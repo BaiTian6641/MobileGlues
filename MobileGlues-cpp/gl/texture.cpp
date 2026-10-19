@@ -793,6 +793,20 @@ void internal_convert(GLenum* internal_format, GLenum* type, GLenum* format, boo
         // GL_RGB case below was inserted between the two and silently became the
         // fallthrough target, rewriting them to GL_RGB + GL_UNSIGNED_BYTE.
         break;
+    case GL_RGB8_SNORM:
+        // ANGLE (and strict GLES) refuses an RGB8_SNORM color attachment:
+        // measured on the X1E Googlebook as GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT.
+        // Iris creates its composite MRT framebuffers with this format and then
+        // disables shaders entirely when the attachment is incomplete.
+        //
+        // RGBA8_SNORM is the renderable format with the same signed-normalized
+        // channel semantics. The extra alpha is not read by the pack. Data
+        // uploads are expanded by mg_upload_fix_t to preserve the three source
+        // channels; allocations need only the enum change.
+        *internal_format = GL_RGBA8_SNORM;
+        if (format) *format = GL_RGBA;
+        if (type) *type = GL_BYTE;
+        break;
     // The unsized spelling of the same thing, and the one classic desktop code
     // uses: glTexImage2D(GL_RGB, ..., GL_RGBA, GL_UNSIGNED_BYTE, rgba) is legal
     // GL, which drops the alpha during conversion. Only GL_RGB8 was recognised,

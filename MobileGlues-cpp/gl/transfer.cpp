@@ -164,6 +164,15 @@ void dec_rgb_u8(const uint8_t* s, uint8_t* d) {
     d[2] = s[2];
 }
 
+// Signed-normalized RGB into the RGBA8_SNORM backing used for an RGB8_SNORM
+// render target. The bytes are the signed values; alpha is SNORM 1.0.
+void dec_rgb_s8(const uint8_t* s, uint8_t* d) {
+    d[0] = s[0];
+    d[1] = s[1];
+    d[2] = s[2];
+    d[3] = 0x7f;
+}
+
 void dec_rgba_u8(const uint8_t* s, uint8_t* d) {
     memcpy(d, s, 4);
 }
@@ -173,22 +182,23 @@ struct upload_rule_t {
     void (*dec)(const uint8_t*, uint8_t*);
     int src_size;
     GLenum out_format;
+    GLenum out_type;
     int channels; // how many 8-bit components dec writes
     bool adapt_only; // selected only to change the channel count, never on its own
 };
 
-const upload_rule_t k_upload_rules[] = {
-    {GL_BGRA, GL_UNSIGNED_BYTE, dec_bgra_u8, 4, GL_RGBA, 4, false},
-    {GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, dec_bgra_8888_rev, 4, GL_RGBA, 4, false},
-    {GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, dec_bgra_8888, 4, GL_RGBA, 4, false},
-    {GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, dec_bgra_1555_rev, 2, GL_RGBA, 4, false},
-    {GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4_REV, dec_bgra_4444_rev, 2, GL_RGBA, 4, false},
-    {GL_BGR, GL_UNSIGNED_BYTE, dec_bgr_u8, 3, GL_RGB, 3, false},
+const upload_rule_t k_upload_rules[] = {{GL_BGRA, GL_UNSIGNED_BYTE, dec_bgra_u8, 4, GL_RGBA, GL_UNSIGNED_BYTE, 4, false},
+    {GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, dec_bgra_8888_rev, 4, GL_RGBA, GL_UNSIGNED_BYTE, 4, false},
+    {GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, dec_bgra_8888, 4, GL_RGBA, GL_UNSIGNED_BYTE, 4, false},
+    {GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, dec_bgra_1555_rev, 2, GL_RGBA, GL_UNSIGNED_BYTE, 4, false},
+    {GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4_REV, dec_bgra_4444_rev, 2, GL_RGBA, GL_UNSIGNED_BYTE, 4, false},
+    {GL_BGR, GL_UNSIGNED_BYTE, dec_bgr_u8, 3, GL_RGB, GL_UNSIGNED_BYTE, 3, false},
     // Not reversed, but the packed 8888 types themselves do not exist in GLES.
-    {GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, dec_rgba_8888_rev, 4, GL_RGBA, 4, false},
-    {GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, dec_rgba_8888, 4, GL_RGBA, 4, false},
-    {GL_RGB, GL_UNSIGNED_BYTE, dec_rgb_u8, 3, GL_RGB, 3, true},
-    {GL_RGBA, GL_UNSIGNED_BYTE, dec_rgba_u8, 4, GL_RGBA, 4, true},
+    {GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, dec_rgba_8888_rev, 4, GL_RGBA, GL_UNSIGNED_BYTE, 4, false},
+    {GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, dec_rgba_8888, 4, GL_RGBA, GL_UNSIGNED_BYTE, 4, false},
+    {GL_RGB, GL_UNSIGNED_BYTE, dec_rgb_u8, 3, GL_RGB, GL_UNSIGNED_BYTE, 3, true},
+    {GL_RGB, GL_BYTE, dec_rgb_s8, 3, GL_RGBA, GL_BYTE, 4, true},
+    {GL_RGBA, GL_UNSIGNED_BYTE, dec_rgba_u8, 4, GL_RGBA, GL_UNSIGNED_BYTE, 4, true},
 };
 
 int channels_of(GLenum format) {
@@ -291,7 +301,7 @@ mg_upload_fix_t::mg_upload_fix_t(GLsizei width, GLsizei height, GLsizei depth, G
         if (want != 0) out_channels = want;
     }
     format = out_channels == 4 ? GL_RGBA : GL_RGB;
-    type = GL_UNSIGNED_BYTE;
+    type = rule->out_type ? rule->out_type : GL_UNSIGNED_BYTE;
 
     // With an unpack PBO bound, pixels is an offset -- and offset 0 is real
     // data, so nullptr only means "no data" when no PBO is bound.

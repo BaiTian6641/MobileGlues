@@ -89,6 +89,12 @@ struct Api {
     PFNGLBINDIMAGETEXTUREPROC glBindImageTexture;
     PFNGLTEXSTORAGE2DPROC glTexStorage2D;
     PFNGLTEXSTORAGE3DPROC glTexStorage3D;
+    PFNGLTEXIMAGE2DPROC glTexImage2D;
+    PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers;
+    PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
+    PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D;
+    PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus;
+    PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
     PFNGLGENTEXTURESPROC glGenTextures;
     PFNGLBINDTEXTUREPROC glBindTexture;
     PFNGLTEXPARAMETERIPROC glTexParameteri;
@@ -786,6 +792,67 @@ void main() { outb.value = uint(imageLoad(img, ivec3(0)).r); }
     return r;
 }
 
+Result test_desktop_glsl_version(const char* version) {
+    Result r;
+    std::string source = "#version ";
+    source += version;
+    source += "\nprecision highp float;\nlayout(location = 0) out vec4 color;\nvoid main() { color = vec4(1.0); }\n";
+    GLuint shader = api.glCreateShader(GL_FRAGMENT_SHADER);
+    const char* src = source.c_str();
+    api.glShaderSource(shader, 1, &src, nullptr);
+    api.glCompileShader(shader);
+    GLint status = GL_FALSE;
+    api.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+    GLint log_length = 0;
+    api.glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
+    std::string log(static_cast<size_t>(log_length), '\0');
+    if (log_length > 0) api.glGetShaderInfoLog(shader, log_length, nullptr, log.data());
+    r.ok = (status == GL_TRUE);
+    r.detail = std::string("version ") + version + " compile=" + std::to_string(status) + " log=" + log;
+    api.glDeleteShader(shader);
+    return r;
+}
+
+Result test_rgb8_snorm_attachment() {
+    Result r;
+    // Complementary's colortex1 is RGB8_SNORM. ANGLE reports that format as
+    // INCOMPLETE_ATTACHMENT when attached directly; the layer must provide a
+    // renderable backing without losing the signed channels.
+    GLuint tex = 0, fbo = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8_SNORM, 4, 4, 0, GL_RGB, GL_BYTE, nullptr);
+    const GLenum tex_error = api.glGetError();
+    api.glGenFramebuffers(1, &fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    api.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+    const GLenum tex_status = api.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    api.glDeleteFramebuffers(1, &fbo);
+    api.glDeleteTextures(1, &tex);
+
+    // The immutable-storage path used by Iris for some targets.
+    GLuint tex2 = 0, fbo2 = 0;
+    api.glGenTextures(1, &tex2);
+    api.glBindTexture(GL_TEXTURE_2D, tex2);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB8_SNORM, 4, 4);
+    const GLenum storage_error = api.glGetError();
+    api.glGenFramebuffers(1, &fbo2);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, fbo2);
+    api.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex2, 0);
+    const GLenum storage_status = api.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    api.glDeleteFramebuffers(1, &fbo2);
+    api.glDeleteTextures(1, &tex2);
+
+    r.ok = (tex_error == GL_NO_ERROR && storage_error == GL_NO_ERROR &&
+            tex_status == GL_FRAMEBUFFER_COMPLETE && storage_status == GL_FRAMEBUFFER_COMPLETE);
+    r.detail = "tex_image_error=" + std::to_string(tex_error) + " tex_status=" + std::to_string(tex_status) +
+               " tex_storage_error=" + std::to_string(storage_error) +
+               " tex_storage_status=" + std::to_string(storage_status);
+    return r;
+}
+
 Result test_integer_image_binding() {
     Result r;
     // ESSL 3.10 cannot name an r16ui image on this provider. The frontend must
@@ -895,6 +962,12 @@ int main(int argc, char** argv) {
     api.glBindImageTexture = sym<PFNGLBINDIMAGETEXTUREPROC>("glBindImageTexture");
     api.glTexStorage2D = sym<PFNGLTEXSTORAGE2DPROC>("glTexStorage2D");
     api.glTexStorage3D = sym<PFNGLTEXSTORAGE3DPROC>("glTexStorage3D");
+    api.glTexImage2D = sym<PFNGLTEXIMAGE2DPROC>("glTexImage2D");
+    api.glGenFramebuffers = sym<PFNGLGENFRAMEBUFFERSPROC>("glGenFramebuffers");
+    api.glBindFramebuffer = sym<PFNGLBINDFRAMEBUFFERPROC>("glBindFramebuffer");
+    api.glFramebufferTexture2D = sym<PFNGLFRAMEBUFFERTEXTURE2DPROC>("glFramebufferTexture2D");
+    api.glCheckFramebufferStatus = sym<PFNGLCHECKFRAMEBUFFERSTATUSPROC>("glCheckFramebufferStatus");
+    api.glDeleteFramebuffers = sym<PFNGLDELETEFRAMEBUFFERSPROC>("glDeleteFramebuffers");
     api.glGenTextures = sym<PFNGLGENTEXTURESPROC>("glGenTextures");
     api.glBindTexture = sym<PFNGLBINDTEXTUREPROC>("glBindTexture");
     api.glTexParameteri = sym<PFNGLTEXPARAMETERIPROC>("glTexParameteri");
@@ -943,6 +1016,14 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "compute_512")) run("compute_512", test_compute_512);
     if (!strcmp(mode, "all") || !strcmp(mode, "vertex_image")) run("vertex_image_store", test_vertex_image_store);
     if (!strcmp(mode, "all") || !strcmp(mode, "read_image_link")) run("read_image_link", test_read_image_link);
+    if (!strcmp(mode, "all") || !strcmp(mode, "desktop_glsl")) {
+        run("desktop_glsl_120", [] { return test_desktop_glsl_version("120"); });
+        run("desktop_glsl_150", [] { return test_desktop_glsl_version("150"); });
+        run("desktop_glsl_330", [] { return test_desktop_glsl_version("330"); });
+        run("desktop_glsl_400", [] { return test_desktop_glsl_version("400"); });
+        run("desktop_glsl_460", [] { return test_desktop_glsl_version("460"); });
+    }
+    if (!strcmp(mode, "all") || !strcmp(mode, "rgb8_snorm")) run("rgb8_snorm_attachment", test_rgb8_snorm_attachment);
     if (!strcmp(mode, "all") || !strcmp(mode, "integer_image")) run("integer_image", test_integer_image_binding);
     fprintf(g_out, "\n}\n");
 
