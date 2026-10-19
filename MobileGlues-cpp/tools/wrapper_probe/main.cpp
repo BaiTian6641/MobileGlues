@@ -123,6 +123,14 @@ struct Api {
     PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
     PFNGLFINISHPROC glFinish;
     PFNGLVIEWPORTPROC glViewport;
+    void (*glGenRenderbuffers)(GLsizei, GLuint*);
+    void (*glDeleteRenderbuffers)(GLsizei, const GLuint*);
+    void (*glBindRenderbuffer)(GLenum, GLuint);
+    void (*glRenderbufferStorageMultisample)(GLenum, GLsizei, GLenum, GLsizei, GLsizei);
+    void (*glFramebufferRenderbuffer)(GLenum, GLenum, GLenum, GLuint);
+    void (*glClearColor)(GLfloat, GLfloat, GLfloat, GLfloat);
+    void (*glClear)(GLbitfield);
+    void (*glBlitFramebuffer)(GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLbitfield, GLenum);
     PFNGLENABLEPROC glEnable;
     PFNGLDISABLEPROC glDisable;
     PFNGLBLENDFUNCPROC glBlendFunc;
@@ -1642,6 +1650,102 @@ void main() { outb.value = floatBitsToUint(texture(depthTex, vec2(0.5)).x); }
     return r;
 }
 
+Result test_blit_resolve() {
+    Result r;
+    // A standard multisample resolve: clear a 4x MSAA renderbuffer, blit it to
+    // a single-sample texture, and sample the resolved colour. The wrapper's
+    // blit must present the resolved value, not the unresolved attachment.
+    const char* cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+uniform highp sampler2D colorTex;
+layout(std430, binding = 1) buffer Out { uint v[3]; } outb;
+void main() {
+    vec4 c = texture(colorTex, vec2(0.5));
+    outb.v[0] = floatBitsToUint(c.r);
+    outb.v[1] = floatBitsToUint(c.g);
+    outb.v[2] = floatBitsToUint(c.b);
+}
+)";
+    GLuint rb = 0, read_fbo = 0, draw_fbo = 0, tex = 0;
+    api.glGenRenderbuffers(1, &rb);
+    api.glBindRenderbuffer(GL_RENDERBUFFER, rb);
+    api.glRenderbufferStorageMultisample(GL_RENDERBUFFER, 4, GL_RGBA8, 1, 1);
+    api.glGenFramebuffers(1, &read_fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, read_fbo);
+    api.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rb);
+    const GLenum read_status = api.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    api.glViewport(0, 0, 1, 1);
+    api.glClearColor(0.25f, 0.5f, 0.75f, 1.0f);
+    api.glClear(GL_COLOR_BUFFER_BIT);
+
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 1, 1);
+    api.glGenFramebuffers(1, &draw_fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, draw_fbo);
+    api.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+    const GLenum draw_status = api.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    api.glBindFramebuffer(GL_READ_FRAMEBUFFER, read_fbo);
+    api.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw_fbo);
+    api.glBlitFramebuffer(0, 0, 1, 1, 0, 0, 1, 1, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    const GLenum blit_error = api.glGetError();
+    api.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    GLuint shader = api.glCreateShader(GL_COMPUTE_SHADER);
+    api.glShaderSource(shader, 1, &cs, nullptr);
+    api.glCompileShader(shader);
+    GLint status = GL_FALSE;
+    api.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+    GLint len = 0;
+    api.glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+    std::string log(static_cast<size_t>(len), '\0');
+    if (len > 0) api.glGetShaderInfoLog(shader, len, nullptr, log.data());
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, shader);
+    api.glLinkProgram(program);
+    GLint linked = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    api.glDeleteShader(shader);
+
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 16, nullptr, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+    GLuint bits[3] = {};
+    if (status == GL_TRUE && linked == GL_TRUE) {
+        api.glActiveTexture(GL_TEXTURE0);
+        api.glBindTexture(GL_TEXTURE_2D, tex);
+        api.glUseProgram(program);
+        api.glUniform1i(api.glGetUniformLocation(program, "colorTex"), 0);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+        api.glFinish();
+        void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(bits), GL_MAP_READ_BIT);
+        if (ptr) {
+            memcpy(bits, ptr, sizeof(bits));
+            api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        }
+    }
+    float rgb[3];
+    memcpy(rgb, bits, sizeof(rgb));
+    const bool close = rgb[0] > 0.23f && rgb[0] < 0.27f && rgb[1] > 0.48f && rgb[1] < 0.52f && rgb[2] > 0.73f &&
+                       rgb[2] < 0.77f;
+    r.ok = read_status == GL_FRAMEBUFFER_COMPLETE && draw_status == GL_FRAMEBUFFER_COMPLETE &&
+           blit_error == GL_NO_ERROR && status == GL_TRUE && linked == GL_TRUE && close;
+    r.detail = "read_status=" + std::to_string(read_status) + " draw_status=" + std::to_string(draw_status) +
+               " blit_error=" + std::to_string(blit_error) + " compile=" + std::to_string(status) +
+               " link=" + std::to_string(linked) + " rgb=" + std::to_string(rgb[0]) + "," +
+               std::to_string(rgb[1]) + "," + std::to_string(rgb[2]) + (log.empty() ? "" : " log=" + log);
+    api.glDeleteProgram(program);
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteFramebuffers(1, &read_fbo);
+    api.glDeleteFramebuffers(1, &draw_fbo);
+    api.glDeleteRenderbuffers(1, &rb);
+    api.glDeleteTextures(1, &tex);
+    return r;
+}
+
 Result test_act_volume() {
     Result r;
     const int W = 192, H = 96, D = 192;
@@ -2296,6 +2400,16 @@ int main(int argc, char** argv) {
     api.glDeleteVertexArrays = sym<PFNGLDELETEVERTEXARRAYSPROC>("glDeleteVertexArrays");
     api.glFinish = sym<PFNGLFINISHPROC>("glFinish");
     api.glViewport = sym<PFNGLVIEWPORTPROC>("glViewport");
+    api.glGenRenderbuffers = sym<void (*)(GLsizei, GLuint*)>("glGenRenderbuffers");
+    api.glDeleteRenderbuffers = sym<void (*)(GLsizei, const GLuint*)>("glDeleteRenderbuffers");
+    api.glBindRenderbuffer = sym<void (*)(GLenum, GLuint)>("glBindRenderbuffer");
+    api.glRenderbufferStorageMultisample = sym<void (*)(GLenum, GLsizei, GLenum, GLsizei, GLsizei)>(
+        "glRenderbufferStorageMultisample");
+    api.glFramebufferRenderbuffer = sym<void (*)(GLenum, GLenum, GLenum, GLuint)>("glFramebufferRenderbuffer");
+    api.glClearColor = sym<void (*)(GLfloat, GLfloat, GLfloat, GLfloat)>("glClearColor");
+    api.glClear = sym<void (*)(GLbitfield)>("glClear");
+    api.glBlitFramebuffer = sym<void (*)(GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLbitfield, GLenum)>(
+        "glBlitFramebuffer");
     api.glEnable = sym<PFNGLENABLEPROC>("glEnable");
     api.glDisable = sym<PFNGLDISABLEPROC>("glDisable");
     api.glBlendFunc = sym<PFNGLBLENDFUNCPROC>("glBlendFunc");
@@ -2345,6 +2459,7 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "depth_filter")) run("depth_filter_complete", test_depth_filter_complete);
     if (!strcmp(mode, "all") || !strcmp(mode, "timer_query")) run("timer_query64", test_timer_query64);
     if (!strcmp(mode, "all") || !strcmp(mode, "copy_image_depth")) run("copy_image_subdata_depth", test_copy_image_subdata_depth);
+    if (!strcmp(mode, "all") || !strcmp(mode, "blit_resolve")) run("blit_multisample_resolve", test_blit_resolve);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
     if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);
