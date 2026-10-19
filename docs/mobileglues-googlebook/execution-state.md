@@ -133,13 +133,14 @@ Still open in these stages:
 - Latest commits on `googlebook/x1e-stage1-3`: `d9789fa` shader source/per-object
   state, `9a91ede` compiler limits/SSBO binding, `0557189` RGB8_SNORM backing,
   `468c4bb` game evidence, `e3b2661` artifact hashes, `d22b187` wrapper version
-  fixtures, `dcc67e8` branch/handoff records, plus the extension-admission and
-  image-metadata bridge commit.
+  fixtures, `dcc67e8` branch/handoff records, `bc34198` extension admission and
+  image-metadata bridge.
 - Latest standalone ARM64 artifact SHA-256:
-  `fd37ab2f71801b6619b937af1895234c318dab9e3dcf29f8f41993d4577d73a8`.
+  `ef515913cd2abb9fb62f5d708d012136cb939d6d9e6957f94098d1d053648fda`.
 - The plugin APK (debug) SHA-256 is
-  `ed3f3c9d5f7b010e2d92d2313ad1e85f2a81f6f651a869f3bea8d313ec5a32ba`; its
-  packaged `libmobileglues.so` SHA-256 is
+  `ed3f3c9d5f7b010e2d92d2313ad1e85f2a81f6f651a869f3bea8d313ec5a32ba`; it
+  predates the extension/image bridge, so rebuild before the next in-game test.
+  Its packaged `libmobileglues.so` SHA-256 is
   `bc23304770683b167fc5ebe328dee4e12e668f39bcbd034d66551a37c9178cac`.
 
 ## Blockers
