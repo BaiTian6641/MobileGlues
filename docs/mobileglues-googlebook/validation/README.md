@@ -47,6 +47,7 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-frag-data-linked.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 frag_data_linked` | PASS: `layout(location = 3)` queried as 3 |
 | `2026-10-19-x1e-wrapper-ssbo-qualifier.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 ssbo_qualifier` | PASS: `readonly buffer` preserved on rebinding to 2 |
 | `2026-10-19-x1e-wrapper-all-translation55.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `7c4c7ad2…e052` | 55/55 PASS including linked-location and SSBO-qualifier probes |
+| `2026-10-19-x1e-playerref-user-report.md` | 2026-10-19 | target device, game process, **user-reported** | FCL run, WSR 128 + `WORLD_SPACE_PLAYER_REF=1` | Functional pass: renders without the prior crash; performance/power FAIL. No archived FPS/power capture |
 
 ## Game-process captures and logs
 

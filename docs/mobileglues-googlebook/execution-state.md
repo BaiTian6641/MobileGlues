@@ -200,8 +200,11 @@ game process.
     six vertex-stage SSBO atomics on binding 3 (`min=-10`, `max=10`) and a 2D RGBA8 vertex image
     store (`64,128,191`) both pass with a valid fence. The earlier "atomics and image store lose the
     device" explanation is therefore incomplete; the declaration/format contract was the
-    source-visible defect. A pack run with the fixed bridge remains the gate, so player reflections
-    stay unverified/unsupported.
+    source-visible defect. A user-reported X1E pack run now renders player reflections without the
+    previous crash (core `e7795ad5…54b`, bridge `0b862474…6f1f`), but the option consumes too much
+    power and drags GPU/system performance. Functional status is **staged pass, user-reported**;
+    performance/power is **FAIL/NOT QUALIFIED**; release support is not claimed. The report is
+    `validation/2026-10-19-x1e-playerref-user-report.md`.
   - Translation failure now replaces the backend source with an empty string, so re-sourcing a
     shader cannot leave a previous valid compilation in place. Fragment output-location patches are
     owned by the linking program: a shared fragment shader is restored before a different program

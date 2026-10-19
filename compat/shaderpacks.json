@@ -100,8 +100,8 @@
       "optional_player_reflection": {
         "additional_ssbo_bytes": 5376,
         "atlas": "64 x 64 RGBA8",
-        "status": "NOT RUN (source contract fixed; device isolation pending)",
-        "compatibility_note": "The core parser now accepts `uniform writeonly highp image2D` and fallback units never alias an explicit binding; bridge 1.0.22 adds the registry binding and rgba8 format to playerAtlas_img. X1E probes pass the six binding-3 vertex atomics and a 2D RGBA8 vertex image store separately. The bridge jar is built but not deployed; a pack run with the fixed bridge is the remaining gate. Do not claim support before that run."
+        "status": "PASS (staged functional, user-reported); PERFORMANCE/POWER FAIL",
+        "compatibility_note": "Core `e7795ad5...54b` with bridge `0b862474...6f1f` renders WSR 128 + player reflections without the previous crash on the X1E laptop. The option consumes too much power and drags GPU/system performance; no FPS/power capture is archived. Functional staging only; do not claim release support or a playable profile. WSR 128 without player reflections remains the supported advanced target."
       }
     },
     "formats": {

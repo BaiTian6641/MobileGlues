@@ -125,7 +125,7 @@
     "runtime_lock": "compat/runtime-lock.json",
     "runtime_lock_sha256": "2c59c5e74321c5bae3de658201b41f0272c263b1517a3186ad6b3cf6d8078344",
     "shaderpack_lock": "compat/shaderpacks.json",
-    "shaderpack_lock_sha256": "72767b166175e4c3822ab88f4cc45f6c5dfade6de9da771e621cf4860c7aba36",
+    "shaderpack_lock_sha256": "2affd5d9a03e5c8044d6e2b7611a0123f6ffc68f43260c075bebadc16b61601c",
     "launcher_lock": "compat/launcher-lock.json",
     "launcher_lock_sha256": "50f036cf69a54c6e00579f7fc0e7849e2111cd5483fca98ad26d4a41ed5ee914",
     "capability_report_sha256": "d7a3ba31520ff393dd2ec43cf663a4e479ec38955b65836bd3887a9c8618185d",
