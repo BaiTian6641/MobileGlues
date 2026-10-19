@@ -195,9 +195,13 @@ game process.
     alias an explicit binding. The bridge regex accepts the same order and rewrites registered
     images in every stage; built jar `iris-image-bridge/dist/mgirisbridge-1.0.22.jar`
     (`0b862474…6f1f`). Device evidence: `translated_image_decl` and `metadata_image_format` pass;
-    full suite **48/48** (`validation/2026-10-19-x1e-wrapper-all-playerimage.json`). The bridge jar
-    is not yet deployed to the FCL instance, and the pack's six vertex-stage atomics still need a
-    device isolation run; player reflections remain unverified/unsupported.
+    full suite **50/50** (`validation/2026-10-19-x1e-wrapper-all-playerops.json`). The bridge jar
+    is not yet deployed to the FCL instance. Two X1E probes isolate the pack's novel operations:
+    six vertex-stage SSBO atomics on binding 3 (`min=-10`, `max=10`) and a 2D RGBA8 vertex image
+    store (`64,128,191`) both pass with a valid fence. The earlier "atomics and image store lose the
+    device" explanation is therefore incomplete; the declaration/format contract was the
+    source-visible defect. A pack run with the fixed bridge remains the gate, so player reflections
+    stay unverified/unsupported.
   - Named deviations remain: `glTextureBarrier`/NV and `glTextureView` have no legal/available ES
     implementation; backing-format copy substitutions remain backlog.
 

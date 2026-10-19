@@ -117,7 +117,7 @@ fidelity reference.
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 128, WSR 1) | WSR 128 | ARM64 / X1E / ANGLE | pass (staged; **required advanced target**) | original pack; WSR images 128×64×128; SSBO 50,855,936 B; log `mclo.gs/adG0NiA` |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 192, WSR 1) | WSR 192 + ACT 192 | ARM64 / X1E / ANGLE | pass (staged, bridge 1.0.17) | original pack; distinct cyan/warm ACT; WSR stable in motion; bridge hash `2e1c083c…6397`; residual: visible half-rate floodfill circle on light placement/world entry |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | WSR 256 | ARM64 / X1E / ANGLE | blocked — **optional/future X2E; not an X1E release blocker** | provider `MAX_SHADER_STORAGE_BLOCK_SIZE=134,217,728`; request 202,899,456 B; never claimed as supported on X1E |
-| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | player reflections (binding 3) | ARM64 / X1E / ANGLE | not tested / unsupported | Image declaration/format contract fixed; the six vertex-stage `atomicMin/atomicMax` calls remain the only unqualified new GPU operation. Bridge jar `0b862474…6f1f` built; instance deployment and device isolation pending. The wrapper does not silently disable the option |
+| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | player reflections (binding 3) | ARM64 / X1E / ANGLE | not tested / unsupported | Image declaration/format contract fixed. X1E probes now pass both novel operations separately: six binding-3 vertex atomics and a 2D RGBA8 vertex image store. Bridge jar `0b862474…6f1f` built but not deployed; a pack run with the fixed bridge is the remaining gate. The wrapper does not silently disable the option |
 | Complementary Unbound r5.9.2 | `2b4e9c71…21d2` | High | standard fidelity suite | ARM64 / X1E / unknown | not tested | — |
 | BSL v10.1.8 | `36b0a50f…30b5` | default | standard fidelity suite | ARM64 / X1E / unknown | not tested | — |
 | BSL v10.1.8 | `36b0a50f…30b5` | multicolored block light | ACT image/compute | ARM64 / X1E / unknown | not tested | — |
@@ -133,7 +133,9 @@ fidelity reference.
 | `glShaderSource` multi-string / explicit-length regression | pass | host `tests/run.sh`; X1E `wrapper_probe source_multi`, `source_multi_implicit` |
 | RGB8_SNORM render-target backing | pass | X1E `wrapper_probe rgb8_snorm_attachment`: both TexImage2D and TexStorage2D FBOs complete |
 | Desktop GLSL version normalization | pass for simple shaders | X1E `wrapper_probe desktop_glsl_120/150/330/400/460` |
-| Full wrapper contract suite | pass (25/25 historical; 48/48 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-playerimage.json` |
+| Full wrapper contract suite | pass (25/25 historical; 50/50 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-playerops.json` |
+| Vertex-stage SSBO atomics on binding 3 | pass | X1E `vertex_ssbo_atomics`: six `atomicMin/Max` on the 5,376-byte block, `min=-10,-10,-10 max=10,10,10`, fence valid |
+| 2D RGBA8 vertex image store | pass | X1E `vertex_image2d_store`: `imageStore` from the vertex stage reads back `64,128,191`, fence valid |
 | Translated image qualifier order | pass | X1E `translated_image_decl`: desktop `layout(binding=0,r32ui) ... uimage3D` + `uniform writeonly image2D` translated to explicit bindings 0/1 with `writeonly highp` preserved |
 | Image-format metadata rewrite | pass | X1E `metadata_image_format`: bare `uniform writeonly image2D playerAtlas_img` + `GL_RGBA8` metadata translated to `layout(binding = 0, rgba8)` |
 | Legal matching depth blit | pass | X1E `blit_depth_match`: D24S8→D24S8 depth+stencil blit, `blit_error=0`, fence valid |

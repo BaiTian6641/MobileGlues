@@ -37,6 +37,9 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-translated-image-decl.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 translated_image_decl` against ARM64 build `7c4c2a57…6650` | PASS: `uniform writeonly highp image2D` parsed and bound to unit 1 without aliasing explicit unit 0 |
 | `2026-10-19-x1e-wrapper-metadata-image-format.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 metadata_image_format` | PASS: `GL_RGBA8` metadata rewrites bare `playerAtlas_img` to `layout(binding = 0, rgba8)` |
 | `2026-10-19-x1e-wrapper-all-playerimage.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `7c4c2a57…6650` | 48/48 PASS including both player-image declaration probes |
+| `2026-10-19-x1e-wrapper-vertex-ssbo-atomics.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 vertex_ssbo_atomics` | PASS: six binding-3 vertex atomics, `min=-10` / `max=10`, fence valid |
+| `2026-10-19-x1e-wrapper-vertex-image2d.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 vertex_image2d` | PASS: 2D RGBA8 vertex image store, readback `64,128,191`, fence valid |
+| `2026-10-19-x1e-wrapper-all-playerops.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `7c4c2a57…6650` | 50/50 PASS including separate player-reflection operation probes |
 
 ## Game-process captures and logs
 

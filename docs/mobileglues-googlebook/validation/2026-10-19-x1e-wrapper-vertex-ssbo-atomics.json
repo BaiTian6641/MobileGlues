@@ -1,0 +1,4 @@
+{
+  "wrapper": {"library": "/data/local/tmp/libmobileglues.so", "renderer": "Adreno (TM)  X1-85 | ANGLE | Vulkan 1.4.295 | OpenGL ES 3.2", "version": "4.0.0 MobileGlues 2.0.0", "shading": "4.60 MobileGlues with glslang and SPIRV-Cross"},
+  "vertex_ssbo_atomics": {"pass": true, "detail": "vstatus=1 link=1 draw_error=0 fence=ok fence_error=0 map_error=0 min=-10,-10,-10 max=10,10,10"}
+}
