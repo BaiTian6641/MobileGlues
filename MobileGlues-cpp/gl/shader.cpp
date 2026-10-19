@@ -11,6 +11,7 @@
 #include "shader_source.h"
 #include "shader_state.h"
 #include "image_metadata.h"
+#include "image_bindings.h"
 
 #include <GL/gl.h>
 #include "getter.h"
@@ -101,6 +102,13 @@ void glShaderSource(GLuint shader, GLsizei count, const GLchar* const* string, c
         LOG_D("\n[INFO] [Shader] Converted Shader source: \n%s", essl_src.c_str())
     }
     mg_normalize_image_qualifiers(essl_src, image_formats);
+    // Iris runs jcpp over the pack source before glShaderSource and the
+    // translator regenerates ESSL from SPIR-V, so a #define-based guard here
+    // cannot see the player-reflection option. Do not pretend to disable it:
+    // the option remains unsupported on the X1E ANGLE vertex-atomic path and
+    // is reported as NOT RUN.
+    state.image_binding_units.clear();
+    mg_bind_image_uniforms(essl_src, mg_object_key(shader).group, &state.image_binding_units);
     if (!essl_src.empty()) {
         if (essl_src.size() > static_cast<size_t>(std::numeric_limits<GLint>::max())) {
             mg_set_gl_error(GL_OUT_OF_MEMORY);

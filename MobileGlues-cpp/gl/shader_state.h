@@ -34,6 +34,7 @@ struct MgObjectKeyHash {
 struct MgShaderObject {
     GLenum type = 0;
     std::string converted_source; // translated ESSL, before any frag-data patch
+    std::unordered_map<std::string, GLuint> image_binding_units;
     bool sampler_buffer_emulated = false;
     bool deleted = false;
     std::set<MgObjectKey> attached_programs;
@@ -43,6 +44,14 @@ struct MgProgramObject {
     std::vector<GLuint> attached_shaders;
     std::unordered_map<std::string, GLuint> frag_data_locations;
     std::unordered_map<std::string, GLuint> storage_block_bindings;
+    // Filled at link: image uniform location -> canonical unit and name.
+    std::unordered_map<GLint, GLuint> image_uniform_units;
+    std::unordered_map<GLint, std::string> image_uniform_names;
+    // Filled when the application assigns image units: app unit -> canonical.
+    std::unordered_map<GLuint, GLuint> image_unit_remap;
+    // Canonical image unit -> uniform name, and names declared in a vertex shader.
+    std::unordered_map<GLuint, std::string> image_unit_names;
+    std::unordered_map<std::string, GLenum> image_declaration_stage;
 };
 
 extern std::unordered_map<MgObjectKey, MgShaderObject, MgObjectKeyHash> g_mg_shaders;

@@ -214,42 +214,42 @@ private:
 // pointer swap rather than an accessor at every use.
 namespace {
 
-struct texture_group_state_t {
-    std::vector<TextureObject*> objects;
-};
-struct texture_ctx_state_t {
-    std::array<TextureUnit, MAX_TEXTURE_IMAGE_UNITS> units;
-    int current_unit = 0;
-    // What this layer last handed to GLES.glBindTexture / GLES.glActiveTexture,
-    // i.e. the driver's side of the same state `units` and `current_unit` describe
-    // from the application's side. The two are not one table because they answer
-    // different questions and can legitimately differ: the texture-buffer
-    // emulation parks the object on unit 15's GL_TEXTURE_2D while the application
-    // asked for GL_TEXTURE_BUFFER on whichever unit was active, and gl/drawing.cpp
-    // needs to know what is on unit 15 without disturbing the active unit to ask.
-    //
-    // Zero-initialised, which is where GL starts a fresh context: no texture bound
-    // anywhere and GL_TEXTURE0 active.
-    std::array<std::array<GLuint, (int)TextureTarget::TEXTURES_COUNT>, MAX_TEXTURE_IMAGE_UNITS> driver_bindings{};
-    int driver_active_unit = 0;
-    // Which share group this context draws its texture objects from. Deleting an
-    // object has to clear it out of every context in that group, not only the one
-    // that happened to issue the glDeleteTextures.
-    unsigned long long group = 0;
-};
+    struct texture_group_state_t {
+        std::vector<TextureObject*> objects;
+    };
+    struct texture_ctx_state_t {
+        std::array<TextureUnit, MAX_TEXTURE_IMAGE_UNITS> units;
+        int current_unit = 0;
+        // What this layer last handed to GLES.glBindTexture / GLES.glActiveTexture,
+        // i.e. the driver's side of the same state `units` and `current_unit` describe
+        // from the application's side. The two are not one table because they answer
+        // different questions and can legitimately differ: the texture-buffer
+        // emulation parks the object on unit 15's GL_TEXTURE_2D while the application
+        // asked for GL_TEXTURE_BUFFER on whichever unit was active, and gl/drawing.cpp
+        // needs to know what is on unit 15 without disturbing the active unit to ask.
+        //
+        // Zero-initialised, which is where GL starts a fresh context: no texture bound
+        // anywhere and GL_TEXTURE0 active.
+        std::array<std::array<GLuint, (int)TextureTarget::TEXTURES_COUNT>, MAX_TEXTURE_IMAGE_UNITS> driver_bindings{};
+        int driver_active_unit = 0;
+        // Which share group this context draws its texture objects from. Deleting an
+        // object has to clear it out of every context in that group, not only the one
+        // that happened to issue the glDeleteTextures.
+        unsigned long long group = 0;
+    };
 
-std::mutex g_tex_mutex;
-// The tables hold their state by pointer. A thread_local pointer into an entry is
-// the whole point of the design -- the ~90 access sites read through g_bg/g_bc
-// rather than looking anything up -- and the map moves its elements when it
-// grows, so the entry itself must not be what moves. The unique_ptr stays put
-// while the map rehashes around it.
-ska::flat_hash_map<unsigned long long, std::unique_ptr<texture_group_state_t>> g_tex_groups;
-ska::flat_hash_map<unsigned long long, std::unique_ptr<texture_ctx_state_t>> g_tex_ctxs;
-texture_group_state_t g_tex_group_default;
-texture_ctx_state_t g_tex_ctx_default;
-thread_local texture_group_state_t* g_tg = &g_tex_group_default;
-thread_local texture_ctx_state_t* g_tc = &g_tex_ctx_default;
+    std::mutex g_tex_mutex;
+    // The tables hold their state by pointer. A thread_local pointer into an entry is
+    // the whole point of the design -- the ~90 access sites read through g_bg/g_bc
+    // rather than looking anything up -- and the map moves its elements when it
+    // grows, so the entry itself must not be what moves. The unique_ptr stays put
+    // while the map rehashes around it.
+    ska::flat_hash_map<unsigned long long, std::unique_ptr<texture_group_state_t>> g_tex_groups;
+    ska::flat_hash_map<unsigned long long, std::unique_ptr<texture_ctx_state_t>> g_tex_ctxs;
+    texture_group_state_t g_tex_group_default;
+    texture_ctx_state_t g_tex_ctx_default;
+    thread_local texture_group_state_t* g_tg = &g_tex_group_default;
+    thread_local texture_ctx_state_t* g_tc = &g_tex_ctx_default;
 
 } // namespace
 
@@ -386,7 +386,9 @@ void MarkTextureObjectForDeletion(unsigned texture) {
     delete textureObject;
 }
 
-int mg_max_texture_units(void) { return MAX_TEXTURE_IMAGE_UNITS; }
+int mg_max_texture_units(void) {
+    return MAX_TEXTURE_IMAGE_UNITS;
+}
 
 // Whether the shadow describes the context whose driver state is actually current.
 //
@@ -399,12 +401,16 @@ int mg_max_texture_units(void) { return MAX_TEXTURE_IMAGE_UNITS; }
 // one of them set would suppress the call the other still needs. Nothing may be
 // skipped on the strength of that record; gl/enable.cpp draws the same line with
 // driver_synced, for the same reason.
-static inline bool driver_shadow_tracks_this_context() { return g_tc != &g_tex_ctx_default; }
+static inline bool driver_shadow_tracks_this_context() {
+    return g_tc != &g_tex_ctx_default;
+}
 
 // The active unit on its own. FSR1 does not disturb it -- its GLStateGuard saves
 // GL_ACTIVE_TEXTURE from the driver and puts it back -- so this half asks only
 // whether the record belongs to the context that is current.
-static inline bool driver_active_unit_shadow_trustworthy() { return driver_shadow_tracks_this_context(); }
+static inline bool driver_active_unit_shadow_trustworthy() {
+    return driver_shadow_tracks_this_context();
+}
 
 // Whether the shadowed bindings can still be believed.
 //
@@ -452,11 +458,20 @@ bool mg_driver_texture_binding(GLenum target, GLuint* out) {
     if (answered && GLES.glGetIntegerv) {
         GLenum pname = 0;
         switch (target) {
-        case GL_TEXTURE_2D:        pname = GL_TEXTURE_BINDING_2D; break;
-        case GL_TEXTURE_3D:        pname = GL_TEXTURE_BINDING_3D; break;
-        case GL_TEXTURE_2D_ARRAY:  pname = GL_TEXTURE_BINDING_2D_ARRAY; break;
-        case GL_TEXTURE_CUBE_MAP:  pname = GL_TEXTURE_BINDING_CUBE_MAP; break;
-        default: break;
+        case GL_TEXTURE_2D:
+            pname = GL_TEXTURE_BINDING_2D;
+            break;
+        case GL_TEXTURE_3D:
+            pname = GL_TEXTURE_BINDING_3D;
+            break;
+        case GL_TEXTURE_2D_ARRAY:
+            pname = GL_TEXTURE_BINDING_2D_ARRAY;
+            break;
+        case GL_TEXTURE_CUBE_MAP:
+            pname = GL_TEXTURE_BINDING_CUBE_MAP;
+            break;
+        default:
+            break;
         }
         if (pname != 0) {
             GLint driver = 0;
@@ -1345,8 +1360,7 @@ void glCopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffse
         // failure is invisible from here -- this layer's glGetError never
         // reports. Say so once rather than copying nothing in silence.
         if (GLES.glGetError != nullptr) {
-            while (GLES.glGetError() != GL_NO_ERROR) {
-            }
+            while (GLES.glGetError() != GL_NO_ERROR) {}
         }
         // The flush is load-bearing. Adreno keeps the source's pending depth
         // writes in an unsubmitted tile pass, and this blit reads the buffer as
@@ -1368,8 +1382,8 @@ void glCopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffse
                                               GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE, &srcDepthSize);
         glGetTexLevelParameteriv(target, level, GL_TEXTURE_DEPTH_SIZE, &dstDepthSize);
         if (srcDepthSize != 0 && dstDepthSize != 0 && srcDepthSize != dstDepthSize) {
-            TX_WARN_ONCE("glCopyTexSubImage2D: skipping depth blit with mismatched sizes src=%d dst=%d",
-                         srcDepthSize, dstDepthSize);
+            TX_WARN_ONCE("glCopyTexSubImage2D: skipping depth blit with mismatched sizes src=%d dst=%d", srcDepthSize,
+                         dstDepthSize);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, prevDrawFBO);
             glDeleteFramebuffers(1, &tempDrawFBO);
             return;
@@ -1823,246 +1837,246 @@ void glTexParameteri(GLenum target, GLenum pname, GLint param) {
 
 namespace {
 
-// The clear values are context state, not framebuffer state, so the ones
-// glClearTexImage sets to clear its temporary attachment are the ones the
-// application's next glClear used. Restoring them from a destructor is what
-// makes that true of every exit from the function, not only the last one.
-struct clear_state_guard_t {
-    GLfloat color[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    GLfloat depth = 1.0f;
-    GLint stencil = 0;
+    // The clear values are context state, not framebuffer state, so the ones
+    // glClearTexImage sets to clear its temporary attachment are the ones the
+    // application's next glClear used. Restoring them from a destructor is what
+    // makes that true of every exit from the function, not only the last one.
+    struct clear_state_guard_t {
+        GLfloat color[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+        GLfloat depth = 1.0f;
+        GLint stencil = 0;
 
-    clear_state_guard_t() {
-        GLES.glGetFloatv(GL_COLOR_CLEAR_VALUE, color);
-        GLES.glGetFloatv(GL_DEPTH_CLEAR_VALUE, &depth);
-        GLES.glGetIntegerv(GL_STENCIL_CLEAR_VALUE, &stencil);
+        clear_state_guard_t() {
+            GLES.glGetFloatv(GL_COLOR_CLEAR_VALUE, color);
+            GLES.glGetFloatv(GL_DEPTH_CLEAR_VALUE, &depth);
+            GLES.glGetIntegerv(GL_STENCIL_CLEAR_VALUE, &stencil);
+        }
+
+        ~clear_state_guard_t() {
+            GLES.glClearColor(color[0], color[1], color[2], color[3]);
+            GLES.glClearDepthf(depth);
+            GLES.glClearStencil(stencil);
+        }
+
+        clear_state_guard_t(const clear_state_guard_t&) = delete;
+        clear_state_guard_t& operator=(const clear_state_guard_t&) = delete;
+    };
+
+    // Reads the one texel glClearTexImage was handed into the three clear
+    // registers. False means the combination cannot be read, which the caller
+    // drops: clearing to a value the application never named is a wrong image that
+    // looks like a right one.
+    bool decode_clear_value(GLenum format, GLenum type, const void* data, GLfloat* rgba, GLfloat* depth,
+                            GLint* stencil) {
+        switch (format) {
+        case GL_RGBA:
+        case GL_RGB:
+        case GL_BGRA:
+        case GL_BGR: {
+            const bool has_alpha = (format == GL_RGBA || format == GL_BGRA);
+            const bool reversed = (format == GL_BGRA || format == GL_BGR);
+            if (type == GL_UNSIGNED_BYTE) {
+                const auto* b = static_cast<const GLubyte*>(data);
+                rgba[0] = (GLfloat)b[reversed ? 2 : 0] / 255.0f;
+                rgba[1] = (GLfloat)b[1] / 255.0f;
+                rgba[2] = (GLfloat)b[reversed ? 0 : 2] / 255.0f;
+                rgba[3] = has_alpha ? (GLfloat)b[3] / 255.0f : 1.0f;
+                return true;
+            }
+            if (type == GL_FLOAT) {
+                const auto* f = static_cast<const GLfloat*>(data);
+                rgba[0] = f[reversed ? 2 : 0];
+                rgba[1] = f[1];
+                rgba[2] = f[reversed ? 0 : 2];
+                rgba[3] = has_alpha ? f[3] : 1.0f;
+                return true;
+            }
+            return false;
+        }
+        case GL_DEPTH_COMPONENT:
+            if (type == GL_FLOAT) {
+                *depth = static_cast<const GLfloat*>(data)[0];
+                return true;
+            }
+            if (type == GL_UNSIGNED_SHORT) {
+                *depth = (GLfloat) static_cast<const GLushort*>(data)[0] / 65535.0f;
+                return true;
+            }
+            if (type == GL_UNSIGNED_INT) {
+                *depth = (GLfloat)((double)static_cast<const GLuint*>(data)[0] / 4294967295.0);
+                return true;
+            }
+            return false;
+        case GL_STENCIL_INDEX:
+            if (type == GL_UNSIGNED_BYTE) {
+                *stencil = static_cast<const GLubyte*>(data)[0];
+                return true;
+            }
+            if (type == GL_UNSIGNED_INT) {
+                *stencil = (GLint) static_cast<const GLuint*>(data)[0];
+                return true;
+            }
+            return false;
+        case GL_DEPTH_STENCIL:
+            if (type == GL_UNSIGNED_INT_24_8) {
+                GLuint v;
+                memcpy(&v, data, sizeof(v));
+                *depth = (GLfloat)((double)(v >> 8) / 16777215.0);
+                *stencil = (GLint)(v & 0xff);
+                return true;
+            }
+            if (type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV) {
+                GLfloat d;
+                GLuint s;
+                memcpy(&d, data, sizeof(d));
+                memcpy(&s, static_cast<const GLubyte*>(data) + sizeof(d), sizeof(s));
+                *depth = d;
+                *stencil = (GLint)(s & 0xff);
+                return true;
+            }
+            return false;
+        default:
+            return false;
+        }
     }
 
-    ~clear_state_guard_t() {
-        GLES.glClearColor(color[0], color[1], color[2], color[3]);
-        GLES.glClearDepthf(depth);
-        GLES.glClearStencil(stencil);
-    }
+    struct mg_clear_program_t {
+        GLuint program = 0;
+        GLint size_location = -1;
+        bool integer = false;
+    };
 
-    clear_state_guard_t(const clear_state_guard_t&) = delete;
-    clear_state_guard_t& operator=(const clear_state_guard_t&) = delete;
-};
+    std::unordered_map<GLenum, mg_clear_program_t> g_clear_programs;
 
-// Reads the one texel glClearTexImage was handed into the three clear
-// registers. False means the combination cannot be read, which the caller
-// drops: clearing to a value the application never named is a wrong image that
-// looks like a right one.
-bool decode_clear_value(GLenum format, GLenum type, const void* data, GLfloat* rgba, GLfloat* depth, GLint* stencil) {
-    switch (format) {
-    case GL_RGBA:
-    case GL_RGB:
-    case GL_BGRA:
-    case GL_BGR: {
-        const bool has_alpha = (format == GL_RGBA || format == GL_BGRA);
-        const bool reversed = (format == GL_BGRA || format == GL_BGR);
-        if (type == GL_UNSIGNED_BYTE) {
-            const auto* b = static_cast<const GLubyte*>(data);
-            rgba[0] = (GLfloat)b[reversed ? 2 : 0] / 255.0f;
-            rgba[1] = (GLfloat)b[1] / 255.0f;
-            rgba[2] = (GLfloat)b[reversed ? 0 : 2] / 255.0f;
-            rgba[3] = has_alpha ? (GLfloat)b[3] / 255.0f : 1.0f;
-            return true;
-        }
-        if (type == GL_FLOAT) {
-            const auto* f = static_cast<const GLfloat*>(data);
-            rgba[0] = f[reversed ? 2 : 0];
-            rgba[1] = f[1];
-            rgba[2] = f[reversed ? 0 : 2];
-            rgba[3] = has_alpha ? f[3] : 1.0f;
-            return true;
-        }
-        return false;
-    }
-    case GL_DEPTH_COMPONENT:
-        if (type == GL_FLOAT) {
-            *depth = static_cast<const GLfloat*>(data)[0];
-            return true;
-        }
-        if (type == GL_UNSIGNED_SHORT) {
-            *depth = (GLfloat)static_cast<const GLushort*>(data)[0] / 65535.0f;
-            return true;
-        }
-        if (type == GL_UNSIGNED_INT) {
-            *depth = (GLfloat)((double)static_cast<const GLuint*>(data)[0] / 4294967295.0);
-            return true;
-        }
-        return false;
-    case GL_STENCIL_INDEX:
-        if (type == GL_UNSIGNED_BYTE) {
-            *stencil = static_cast<const GLubyte*>(data)[0];
-            return true;
-        }
-        if (type == GL_UNSIGNED_INT) {
-            *stencil = (GLint)static_cast<const GLuint*>(data)[0];
-            return true;
-        }
-        return false;
-    case GL_DEPTH_STENCIL:
-        if (type == GL_UNSIGNED_INT_24_8) {
-            GLuint v;
-            memcpy(&v, data, sizeof(v));
-            *depth = (GLfloat)((double)(v >> 8) / 16777215.0);
-            *stencil = (GLint)(v & 0xff);
-            return true;
-        }
-        if (type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV) {
-            GLfloat d;
-            GLuint s;
-            memcpy(&d, data, sizeof(d));
-            memcpy(&s, static_cast<const GLubyte*>(data) + sizeof(d), sizeof(s));
-            *depth = d;
-            *stencil = (GLint)(s & 0xff);
-            return true;
-        }
-        return false;
-    default:
-        return false;
-    }
-}
-
-
-struct mg_clear_program_t {
-    GLuint program = 0;
-    GLint size_location = -1;
-    bool integer = false;
-};
-
-std::unordered_map<GLenum, mg_clear_program_t> g_clear_programs;
-
-// Zero a 3D custom image with imageStore. This is the only path that is both
-// correct and safe on ANGLE: FBO clears crash for layered textures, and
-// glTexSubImage3D on a texture that has ever been image-bound faults.
-bool mg_clear_image3d_zero(GLuint texture, TextureObject* tex) {
-    if (texture == 0 || tex == nullptr || tex->target != TextureTarget::TEXTURE_3D || tex->width <= 0 ||
-        tex->height <= 0 || tex->depth <= 0) {
-        fprintf(stderr, "[MG-CLEAR] reject texture=%u tex=%p target=%d size=%dx%dx%d\n", texture, (void*)tex,
-                tex ? (int)tex->target : -1, tex ? tex->width : 0, tex ? tex->height : 0, tex ? tex->depth : 0);
-        fflush(stderr);
-        return false;
-    }
-    const char* qualifier = nullptr;
-    bool integer = false;
-    GLenum backing = tex->internal_format;
-    switch (backing) {
-    case GL_R32UI:
-        qualifier = "r32ui";
-        integer = true;
-        break;
-    case GL_R32I:
-        qualifier = "r32i";
-        integer = true;
-        break;
-    case GL_R32F:
-        qualifier = "r32f";
-        break;
-    case GL_RGBA16F:
-        qualifier = "rgba16f";
-        break;
-    case GL_RGBA32F:
-        qualifier = "rgba32f";
-        break;
-    case GL_RGBA8:
-        qualifier = "rgba8";
-        break;
-    case GL_RGBA8_SNORM:
-        qualifier = "rgba8_snorm";
-        break;
-    default:
-        fprintf(stderr, "[MG-CLEAR] unsupported internal=0x%x texture=%u\n", backing, texture);
-        fflush(stderr);
-        return false;
-    }
-    if (!GLES.glGetIntegeri_v || !GLES.glBindImageTexture || !GLES.glDispatchCompute) {
-        fprintf(stderr, "[MG-CLEAR] missing image/compute entry point\n");
-        fflush(stderr);
-        return false;
-    }
-
-    mg_clear_program_t& clear = g_clear_programs[backing];
-    if (clear.program == 0) {
-        std::string source = "#version 310 es\n";
-        source += "layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;\n";
-        source += std::string("layout(") + qualifier + ", binding = 0) writeonly uniform highp " +
-                  (integer ? "uimage3D" : "image3D") + " img;\n";
-        source += "uniform ivec3 volumeSize;\n";
-        source += "void main() {\n";
-        source += "  ivec3 p = ivec3(gl_GlobalInvocationID);\n";
-        source += "  if (any(greaterThanEqual(p, volumeSize))) return;\n";
-        source += integer ? "  imageStore(img, p, uvec4(0u));\n" : "  imageStore(img, p, vec4(0.0));\n";
-        source += "}\n";
-        const char* src = source.c_str();
-        GLuint shader = GLES.glCreateShader(GL_COMPUTE_SHADER);
-        GLES.glShaderSource(shader, 1, &src, nullptr);
-        GLES.glCompileShader(shader);
-        GLint compiled = GL_FALSE;
-        GLES.glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-        if (compiled != GL_TRUE) {
-            char log[512] = {0};
-            GLES.glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
-            fprintf(stderr, "[MG-CLEAR] clear compute compile failed: %s\n", log);
+    // Zero a 3D custom image with imageStore. This is the only path that is both
+    // correct and safe on ANGLE: FBO clears crash for layered textures, and
+    // glTexSubImage3D on a texture that has ever been image-bound faults.
+    bool mg_clear_image3d_zero(GLuint texture, TextureObject* tex) {
+        if (texture == 0 || tex == nullptr || tex->target != TextureTarget::TEXTURE_3D || tex->width <= 0 ||
+            tex->height <= 0 || tex->depth <= 0) {
+            fprintf(stderr, "[MG-CLEAR] reject texture=%u tex=%p target=%d size=%dx%dx%d\n", texture, (void*)tex,
+                    tex ? (int)tex->target : -1, tex ? tex->width : 0, tex ? tex->height : 0, tex ? tex->depth : 0);
             fflush(stderr);
+            return false;
+        }
+        const char* qualifier = nullptr;
+        bool integer = false;
+        GLenum backing = tex->internal_format;
+        switch (backing) {
+        case GL_R32UI:
+            qualifier = "r32ui";
+            integer = true;
+            break;
+        case GL_R32I:
+            qualifier = "r32i";
+            integer = true;
+            break;
+        case GL_R32F:
+            qualifier = "r32f";
+            break;
+        case GL_RGBA16F:
+            qualifier = "rgba16f";
+            break;
+        case GL_RGBA32F:
+            qualifier = "rgba32f";
+            break;
+        case GL_RGBA8:
+            qualifier = "rgba8";
+            break;
+        case GL_RGBA8_SNORM:
+            qualifier = "rgba8_snorm";
+            break;
+        default:
+            fprintf(stderr, "[MG-CLEAR] unsupported internal=0x%x texture=%u\n", backing, texture);
+            fflush(stderr);
+            return false;
+        }
+        if (!GLES.glGetIntegeri_v || !GLES.glBindImageTexture || !GLES.glDispatchCompute) {
+            fprintf(stderr, "[MG-CLEAR] missing image/compute entry point\n");
+            fflush(stderr);
+            return false;
+        }
+
+        mg_clear_program_t& clear = g_clear_programs[backing];
+        if (clear.program == 0) {
+            std::string source = "#version 310 es\n";
+            source += "layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;\n";
+            source += std::string("layout(") + qualifier + ", binding = 0) writeonly uniform highp " +
+                      (integer ? "uimage3D" : "image3D") + " img;\n";
+            source += "uniform ivec3 volumeSize;\n";
+            source += "void main() {\n";
+            source += "  ivec3 p = ivec3(gl_GlobalInvocationID);\n";
+            source += "  if (any(greaterThanEqual(p, volumeSize))) return;\n";
+            source += integer ? "  imageStore(img, p, uvec4(0u));\n" : "  imageStore(img, p, vec4(0.0));\n";
+            source += "}\n";
+            const char* src = source.c_str();
+            GLuint shader = GLES.glCreateShader(GL_COMPUTE_SHADER);
+            GLES.glShaderSource(shader, 1, &src, nullptr);
+            GLES.glCompileShader(shader);
+            GLint compiled = GL_FALSE;
+            GLES.glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+            if (compiled != GL_TRUE) {
+                char log[512] = {0};
+                GLES.glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
+                fprintf(stderr, "[MG-CLEAR] clear compute compile failed: %s\n", log);
+                fflush(stderr);
+                GLES.glDeleteShader(shader);
+                return false;
+            }
+            GLuint program = GLES.glCreateProgram();
+            GLES.glAttachShader(program, shader);
+            GLES.glLinkProgram(program);
             GLES.glDeleteShader(shader);
-            return false;
+            GLint linked = GL_FALSE;
+            GLES.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+            if (linked != GL_TRUE) {
+                char log[512] = {0};
+                GLES.glGetProgramInfoLog(program, sizeof(log), nullptr, log);
+                fprintf(stderr, "[MG-CLEAR] clear compute link failed: %s\n", log);
+                fflush(stderr);
+                GLES.glDeleteProgram(program);
+                return false;
+            }
+            clear.program = program;
+            clear.size_location = GLES.glGetUniformLocation(program, "volumeSize");
+            clear.integer = integer;
         }
-        GLuint program = GLES.glCreateProgram();
-        GLES.glAttachShader(program, shader);
-        GLES.glLinkProgram(program);
-        GLES.glDeleteShader(shader);
-        GLint linked = GL_FALSE;
-        GLES.glGetProgramiv(program, GL_LINK_STATUS, &linked);
-        if (linked != GL_TRUE) {
-            char log[512] = {0};
-            GLES.glGetProgramInfoLog(program, sizeof(log), nullptr, log);
-            fprintf(stderr, "[MG-CLEAR] clear compute link failed: %s\n", log);
+        if (clear.program == 0 || clear.size_location < 0) {
+            fprintf(stderr, "[MG-CLEAR] bad program=%u size_loc=%d internal=0x%x\n", clear.program, clear.size_location,
+                    backing);
             fflush(stderr);
-            GLES.glDeleteProgram(program);
             return false;
         }
-        clear.program = program;
-        clear.size_location = GLES.glGetUniformLocation(program, "volumeSize");
-        clear.integer = integer;
-    }
-    if (clear.program == 0 || clear.size_location < 0) {
-        fprintf(stderr, "[MG-CLEAR] bad program=%u size_loc=%d internal=0x%x\n", clear.program, clear.size_location,
-                backing);
-        fflush(stderr);
-        return false;
-    }
 
-    // Save unit 0 and the current program; restore both on every exit.
-    GLint previous_texture = 0, previous_level = 0, previous_layered = 0, previous_layer = 0, previous_access = 0,
-          previous_format = 0;
-    GLES.glGetIntegeri_v(GL_IMAGE_BINDING_NAME, 0, &previous_texture);
-    GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LEVEL, 0, &previous_level);
-    GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LAYERED, 0, &previous_layered);
-    GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LAYER, 0, &previous_layer);
-    GLES.glGetIntegeri_v(GL_IMAGE_BINDING_ACCESS, 0, &previous_access);
-    GLES.glGetIntegeri_v(GL_IMAGE_BINDING_FORMAT, 0, &previous_format);
-    GLint previous_program = 0;
-    GLES.glGetIntegerv(GL_CURRENT_PROGRAM, &previous_program);
+        // Save unit 0 and the current program; restore both on every exit.
+        GLint previous_texture = 0, previous_level = 0, previous_layered = 0, previous_layer = 0, previous_access = 0,
+              previous_format = 0;
+        GLES.glGetIntegeri_v(GL_IMAGE_BINDING_NAME, 0, &previous_texture);
+        GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LEVEL, 0, &previous_level);
+        GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LAYERED, 0, &previous_layered);
+        GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LAYER, 0, &previous_layer);
+        GLES.glGetIntegeri_v(GL_IMAGE_BINDING_ACCESS, 0, &previous_access);
+        GLES.glGetIntegeri_v(GL_IMAGE_BINDING_FORMAT, 0, &previous_format);
+        GLint previous_program = 0;
+        GLES.glGetIntegerv(GL_CURRENT_PROGRAM, &previous_program);
 
-    GLES.glBindImageTexture(0, texture, 0, GL_TRUE, 0, GL_READ_WRITE, backing);
-    GLES.glUseProgram(clear.program);
-    GLES.glUniform3i(clear.size_location, tex->width, tex->height, tex->depth);
-    GLES.glDispatchCompute((GLuint)((tex->width + 7) / 8), (GLuint)((tex->height + 7) / 8),
-                           (GLuint)((tex->depth + 7) / 8));
-    GLES.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT |
-                         GL_SHADER_STORAGE_BARRIER_BIT);
+        GLES.glBindImageTexture(0, texture, 0, GL_TRUE, 0, GL_READ_WRITE, backing);
+        GLES.glUseProgram(clear.program);
+        GLES.glUniform3i(clear.size_location, tex->width, tex->height, tex->depth);
+        GLES.glDispatchCompute((GLuint)((tex->width + 7) / 8), (GLuint)((tex->height + 7) / 8),
+                               (GLuint)((tex->depth + 7) / 8));
+        GLES.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT |
+                             GL_SHADER_STORAGE_BARRIER_BIT);
 
-    if (previous_texture != 0) {
-        GLES.glBindImageTexture(0, (GLuint)previous_texture, previous_level, (GLboolean)previous_layered,
-                                previous_layer, (GLenum)previous_access, (GLenum)previous_format);
-    } else {
-        GLES.glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);
+        if (previous_texture != 0) {
+            GLES.glBindImageTexture(0, (GLuint)previous_texture, previous_level, (GLboolean)previous_layered,
+                                    previous_layer, (GLenum)previous_access, (GLenum)previous_format);
+        } else {
+            GLES.glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);
+        }
+        GLES.glUseProgram((GLuint)previous_program);
+        return true;
     }
-    GLES.glUseProgram((GLuint)previous_program);
-    return true;
-}
 
 } // namespace
 
@@ -2110,14 +2124,15 @@ void glClearTexImage(GLuint texture, GLint level, GLenum format, GLenum type, co
     // shader preserves the clear semantics without
     // attaching the texture to an FBO. The clear value is zero in all Iris
     // calls; non-zero conversions remain rejected rather than guessed.
-    const bool layered_target =
-        textureTarget == TextureTarget::TEXTURE_3D || textureTarget == TextureTarget::TEXTURE_2D_ARRAY ||
-        textureTarget == TextureTarget::TEXTURE_CUBE_MAP;
+    const bool layered_target = textureTarget == TextureTarget::TEXTURE_3D ||
+                                textureTarget == TextureTarget::TEXTURE_2D_ARRAY ||
+                                textureTarget == TextureTarget::TEXTURE_CUBE_MAP;
     if (layered_target) {
         const bool zero = data == nullptr || (rgba[0] == 0.0f && rgba[1] == 0.0f && rgba[2] == 0.0f &&
-                                             rgba[3] == 0.0f && depth == 0.0f && stencil == 0);
+                                              rgba[3] == 0.0f && depth == 0.0f && stencil == 0);
         if (zero && textureTarget == TextureTarget::TEXTURE_3D && mg_clear_image3d_zero(texture, tex)) return;
-        TX_WARN_ONCE("glClearTexImage: layered texture %u target=%d clear not supported without an image-store path", texture, (int)textureTarget);
+        TX_WARN_ONCE("glClearTexImage: layered texture %u target=%d clear not supported without an image-store path",
+                     texture, (int)textureTarget);
         return;
     }
 

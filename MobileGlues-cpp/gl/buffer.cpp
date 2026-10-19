@@ -37,35 +37,35 @@ static GLint maxArrayId = 0;
 
 namespace {
 
-struct buffer_group_state_t { // shared across a share group
-    std::vector<GLuint> gen_buffers;
-    std::vector<char> gen_buffer_exists;
-    std::vector<GLuint> free_buffer_ids;
-    std::vector<size_t> buffer_datasize;
-};
+    struct buffer_group_state_t { // shared across a share group
+        std::vector<GLuint> gen_buffers;
+        std::vector<char> gen_buffer_exists;
+        std::vector<GLuint> free_buffer_ids;
+        std::vector<size_t> buffer_datasize;
+    };
 
-struct buffer_ctx_state_t { // private to one context
-    std::vector<GLuint> gen_arrays;
-    std::vector<char> gen_array_exists;
-    std::vector<GLuint> free_array_ids;
-    std::vector<GLuint> element_array_buffer_per_vao;
-    std::array<GLuint, 13> bound_buffers{};
-};
+    struct buffer_ctx_state_t { // private to one context
+        std::vector<GLuint> gen_arrays;
+        std::vector<char> gen_array_exists;
+        std::vector<GLuint> free_array_ids;
+        std::vector<GLuint> element_array_buffer_per_vao;
+        std::array<GLuint, 13> bound_buffers{};
+    };
 
-std::mutex g_buf_mutex;
-// The tables hold their state by pointer. A thread_local pointer into an entry is
-// the whole point of the design -- the ~90 access sites read through g_bg/g_bc
-// rather than looking anything up -- and the map moves its elements when it
-// grows, so the entry itself must not be what moves. The unique_ptr stays put
-// while the map rehashes around it.
-ska::flat_hash_map<unsigned long long, std::unique_ptr<buffer_group_state_t>> g_buf_groups;
-ska::flat_hash_map<unsigned long long, std::unique_ptr<buffer_ctx_state_t>> g_buf_ctxs;
+    std::mutex g_buf_mutex;
+    // The tables hold their state by pointer. A thread_local pointer into an entry is
+    // the whole point of the design -- the ~90 access sites read through g_bg/g_bc
+    // rather than looking anything up -- and the map moves its elements when it
+    // grows, so the entry itself must not be what moves. The unique_ptr stays put
+    // while the map rehashes around it.
+    ska::flat_hash_map<unsigned long long, std::unique_ptr<buffer_group_state_t>> g_buf_groups;
+    ska::flat_hash_map<unsigned long long, std::unique_ptr<buffer_ctx_state_t>> g_buf_ctxs;
 
-buffer_group_state_t g_buf_group_default;
-buffer_ctx_state_t g_buf_ctx_default;
+    buffer_group_state_t g_buf_group_default;
+    buffer_ctx_state_t g_buf_ctx_default;
 
-thread_local buffer_group_state_t* g_bg = &g_buf_group_default;
-thread_local buffer_ctx_state_t* g_bc = &g_buf_ctx_default;
+    thread_local buffer_group_state_t* g_bg = &g_buf_group_default;
+    thread_local buffer_ctx_state_t* g_bc = &g_buf_ctx_default;
 
 } // namespace
 
@@ -297,14 +297,29 @@ GLuint mg_driver_bound_buffer(GLenum target) {
     if (GLES.glGetIntegerv) {
         GLenum pname = 0;
         switch (target) {
-        case GL_ARRAY_BUFFER:          pname = GL_ARRAY_BUFFER_BINDING; break;
-        case GL_ELEMENT_ARRAY_BUFFER:  pname = GL_ELEMENT_ARRAY_BUFFER_BINDING; break;
-        case GL_DRAW_INDIRECT_BUFFER:  pname = GL_DRAW_INDIRECT_BUFFER_BINDING; break;
-        case GL_PIXEL_UNPACK_BUFFER:   pname = GL_PIXEL_UNPACK_BUFFER_BINDING; break;
-        case GL_PIXEL_PACK_BUFFER:     pname = GL_PIXEL_PACK_BUFFER_BINDING; break;
-        case GL_COPY_READ_BUFFER:      pname = GL_COPY_READ_BUFFER_BINDING; break;
-        case GL_COPY_WRITE_BUFFER:     pname = GL_COPY_WRITE_BUFFER_BINDING; break;
-        default: break;
+        case GL_ARRAY_BUFFER:
+            pname = GL_ARRAY_BUFFER_BINDING;
+            break;
+        case GL_ELEMENT_ARRAY_BUFFER:
+            pname = GL_ELEMENT_ARRAY_BUFFER_BINDING;
+            break;
+        case GL_DRAW_INDIRECT_BUFFER:
+            pname = GL_DRAW_INDIRECT_BUFFER_BINDING;
+            break;
+        case GL_PIXEL_UNPACK_BUFFER:
+            pname = GL_PIXEL_UNPACK_BUFFER_BINDING;
+            break;
+        case GL_PIXEL_PACK_BUFFER:
+            pname = GL_PIXEL_PACK_BUFFER_BINDING;
+            break;
+        case GL_COPY_READ_BUFFER:
+            pname = GL_COPY_READ_BUFFER_BINDING;
+            break;
+        case GL_COPY_WRITE_BUFFER:
+            pname = GL_COPY_WRITE_BUFFER_BINDING;
+            break;
+        default:
+            break;
         }
         if (pname != 0) {
             GLint driver = 0;
@@ -633,7 +648,7 @@ void glBindVertexBuffer(GLuint bindingindex, GLuint buffer, GLintptr offset, GLs
 // no correctness.
 bool get_internal_format_transfer(GLenum internalformat, GLenum* format, GLenum* type) {
     switch (internalformat) {
-    // clang-format off
+        // clang-format off
     case GL_R8:        *format = GL_RED;           *type = GL_UNSIGNED_BYTE;  return true;
     case GL_R8I:       *format = GL_RED_INTEGER;   *type = GL_BYTE;           return true;
     case GL_R8UI:      *format = GL_RED_INTEGER;   *type = GL_UNSIGNED_BYTE;  return true;
@@ -989,26 +1004,26 @@ void glTexBufferRange(GLenum target, GLenum internalformat, GLuint buffer, GLint
 // afterwards. GLES defines it as a generic target with no meaning of its own, so
 // the swap is invisible: nothing observes it, and no draw depends on it.
 namespace {
-struct borrowed_target_t {
-    GLenum target;
-    GLint saved = 0;
-    bool borrowed = false;
+    struct borrowed_target_t {
+        GLenum target;
+        GLint saved = 0;
+        bool borrowed = false;
 
-    explicit borrowed_target_t(GLenum requested) : target(requested) {
-        if (requested != GL_PARAMETER_BUFFER) return;
-        const GLuint real = find_real_buffer(find_bound_buffer(GL_PARAMETER_BUFFER_BINDING));
-        GLES.glGetIntegerv(GL_COPY_WRITE_BUFFER_BINDING, &saved);
-        GLES.glBindBuffer(GL_COPY_WRITE_BUFFER, real);
-        target = GL_COPY_WRITE_BUFFER;
-        borrowed = true;
-    }
-    ~borrowed_target_t() {
-        if (borrowed) GLES.glBindBuffer(GL_COPY_WRITE_BUFFER, static_cast<GLuint>(saved));
-    }
+        explicit borrowed_target_t(GLenum requested) : target(requested) {
+            if (requested != GL_PARAMETER_BUFFER) return;
+            const GLuint real = find_real_buffer(find_bound_buffer(GL_PARAMETER_BUFFER_BINDING));
+            GLES.glGetIntegerv(GL_COPY_WRITE_BUFFER_BINDING, &saved);
+            GLES.glBindBuffer(GL_COPY_WRITE_BUFFER, real);
+            target = GL_COPY_WRITE_BUFFER;
+            borrowed = true;
+        }
+        ~borrowed_target_t() {
+            if (borrowed) GLES.glBindBuffer(GL_COPY_WRITE_BUFFER, static_cast<GLuint>(saved));
+        }
 
-    borrowed_target_t(const borrowed_target_t&) = delete;
-    borrowed_target_t& operator=(const borrowed_target_t&) = delete;
-};
+        borrowed_target_t(const borrowed_target_t&) = delete;
+        borrowed_target_t& operator=(const borrowed_target_t&) = delete;
+    };
 } // namespace
 
 void glBufferData(GLenum target, GLsizeiptr size, const void* data, GLenum usage) {
@@ -1088,8 +1103,8 @@ void glClearBufferSubData(GLenum target, GLenum internalformat, GLintptr offset,
         // Do not silently substitute zeros for a value conversion this layer
         // does not implement.
         mg_set_gl_error(GL_INVALID_OPERATION);
-        LOG_E("glClearBufferSubData: unsupported non-zero clear conversion format=%s type=%s",
-              glEnumToString(format), glEnumToString(type))
+        LOG_E("glClearBufferSubData: unsupported non-zero clear conversion format=%s type=%s", glEnumToString(format),
+              glEnumToString(type))
         return;
     }
 

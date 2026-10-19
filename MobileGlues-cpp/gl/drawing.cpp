@@ -12,6 +12,8 @@
 #include "mg.h"
 #include "texture.h"
 #include "image_metadata.h"
+#include "image_bindings.h"
+#include "shader_state.h"
 #include "../egl/context.h"
 
 #define DEBUG 0
@@ -226,17 +228,29 @@ void glDrawElements(GLenum mode, GLsizei count, GLenum type, const void* indices
     CHECK_GL_ERROR
 }
 
-namespace {
-constexpr GLuint kTrackedImageUnits = 32;
-GLuint g_bound_image_textures[kTrackedImageUnits] = {};
-} // namespace
-
 bool mg_image_texture_is_bound(GLuint texture) {
     if (texture == 0) return false;
-    for (GLuint bound : g_bound_image_textures) {
-        if (bound == texture) return true;
+    for (const mg_image_binding_t& binding : gl_state->image_bindings) {
+        if (binding.texture == texture) return true;
     }
     return false;
+}
+
+void mg_materialize_image_bindings() {
+    MgProgramObject* state = mg_find_program(gl_state->current_program);
+    if (state == nullptr || state->image_uniform_units.empty()) return;
+    for (GLuint logical = 0; logical < MG_TRACKED_IMAGE_UNITS; ++logical) {
+        const mg_image_binding_t& binding = gl_state->image_bindings[logical];
+        if (binding.texture == 0) continue;
+        GLuint physical = logical;
+        auto it = state->image_unit_remap.find(logical);
+        if (it != state->image_unit_remap.end()) physical = it->second;
+        // The shader was compiled against the backing qualifier, not the
+        // desktop logical format.
+        const GLenum format = mg_image_backing_format(binding.format);
+        GLES.glBindImageTexture(physical, binding.texture, binding.level, binding.layered, binding.layer,
+                                binding.access, format);
+    }
 }
 
 void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access,
@@ -244,15 +258,17 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
     LOG()
     LOG_D("glBindImageTexture, unit: %d, texture: %d, level: %d, layered: %d, layer: %d, access: %d, format: %d", unit,
           texture, level, layered, layer, access, format)
+    // Retain the application's logical binding. A later glUseProgram may map
+    // this unit to a different physical ESSL unit; replaying the record is what
+    // keeps image binding order independent of the current program.
+    if (unit < MG_TRACKED_IMAGE_UNITS) {
+        gl_state->image_bindings[unit] = {texture, level, layered, layer, access, format};
+    }
     // The shader was compiled against the backing qualifier, not the desktop
     // logical format. Bind the same backing format the texture was allocated
     // with; R8UI/R16UI become R32UI.
     format = mg_image_backing_format(format);
-    // ANGLE's Vulkan descriptor update can fault when an image unit is
-    // re-pointed directly from one texture shape to another (observed with a
-    // 32x16x32 R32UI 3D wsr_lod_img after a 2D/3D predecessor). Detach the unit
-    // first; the GL contract allows this and the final binding is unchanged.
-    if (unit < kTrackedImageUnits) g_bound_image_textures[unit] = texture;
+    unit = mg_remap_image_unit(unit);
     GLES.glBindImageTexture(unit, texture, level, layered, layer, access, format);
     // The provider rejects formats that ESSL 3.10 cannot name, notably r8ui and
     // r16ui. Until the loader lowers those formats, the application must see the
@@ -264,8 +280,13 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
 
 void glUniform1i(GLint location, GLint v0) {
     LOG()
-    LOG_D("glUniform1i, location: %d, v0: %d", location, v0)
-    GLES.glUniform1i(location, v0);
+    GLint mapped = v0;
+    const bool image_uniform = mg_image_uniform_value(location, v0, &mapped);
+    LOG_D("glUniform1i, location: %d, v0: %d", location, mapped)
+    GLES.glUniform1i(location, mapped);
+    // The application may bind images before it selects the program and sets
+    // the image uniform. Once the logical unit is known, replay the binding.
+    if (image_uniform) mg_materialize_image_bindings();
     CHECK_GL_ERROR
 }
 

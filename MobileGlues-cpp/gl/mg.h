@@ -67,6 +67,19 @@ extern "C"
     typedef struct hardware_s* hardware_t;
     extern hardware_t hardware;
 
+    // Desktop image units are context state. The wrapper remaps the
+    // application's logical unit to the program's physical ESSL unit, so it
+    // must retain the logical binding and replay it when the program changes.
+#define MG_TRACKED_IMAGE_UNITS 32
+    struct mg_image_binding_t {
+        GLuint texture;
+        GLint level;
+        GLboolean layered;
+        GLint layer;
+        GLenum access;
+        GLenum format;
+    };
+
     struct gl_state_s {
         GLsizei proxy_width;
         GLsizei proxy_height;
@@ -96,6 +109,11 @@ extern "C"
         GLint pack_lsb_first;
         GLint pack_image_height;
         GLint pack_skip_images;
+
+        // Logical application state for glBindImageTexture. The physical ESSL
+        // unit is derived from the current program and replayed on program
+        // switches; the application never observes the remap.
+        mg_image_binding_t image_bindings[MG_TRACKED_IMAGE_UNITS];
     };
     typedef struct gl_state_s* gl_state_t;
     // Where gl_state points when no tracked context is current. Every member is a

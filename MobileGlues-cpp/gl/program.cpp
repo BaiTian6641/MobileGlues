@@ -18,6 +18,7 @@
 #include "../config/settings.h"
 #include "drawing.h"
 #include "shader_state.h"
+#include "image_bindings.h"
 
 #define DEBUG 0
 
@@ -169,6 +170,16 @@ void glLinkProgram(GLuint program) {
 
     GLES.glLinkProgram(program);
 
+    GLint link_status = GL_FALSE;
+    GLES.glGetProgramiv(program, GL_LINK_STATUS, &link_status);
+    if (link_status == GL_TRUE) {
+        mg_reflect_image_uniforms(program);
+        mg_resolve_duplicate_image_bindings(program);
+        // A relink can change the physical image-unit plan while the program
+        // is already current.
+        if (gl_state->current_program == program) mg_materialize_image_bindings();
+    }
+
     CHECK_GL_ERROR
 }
 
@@ -191,6 +202,9 @@ void glUseProgram(GLuint program) {
     if (program != gl_state->current_program) {
         gl_state->current_program = program;
         GLES.glUseProgram(program);
+        // Image units are context state; the program's physical plan may map
+        // them differently from the previous program.
+        mg_materialize_image_bindings();
         CHECK_GL_ERROR
     }
 }

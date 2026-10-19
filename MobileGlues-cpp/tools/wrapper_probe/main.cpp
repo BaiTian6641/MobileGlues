@@ -1005,6 +1005,213 @@ void main() { outb.value = imageLoad(img, ivec3(0)).r; }
     return r;
 }
 
+Result test_explicit_image_binding() {
+    Result r;
+    // Both programs name unit 5 themselves and never call glUniform1i. If the
+    // wrapper replaces the explicit binding with its fallback unit, the image
+    // is written/read on a unit the application never bound and the value is 0.
+    const char* write_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+layout(binding = 5, r32ui) writeonly uniform highp uimage3D img;
+void main() { imageStore(img, ivec3(0), uvec4(0x12345678u, 0u, 0u, 0u)); }
+)";
+    const char* read_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+layout(binding = 5, r32ui) readonly uniform highp uimage3D img;
+layout(std430, binding = 1) buffer Out { uint value; } outb;
+void main() { outb.value = imageLoad(img, ivec3(0)).r; }
+)";
+
+    GLuint tex = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_3D, tex);
+    api.glTexStorage3D(GL_TEXTURE_3D, 1, GL_R32UI, 1, 1, 1);
+    const GLenum storage_error = api.glGetError();
+    api.glBindImageTexture(5, tex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+    const GLenum bind_error = api.glGetError();
+
+    auto build_program = [&](const char* source, std::string* log_out) -> GLuint {
+        GLuint shader = api.glCreateShader(GL_COMPUTE_SHADER);
+        api.glShaderSource(shader, 1, &source, nullptr);
+        api.glCompileShader(shader);
+        GLint status = GL_FALSE;
+        api.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+        GLint len = 0;
+        api.glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+        if (len > 0) {
+            log_out->resize(static_cast<size_t>(len), '\0');
+            api.glGetShaderInfoLog(shader, len, nullptr, log_out->data());
+        }
+        if (!status) {
+            api.glDeleteShader(shader);
+            return 0;
+        }
+        GLuint program = api.glCreateProgram();
+        api.glAttachShader(program, shader);
+        api.glLinkProgram(program);
+        GLint linked = GL_FALSE;
+        api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+        api.glDeleteShader(shader);
+        if (!linked) {
+            api.glDeleteProgram(program);
+            return 0;
+        }
+        return program;
+    };
+
+    std::string write_log, read_log;
+    GLuint write_program = build_program(write_cs, &write_log);
+    GLuint read_program = build_program(read_cs, &read_log);
+
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 16, nullptr, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+
+    if (write_program) {
+        api.glUseProgram(write_program);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    }
+    if (read_program) {
+        api.glUseProgram(read_program);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    }
+    GLuint value = 0;
+    void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, 4, GL_MAP_READ_BIT);
+    if (ptr) {
+        memcpy(&value, ptr, 4);
+        api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    }
+    r.ok = storage_error == GL_NO_ERROR && bind_error == GL_NO_ERROR && write_program != 0 &&
+           read_program != 0 && value == 0x12345678u;
+    r.detail = "storage_error=" + std::to_string(storage_error) + " bind_error=" + std::to_string(bind_error) +
+               " write_program=" + std::to_string(write_program) +
+               " read_program=" + std::to_string(read_program) + " value=" + std::to_string(value) +
+               (write_log.empty() ? "" : " write_log=" + write_log) +
+               (read_log.empty() ? "" : " read_log=" + read_log);
+    if (write_program) api.glDeleteProgram(write_program);
+    if (read_program) api.glDeleteProgram(read_program);
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteTextures(1, &tex);
+    return r;
+}
+
+Result test_duplicate_image_binding() {
+    Result r;
+    // Iris can leave both images at binding 0 while assigning units through
+    // glUniform1i. The wrapper must treat the repeated binding as an alias and
+    // give the declarations distinct fallback units.
+    const char* write_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+layout(binding = 0) writeonly uniform highp uimage3D img0;
+layout(binding = 0) writeonly uniform highp uimage3D img1;
+void main() {
+    imageStore(img0, ivec3(0), uvec4(11u, 0u, 0u, 0u));
+    imageStore(img1, ivec3(0), uvec4(22u, 0u, 0u, 0u));
+}
+)";
+    const char* read_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+layout(binding = 0) readonly uniform highp uimage3D img0;
+layout(binding = 0) readonly uniform highp uimage3D img1;
+layout(std430, binding = 1) buffer Out { uint v[2]; } outb;
+void main() {
+    outb.v[0] = imageLoad(img0, ivec3(0)).r;
+    outb.v[1] = imageLoad(img1, ivec3(0)).r;
+}
+)";
+
+    GLuint tex0 = 0, tex1 = 0;
+    api.glGenTextures(1, &tex0);
+    api.glGenTextures(1, &tex1);
+    for (GLuint tex : {tex0, tex1}) {
+        api.glBindTexture(GL_TEXTURE_3D, tex);
+        api.glTexStorage3D(GL_TEXTURE_3D, 1, GL_R32UI, 1, 1, 1);
+    }
+    api.glBindImageTexture(0, tex0, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+    api.glBindImageTexture(1, tex1, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+    const GLenum bind_error = api.glGetError();
+
+    auto build_program = [&](const char* source, std::string* log_out) -> GLuint {
+        GLuint shader = api.glCreateShader(GL_COMPUTE_SHADER);
+        api.mg_image_metadata_begin();
+        api.mg_image_metadata_add("img0", GL_R32UI);
+        api.mg_image_metadata_add("img1", GL_R32UI);
+        api.mg_image_metadata_end();
+        api.glShaderSource(shader, 1, &source, nullptr);
+        api.glCompileShader(shader);
+        GLint status = GL_FALSE;
+        api.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+        GLint len = 0;
+        api.glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+        if (len > 0) {
+            log_out->resize(static_cast<size_t>(len), '\0');
+            api.glGetShaderInfoLog(shader, len, nullptr, log_out->data());
+        }
+        if (!status) {
+            api.glDeleteShader(shader);
+            return 0;
+        }
+        GLuint program = api.glCreateProgram();
+        api.glAttachShader(program, shader);
+        api.glLinkProgram(program);
+        GLint linked = GL_FALSE;
+        api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+        api.glDeleteShader(shader);
+        if (!linked) {
+            api.glDeleteProgram(program);
+            return 0;
+        }
+        return program;
+    };
+
+    std::string write_log, read_log;
+    GLuint write_program = build_program(write_cs, &write_log);
+    GLuint read_program = build_program(read_cs, &read_log);
+
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 16, nullptr, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+
+    if (write_program) {
+        api.glUseProgram(write_program);
+        api.glUniform1i(api.glGetUniformLocation(write_program, "img0"), 0);
+        api.glUniform1i(api.glGetUniformLocation(write_program, "img1"), 1);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    }
+    if (read_program) {
+        api.glUseProgram(read_program);
+        api.glUniform1i(api.glGetUniformLocation(read_program, "img0"), 0);
+        api.glUniform1i(api.glGetUniformLocation(read_program, "img1"), 1);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    }
+    GLuint values[2] = {};
+    void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(values), GL_MAP_READ_BIT);
+    if (ptr) {
+        memcpy(values, ptr, sizeof(values));
+        api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    }
+    r.ok = bind_error == GL_NO_ERROR && write_program != 0 && read_program != 0 && values[0] == 11u &&
+           values[1] == 22u;
+    r.detail = "bind_error=" + std::to_string(bind_error) + " write_program=" + std::to_string(write_program) +
+               " read_program=" + std::to_string(read_program) + " values=" + std::to_string(values[0]) + "," +
+               std::to_string(values[1]) + (write_log.empty() ? "" : " write_log=" + write_log) +
+               (read_log.empty() ? "" : " read_log=" + read_log);
+    if (write_program) api.glDeleteProgram(write_program);
+    if (read_program) api.glDeleteProgram(read_program);
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteTextures(1, &tex0);
+    api.glDeleteTextures(1, &tex1);
+    return r;
+}
+
 Result test_act_volume() {
     Result r;
     const int W = 192, H = 96, D = 192;
@@ -1698,6 +1905,8 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "rgb8_snorm")) run("rgb8_snorm_attachment", test_rgb8_snorm_attachment);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
+    if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);
+    if (!strcmp(mode, "all") || !strcmp(mode, "duplicate_image")) run("duplicate_image_binding", test_duplicate_image_binding);
     if (!strcmp(mode, "all") || !strcmp(mode, "integer_image")) run("integer_image", test_integer_image_binding);
     if (!strcmp(mode, "all") || !strcmp(mode, "act_volume")) run("act_volume", test_act_volume);
     if (!strcmp(mode, "all") || !strcmp(mode, "act_pingpong")) run("act_pingpong", test_act_pingpong);

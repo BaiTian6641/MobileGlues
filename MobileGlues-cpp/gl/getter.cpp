@@ -243,6 +243,10 @@ void InitGLESBaseExtensions() {
     const bool es32 = g_gles_caps.major > 3 || (g_gles_caps.major == 3 && g_gles_caps.minor >= 2);
 
     if (es30) extensions.push_back("GL_ARB_clear_texture");
+    // glClearBufferData/glClearBufferSubData are implemented in gl/buffer.cpp.
+    // Iris 1.8.14 uses the latter to zero-fill new SSBOs through GL43C; without
+    // the name the LWJGL entry point stays null even though the symbol exists.
+    if (es30) extensions.push_back("GL_ARB_clear_buffer_object");
     if (es30 && GLES.glGetProgramBinary != nullptr && GLES.glProgramBinary != nullptr)
         extensions.push_back("GL_ARB_get_program_binary");
     if (es31 && GLES.glBindBufferBase != nullptr && GLES.glBindBufferRange != nullptr)
