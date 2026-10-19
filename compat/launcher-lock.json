@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "updated": "2026-10-19",
+  "selection": {
+    "status": "PROVISIONAL",
+    "primary": "fcl",
+    "decision_gate": "S0.3",
+    "rule": "Select one maintained launcher integration through source review and a release-build prototype. FCL is the only integration with an observed game process; its selection is not yet a support claim.",
+    "candidates": [
+      "fcl",
+      "zalith-launcher-2"
+    ]
+  },
+  "primary": {
+    "id": "fcl",
+    "name": "Fold Craft Launcher",
+    "package": "com.tungsten.fcl",
+    "version": "1.3.4.0",
+    "source": "https://github.com/FCL-Team/FoldCraftLauncher",
+    "installed_on": "C1L63708PZ",
+    "responsibilities": [
+      "entitled Minecraft installation and account sign-in",
+      "matched JVM and native dependency set",
+      "instance management, mods and world storage",
+      "shaderpack ZIP import through normal Android file access",
+      "provider policy, safe restart and support export"
+    ],
+    "renderer_plugin": {
+      "package": "com.fcl.plugin.mobileglues",
+      "installed_version": "2.0.0",
+      "installed_apk_sha256": "a7e1eb29731fdece7ab3af7fb00692b856f1808a7544436e7b3eb6c08355581a",
+      "test_apk_sha256": "e728b6e9bd0d290df4059a401aed3aa7bd48c6f55d1d3bccb7cb0af4fbd72162",
+      "test_packaged_library_sha256": "85f6dcf2d29ac6e7bbe82fe70f660daaba44f6018f1849a86118991ced3cd3a0",
+      "status": "TEST BUILD INSTALLED; NOT RELEASE-SIGNED"
+    },
+    "observed_game_process": {
+      "minecraft": "1.21.1",
+      "loader": "NeoForge 21.1.262",
+      "java": "21.0.1-internal (FCL app_runtime/jre21)",
+      "iris": "1.8.14-beta.1+mc1.21.1",
+      "sodium": "0.8.13+mc1.21.1",
+      "renderer": "test plugin core a524755",
+      "provider_in_game": "Adreno X1-85 / ANGLE / Vulkan 1.4.295 / OpenGL ES 3.2",
+      "installed_plugin_log_paths": [
+        "SDL_OPENGL_LIBRARY",
+        "LD_LIBRARY_PATH"
+      ],
+      "pack": "ComplementaryReimagined_r5.9.2.zip, High, active without fallback",
+      "evidence": [
+        "docs/mobileglues-googlebook/validation/README.md",
+        "https://mclo.gs/z3qIi68",
+        "https://mclo.gs/hH2OIs5"
+      ],
+      "qualification": "Game-process smoke only. This is not the pinned 1.20.1/Fabric or 26.3/Fabric lane."
+    },
+    "qualification": {
+      "status": "PARTIAL",
+      "reason": "Launch, renderer loading and original ZIP import were observed. Release-build source review, both pinned lanes, provider selection and recovery are not qualified."
+    }
+  },
+  "candidate": {
+    "id": "zalith-launcher-2",
+    "name": "Zalith Launcher 2",
+    "source": "https://github.com/ZalithLauncher/ZalithLauncher2",
+    "version": null,
+    "status": "NOT INSPECTED",
+    "note": "Inspect source, native bridge and release-build integration before selecting or pinning. Do not inherit FCL results."
+  },
+  "provider_policy": {
+    "reference": "compat/runtime-lock.json#provider",
+    "rule": "Persist the observed provider and restart the graphics process on change. Cache identities include provider and driver fingerprints."
+  }
+}

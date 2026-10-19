@@ -1,0 +1,75 @@
+# Googlebook port documentation
+
+Research date: 19 October 2026. Target: native Android ARM64 on Snapdragon X1E and X2E
+Googlebooks. Device execution, performance qualification and retail X2E qualification remain
+work to perform.
+
+This directory separates maintained requirements from captured evidence. A support claim is
+valid only when it names the exact device, runtime, renderer, provider and shaderpack tuple and
+points to retained evidence.
+
+## Authority order
+
+1. `01_MobileGlues_Googlebook_Architecture.md` defines product scope, architecture, provider
+   strategy, the OpenGL contract and the release definition.
+2. `02_MobileGlues_Googlebook_Implementation_Plan.md` defines stages, tasks, dependencies and
+   exit gates.
+3. `03_MobileGlues_Googlebook_Validation_and_Sources.md` defines the lock proposal, test
+   corpus, acceptance methods, source register and support boundaries.
+4. `mobileglues-googlebook/` contains execution records and retained evidence.
+5. `../compat/` contains machine-readable runtime, launcher, shaderpack and device-profile
+   locks.
+
+If a measured fact in an evidence artifact contradicts the specification, correct the
+specification and retain the evidence. Never relabel or delete evidence to make a gate pass.
+
+## Document map
+
+| Path | Role | State |
+| --- | --- | --- |
+| [01_MobileGlues_Googlebook_Architecture.md](01_MobileGlues_Googlebook_Architecture.md) | Product and architecture requirements | Authoritative |
+| [02_MobileGlues_Googlebook_Implementation_Plan.md](02_MobileGlues_Googlebook_Implementation_Plan.md) | S0-S9 execution plan and gates | Authoritative |
+| [03_MobileGlues_Googlebook_Validation_and_Sources.md](03_MobileGlues_Googlebook_Validation_and_Sources.md) | Locks, acceptance methods and sources | Authoritative for method |
+| [mobileglues-googlebook/](mobileglues-googlebook/) | Execution state, decisions, feature matrix and validation artifacts | Evidence only |
+| [../compat/](../compat/) | Runtime, launcher, shaderpack and device-profile locks | Proposed until qualified |
+| [MobileGlues_Googlebook_X1E_Optimization_Plan.md](MobileGlues_Googlebook_X1E_Optimization_Plan.md) | Historical X1E plan | Superseded |
+
+## Stage scheme
+
+The maintained plan uses `S0`-`S9`. Runtime-lane results stay separate:
+
+- `S1-legacy`: Minecraft 1.20.1 / Java 17 / Fabric / Iris / Sodium.
+- `S1-current`: Minecraft 26.3 / Java 25 / Fabric / Iris / Sodium.
+- `S1-provider`: below-wrapper and in-process EGL/GLES provider evidence.
+
+Aggregate S1 is `PARTIAL/BLOCKED` while a required lane has no passing real-device startup.
+Older execution records use `Stage 0`-`Stage 8`; the approximate mapping is in
+`mobileglues-googlebook/README.md`. Do not convert old evidence to a new stage result without
+checking its exact lane, provider and pack tuple.
+
+## Status vocabulary
+
+Device and test results use exactly `PASS`, `FAIL`, `BLOCKED`, `NOT RUN` or
+`NOT APPLICABLE`, with a reason for the latter three.
+
+Support classifications are:
+
+- **Certified**: the complete named device/runtime/pack/profile tuple passed.
+- **Compatible but performance-limited**: fidelity passed, measured performance is outside the
+  preferred target.
+- **Experimental**: particular features or runtime combinations remain under test.
+- **Unsupported**: a known blocker prevents the requested configuration.
+- **Unqualified**: insufficient evidence; no pass or fail claim.
+
+A compile, a screenshot or an average frame rate alone does not establish support. A pack with
+an intended effect disabled is a failed test for that effect.
+
+## Lock and evidence rules
+
+- Original shaderpack ZIPs stay byte-identical. Only hashes, acquisition metadata and test
+  results belong in Git; archives stay in `/home/polar/MobileGlues-fixtures/`.
+- The connected X1E unit is an HP Googlebook 14 (`quartz`, 2880 x 1800). The XPS Googlebook
+  (2560 x 1600) is the official reference specification, not an identity for the HP unit.
+- Provider selection is recorded as observed, not requested. A provider change starts a fresh
+  graphics process and a new cache namespace.
+- Performance objectives remain planning targets until measured on the named tuple.

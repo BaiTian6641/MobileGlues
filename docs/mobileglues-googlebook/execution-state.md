@@ -1,16 +1,25 @@
 # MobileGlues X1E Execution State
 
-Plan baseline: `docs/MobileGlues_Googlebook_X1E_Optimization_Plan.md` (canonical path in this workspace).
+Plan baseline: `docs/01_MobileGlues_Googlebook_Architecture.md`,
+`docs/02_MobileGlues_Googlebook_Implementation_Plan.md` and
+`docs/03_MobileGlues_Googlebook_Validation_and_Sources.md`. Distribution locks: `compat/`.
 Last updated: 2026-10-19 (bridge 1.0.17).
+
+Stage labels below retain the historical `Stage 0`-`Stage 8` numbering used when the evidence
+was captured. The approximate `S0`-`S9` mapping and lane status are in `README.md`. In current
+terms: S0 partial; S1-provider partial; S1-legacy partial but the pinned lane is NOT RUN;
+S1-current NOT RUN; S2/S3 partial; S4 partial; S5/S6 staged with WSR 256 blocked; S7-S9 NOT RUN.
 
 ## Current stage and active task
 
-- Stage 0/1/2: locked X1E tuple, reproducible ARM64 build, provider and wrapper probes complete for the
-  tested contracts; remaining capability/cache/ownership items stay open.
-- Stage 3: both original Complementary r5.9.2 styles initialize at High without fallback; named-effect
-  fidelity matrix remains open.
-- Stage 4: ACT 192 staged pass on the original pack.
-- Stage 5: WSR 128 and WSR 192 staged passes on the original pack; WSR 256 blocked by provider SSBO limit.
+- Stage 0/1/2 (historical): locked X1E tuple, reproducible ARM64 build, provider and wrapper probes
+  complete for the tested contracts; remaining capability/cache/ownership items stay open.
+- Stage 3 (historical): both original Complementary r5.9.2 styles initialize at High without fallback;
+  named-effect fidelity matrix remains open. The game process was Minecraft 1.21.1 / NeoForge
+  21.1.262, not the pinned 1.20.1/Fabric or 26.3/Fabric lane.
+- Stage 4 (historical): ACT 192 staged pass on the original pack.
+- Stage 5 (historical): WSR 128 and WSR 192 staged passes on the original pack; WSR 256 blocked by
+  the provider's 134,217,728-byte storage-block limit.
 - Active task: WSR 256 negative gate and optional player reflections, then return to named-effect fidelity.
 - Image binding / ACT repair (bridge 1.0.17): fixed name-to-unit registry shared by the transformer and
   Iris ProgramImages; `voxel_img` per-frame clear restored. On X1E, ACT 192 colors are distinct, WSR 192

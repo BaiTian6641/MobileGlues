@@ -7,6 +7,12 @@ No row is release-qualified. The X1E Googlebook (`C1L63708PZ`) and the FCL game 
 staged rows below are device evidence, but named-effect coverage, performance, and lifecycle gates remain
 open.
 
+This file preserves evidence captured under the historical X1E plan. Its stage labels and status
+vocabulary are not the current `S0`-`S9` table; see `README.md` and `../README.md` for the mapping and
+current lane status. The game-process rows use Minecraft 1.21.1 / NeoForge 21.1.262, not the pinned
+1.20.1/Fabric or 26.3/Fabric lanes, and the connected unit is an HP Googlebook 14 rather than the XPS
+reference specification.
+
 ## Renderer / build rows
 
 | Renderer build | Backend/provider | Device | Level | Result | Evidence |

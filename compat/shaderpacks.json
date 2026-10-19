@@ -1,0 +1,242 @@
+{
+  "schema": 1,
+  "updated": "2026-10-19",
+  "research_date": "2026-10-19",
+  "source_policy": "Original publisher archives are test inputs. Keep them byte-identical, store only hashes and acquisition metadata in Git, and never ship a visually reduced derivative under the original pack name.",
+  "profiles": {
+    "high": {
+      "author_profile": "High",
+      "colored_lighting": 0,
+      "act_volume": null,
+      "world_space_reflections": false,
+      "release_role": "required standard fidelity"
+    },
+    "very_high": {
+      "author_profile": "Very High",
+      "colored_lighting": 192,
+      "act_volume": [192, 96, 192],
+      "world_space_reflections": false,
+      "release_role": "required advanced lighting"
+    },
+    "ultra": {
+      "author_profile": "Ultra",
+      "colored_lighting": 256,
+      "act_volume": [256, 128, 256],
+      "world_space_reflections": true,
+      "release_role": "required advanced lighting and WSR"
+    },
+    "complementary": {
+      "author_profile": "Complementary",
+      "colored_lighting": 512,
+      "act_volume": [512, 256, 512],
+      "world_space_reflections": true,
+      "release_role": "optional extended stress; outside the initial full-support claim"
+    }
+  },
+  "hard_requirements": {
+    "compute": {
+      "local_size": [8, 8, 8],
+      "minimum_total_invocations": 512,
+      "source": "ACT flood fill in the original r5.9.3 assets",
+      "x1e_provider_status": "PASS",
+      "x1e_evidence": "capability probe compute_512_invocations and wrapper_probe compute_512"
+    },
+    "vertex_integer_image_writes": {
+      "required": true,
+      "source": "shadow vertex path writes integer 3D images",
+      "rgba16f_status": "PASS",
+      "r8ui_r16ui_status": "FAIL on the raw provider; r32ui substitution is staged, full lowering not implemented",
+      "x1e_evidence": "capability probe vertex_image_store; wrapper_probe vertex_image_store"
+    },
+    "active_render_targets": {
+      "rule": "Count active outputs after preprocessing and loader transformation; do not infer MRT requirements from the highest logical colortex index.",
+      "observed_static_max_outputs": 5
+    },
+    "act_256_resources_mib": {
+      "act_images": 144,
+      "wsr_images_including_lod": 8.0625,
+      "selected_act_wsr_subtotal": 345.5625,
+      "ultra_rain_puddle_image": 0.015625,
+      "listed_resources_total": 345.578125,
+      "excluded": [
+        "ordinary framebuffers and history",
+        "atlas and world data",
+        "other optional resources",
+        "driver overhead",
+        "Java memory"
+      ]
+    },
+    "wsr_storage": {
+      "single_ssbo_bytes": 202899456,
+      "single_ssbo_mib": 193.5,
+      "provider_max_shader_storage_block_size": 134217728,
+      "wsr_128_ssbo_bytes": 50855936,
+      "wsr_128_status": "PASS (staged)",
+      "wsr_192_ssbo_bytes": 114229248,
+      "wsr_192_status": "PASS (staged)",
+      "wsr_256_status": "BLOCKED by the provider limit; system RAM does not repair a smaller accessible range",
+      "optional_player_reflection": {
+        "additional_ssbo_bytes": 5376,
+        "atlas": "64 x 64 RGBA8",
+        "status": "NOT RUN"
+      }
+    },
+    "formats": {
+      "RGB8_SNORM": "FAIL as a raw color attachment on X1E; wrapper RGB8_SNORM backing is PASS (staged)",
+      "RGBA8_SNORM": "PASS",
+      "R11F_G11F_B10F": "PASS",
+      "RGB16F": "PASS",
+      "RGBA16F": "PASS",
+      "r8ui_r16ui_images": "FAIL on the raw provider; r32ui substitution staged"
+    },
+    "rule": "A successful compile with an intended effect disabled is a failed test for that effect."
+  },
+  "packs": [
+    {
+      "id": "complementary-reimagined",
+      "style": "Reimagined",
+      "version": "r5.9.3",
+      "modrinth_version_id": "Bqen1mJX",
+      "filename": "ComplementaryReimagined_r5.9.3.zip",
+      "size": 553397,
+      "sha256": "fed6c879e732cf7fc7bc6570ebb1def43235aa7e96f62859fbdbdbfa0b484b38",
+      "sha512": "45304b1d7862afdb2177b7e6226fc9c6737911d17a4ad46cc9c519ca4deb935f05072cd337cd8b19a15bb8062b57b54eceec7bdee4cd572d94858e2946d37d85",
+      "role": "required standard and advanced corpus",
+      "profiles": ["high", "very_high", "ultra", "complementary"],
+      "lanes": ["current", "legacy"],
+      "qualification": {
+        "status": "STAGED",
+        "effect_matrix": "NOT RUN",
+        "advanced_profiles": "NOT RUN on r5.9.3; ACT/WSR evidence was collected on the r5.9.2 regression asset",
+        "staged_evidence": [
+          "Historical smoke: MC 1.21.1 / NeoForge, High, pipeline active without fallback, 22 FPS at 2880 x 1585."
+        ]
+      }
+    },
+    {
+      "id": "complementary-unbound",
+      "style": "Unbound",
+      "version": "r5.9.3",
+      "modrinth_version_id": "B1kyfoUZ",
+      "filename": "ComplementaryUnbound_r5.9.3.zip",
+      "size": 553400,
+      "sha256": "98ac741dee294d2a3c82d153349148c3bb7fb688c30eb3b49c3b9ac37e968c5a",
+      "sha512": "a085d1d8cda67cd17a2b414eeba48bbd809da069f269bab46246235ec8fe714a275013c70d0504527b0987d810deddddba4564332414ab3b3bd7435932ff808c",
+      "role": "required distinct visual style and advanced corpus",
+      "profiles": ["high", "very_high", "ultra", "complementary"],
+      "lanes": ["current", "legacy"],
+      "qualification": {
+        "status": "NOT RUN",
+        "effect_matrix": "NOT RUN",
+        "advanced_profiles": "NOT RUN"
+      }
+    },
+    {
+      "id": "complementary-reimagined-regression",
+      "style": "Reimagined",
+      "version": "r5.9.2",
+      "modrinth_version_id": "vxxxESqv",
+      "filename": "ComplementaryReimagined_r5.9.2.zip",
+      "size": 553236,
+      "sha256": "7ae5f1d6a4237a5c8893578397e58c9d08b79d7403bc27242aef56957489a278",
+      "sha512": "28e138fcd5b53b8f84cceb572d383c9584fd255ffab6a2b726f0ad425d162c2540e31160e0e85402b6df81e29aa0124cdf6b6701ed5e78f0ac4c75135cd555f4",
+      "role": "regression against the prior source generation",
+      "profiles": ["high", "very_high", "ultra", "complementary"],
+      "lanes": ["legacy"],
+      "qualification": {
+        "status": "STAGED",
+        "blockers": [
+          "WSR 256 exceeds the measured provider storage-block limit"
+        ],
+        "effect_matrix": "NOT RUN",
+        "staged_evidence": [
+          "High: pipeline active without fallback on the historical 1.21.1/NeoForge instance; 21 FPS at 2880 x 1585.",
+          "Very High ACT 192: distinct cyan and warm colored light, stable over an 8 s sample in one emissive scene.",
+          "WSR 128: 50,855,936-byte SSBO, water and room reflections visible.",
+          "WSR 192: 114,229,248-byte SSBO, terrain and island reflections visible.",
+          "WSR 256: BLOCKED; 202,899,456-byte request exceeds the 134,217,728-byte provider limit."
+        ],
+        "not_yet_qualified": [
+          "effect-by-effect PBR, shadows, bloom, TAA/history and SSR",
+          "player reflections",
+          "current runtime lane"
+        ]
+      }
+    },
+    {
+      "id": "complementary-unbound-regression",
+      "style": "Unbound",
+      "version": "r5.9.2",
+      "modrinth_version_id": "nahkiiZN",
+      "filename": "ComplementaryUnbound_r5.9.2.zip",
+      "size": 553239,
+      "sha256": "2b4e9c717758fd1ba1d6306f2e847096704196f0823c4d6941b3de6f423121d2",
+      "sha512": "75ed262c8504343bfb83721fa500b60f4dceb767e211a500aa7e3c065b4a8ddf7bf6737b884ea99dfff68072f7cae6d82c5d863379b7487cc13e172a9c5ddae8",
+      "role": "regression against the prior source generation",
+      "profiles": ["high", "very_high", "ultra", "complementary"],
+      "lanes": ["legacy"],
+      "qualification": {
+        "status": "STAGED",
+        "effect_matrix": "NOT RUN",
+        "staged_evidence": [
+          "High: pipeline active without fallback on the historical instance; 20 FPS at 2880 x 1585; reload works."
+        ]
+      }
+    },
+    {
+      "id": "bsl",
+      "version": "10.1.8",
+      "modrinth_version_id": "Y68yiql9",
+      "filename": "BSL_v10.1.8.zip",
+      "size": 1134153,
+      "sha256": "36b0a50ff7918bf10e9422c401d93779f9d0088a26acea975b435243f96930b5",
+      "sha512": "94a3c25d6820868db624e11347873e6b572e7cd571967d9ac6f4690ca5d37ca302a7645d85eec800e0654541e3825fba14d37b5a25d3996aaf038178552be26f",
+      "role": "required independent standard pack",
+      "profiles": ["default", "multicolored_blocklight"],
+      "lanes": ["current", "legacy"],
+      "qualification": {
+        "status": "NOT RUN",
+        "note": "Default profile is a conventional raster workload. The optional multicolored block-light path uses integer voxel images, floating lighting volumes and compute; qualify it separately."
+      }
+    },
+    {
+      "id": "photon",
+      "version": "v1.4",
+      "modrinth_version_id": "BnGklH5y",
+      "filename": "photon_v1.4.zip",
+      "size": 3857333,
+      "sha256": "da0929b38f5fd99befaaa8cd141cbf60e1fad05b92d916d0eeeee7c79f86c0fd",
+      "sha512": "2dec87084dccf91a72a06235ecbfb3627f066699b5f70583f06077cba61433aedbfa6af28eb68bf1cdc726149cc3d9a587517cfab59e6a24e9d6a40b6874d655",
+      "role": "independent compute-oriented pack",
+      "profiles": ["default_skylight", "optional_subgroup"],
+      "lanes": ["legacy", "current"],
+      "qualification": {
+        "status": "NOT RUN",
+        "note": "Published 2026-10-19. Pin it and retain a prior-version comparison. Default skylight uses a 256-invocation compute reduction with an RGBA16F image and shared memory; the optional subgroup path needs separate support detection."
+      }
+    },
+    {
+      "id": "rethinking-voxels",
+      "version": "r0.1-beta9",
+      "modrinth_version_id": "cpD4esk9",
+      "filename": "rethinking-voxels_r0.1-beta9.zip",
+      "size": 8301317,
+      "sha256": "a8cd9d4338c7d3d1fffecc4525348a31ea3d219ef31382c51d5ddc3b4b0114e1",
+      "sha512": "1e32f41e67e527c3c60149677a05b61c6d305e440812e29abba745b8ed304954780ca48d58b834c49835790bc3c4d38f37c893c5cbdfea9edc07b72e1dabd296",
+      "role": "advanced stress on a compatible legacy lane",
+      "profiles": ["default"],
+      "lanes": ["legacy"],
+      "qualification": {
+        "status": "NOT RUN",
+        "note": "Publisher metadata lists 1.20.1 through 1.21.10 but not 26.3. Start on a compatible legacy lane; do not run it on the current lane and call the version mismatch a renderer result."
+      }
+    }
+  ],
+  "qualification_summary": {
+    "release_qualified_packs": [],
+    "standard_preview_gate": "NOT RUN",
+    "advanced_gate": "BLOCKED by WSR 256 on the current X1E provider",
+    "x2e": "NOT RUN",
+    "note": "Staged scene evidence is not an effect-by-effect or release qualification."
+  }
+}

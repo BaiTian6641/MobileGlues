@@ -1,8 +1,11 @@
 # AGENTS.md
 
 Project: MobileGlues X1E Googlebook implementation. The requirements baseline is
-`docs/MobileGlues_Googlebook_X1E_Optimization_Plan.md`. Execution records live in
-`docs/mobileglues-googlebook/`.
+`docs/01_MobileGlues_Googlebook_Architecture.md`, with the execution plan in
+`docs/02_MobileGlues_Googlebook_Implementation_Plan.md` and acceptance/sources in
+`docs/03_MobileGlues_Googlebook_Validation_and_Sources.md`. Execution records live in
+`docs/mobileglues-googlebook/`; versioned distribution locks live in `compat/`. The older
+`docs/MobileGlues_Googlebook_X1E_Optimization_Plan.md` is historical and superseded.
 
 ## Target hardware
 

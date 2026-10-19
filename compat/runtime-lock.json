@@ -1,0 +1,289 @@
+{
+  "schema": 1,
+  "updated": "2026-10-19",
+  "specification": {
+    "architecture": "docs/01_MobileGlues_Googlebook_Architecture.md",
+    "implementation_plan": "docs/02_MobileGlues_Googlebook_Implementation_Plan.md",
+    "validation": "docs/03_MobileGlues_Googlebook_Validation_and_Sources.md",
+    "research_date": "2026-10-19"
+  },
+  "status_vocabulary": {
+    "PASS": "required behavior verified with retained evidence for the named tuple",
+    "FAIL": "required behavior did not execute or produced incorrect output",
+    "BLOCKED": "an external constraint or missing prerequisite prevents execution",
+    "NOT RUN": "no measurement exists",
+    "NOT APPLICABLE": "the requirement does not apply to this tuple",
+    "STAGED": "a bounded scene or subset executed; not the full effect or profile matrix",
+    "PARTIAL": "some required sub-gates pass while others remain open",
+    "OBSERVED": "identity or behavior recorded; not a correctness result",
+    "REPRODUCED": "the named source, build or artifact was reproduced",
+    "UNQUALIFIED": "insufficient evidence; no support claim"
+  },
+  "lanes": {
+    "current": {
+      "id": "S1-current",
+      "role": "required",
+      "status": "NOT RUN",
+      "minecraft": {
+        "version": "26.3",
+        "manifest": "https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json",
+        "client_sha1": "e877b6a07acd633fb3bb475002175cec036e7b87"
+      },
+      "java": {
+        "component": "java-runtime-epsilon",
+        "major": 25,
+        "android_runtime": null,
+        "status": "UNRESOLVED",
+        "note": "The Mojang component is the desktop requirement. The launcher must supply a compatible Android ARM64 runtime and JNI closure."
+      },
+      "loader": {
+        "type": "fabric",
+        "version": "0.19.5",
+        "status": "CANDIDATE",
+        "source": "https://meta.fabricmc.net/v2/versions/loader (stable channel, read 2026-10-19)",
+        "note": "Pin the launcher-tested loader during S0.3/S1; do not let an updater move it independently."
+      },
+      "iris": {
+        "version": "1.11.7+26.3-fabric",
+        "modrinth_version_id": "vTN4NRGW",
+        "filename": "iris-fabric-1.11.7+mc26.3.jar",
+        "size": 2850938,
+        "sha512": "d8d3312f77fc52a48e4a6cd836fda33669bdebcb4de0b8c0d30adc808b287330a533e0baef355cc1ce6336a26851d9775369a802a4666b7b7a6266af20088f42"
+      },
+      "sodium": {
+        "version": "mc26.3-0.9.2-fabric",
+        "modrinth_version_id": "bAZQdGpg",
+        "filename": "sodium-fabric-0.9.2+mc26.3.jar",
+        "size": 1908068,
+        "sha512": "f3f260f204b8ce5e8777c2c73f537956755ec61f3817b0b78b5e5568e8aa40f14891f146475075109747665c7c88a45ca0ca9a8df3c68d79c58ecdaa8d8c4b93",
+        "dependency_source": "Iris vTN4NRGW declares this version as a required dependency"
+      },
+      "bridge": {
+        "type": "sdl",
+        "lwjgl": "3.4.3",
+        "status": "UNRESOLVED",
+        "required_contracts": [
+          "GL.getFunctionProvider() satisfies the game's org.lwjgl.system.SharedLibrary cast",
+          "getPath() names the actual loadable MobileGlues frontend",
+          "SDL loads the same frontend and agrees on glGetError and other transformed addresses",
+          "The active backend is Minecraft's OpenGL path, not its native Vulkan backend"
+        ],
+        "note": "Official 26.3 client bytecode was inspected; the Android-native SDL/LWJGL closure still has to be built and tested."
+      },
+      "native_closure": {
+        "status": "UNRESOLVED",
+        "android_abi": "arm64-v8a",
+        "required_modules": [
+          "lwjgl 3.4.3",
+          "lwjgl-sdl",
+          "lwjgl-opengl",
+          "lwjgl-shaderc",
+          "lwjgl-spirv-cross",
+          "lwjgl-vma",
+          "lwjgl-vulkan",
+          "lwjgl-openal",
+          "lwjgl-freetype",
+          "lwjgl-jemalloc"
+        ],
+        "android_classifiers_in_manifest": false,
+        "note": "The Mojang manifest lists desktop native classifiers only. Android modules are an owned porting gap, not established by Linux ARM64 archives."
+      },
+      "qualification": {
+        "status": "NOT RUN",
+        "blockers": [
+          "Android Java 25 runtime and JNI closure",
+          "SDL/GL function-provider bridge and address agreement",
+          "launcher instance creation, original ZIP import and initial scene"
+        ]
+      }
+    },
+    "legacy": {
+      "id": "S1-legacy",
+      "role": "required",
+      "status": "NOT RUN",
+      "minecraft": {
+        "version": "1.20.1",
+        "manifest": null,
+        "status": "PIN PENDING",
+        "note": "Resolve the exact 1.20.1 manifest and asset index during S0."
+      },
+      "java": {
+        "major": 17,
+        "android_runtime": null,
+        "status": "UNRESOLVED"
+      },
+      "loader": {
+        "type": "fabric",
+        "version": "0.19.5",
+        "status": "CANDIDATE",
+        "source": "https://meta.fabricmc.net/v2/versions/loader (stable channel, read 2026-10-19)",
+        "note": "Validate the selected loader against Iris 1.7.6 before locking."
+      },
+      "iris": {
+        "version": "1.7.6+1.20.1",
+        "modrinth_version_id": "s5eFLITc",
+        "filename": "iris-1.7.6+mc1.20.1.jar",
+        "size": 2726899,
+        "sha512": "f1337b0441c31269bd3bfcb28647d521326a83e73128c1ac8d065615f8a5a4ca1e8c96a468b356584236ece5b164ec8d8a52b1878064f4e391ecf4f32885e301",
+        "declared_sodium_dependency": "ryOMVRuG"
+      },
+      "sodium": {
+        "selected": {
+          "version": "mc1.20.1-0.5.12-beta.2-fabric",
+          "modrinth_version_id": "ryOMVRuG",
+          "filename": "sodium-fabric-0.5.12-beta.2+mc1.20.1.jar",
+          "size": 971376,
+          "sha512": "e6906b77e709c17bfe445d065353010853cad58a65252f70f9e7e06113156f21c85e91a71e5ccebb4ea0f0168280737bb12ae407e115a9f1df3b5e8d21b87ec5"
+        },
+        "alternative": {
+          "version": "mc1.20.1-0.5.13-fabric",
+          "modrinth_version_id": "OihdIimA",
+          "filename": "sodium-fabric-0.5.13+mc1.20.1.jar",
+          "size": 971552,
+          "sha512": "81c64f9c2d3402dfa43ee54d8f5a054f5243bfb08984e3addcab9fe885073c79c43c1c8c41e8f30b625d26a656f82a8e5f370bbbbf222ff1c08f4b324edb7ea4",
+          "status": "UNQUALIFIED"
+        },
+        "selection_reason": "Iris s5eFLITc declares required dependency ryOMVRuG, which resolves to Sodium 0.5.12-beta.2. Sodium 0.5.13 is not the metadata-selected tuple and stays unqualified until separately tested.",
+        "status": "PINNED BY METADATA"
+      },
+      "bridge": {
+        "type": "glfw",
+        "status": "UNRESOLVED"
+      },
+      "qualification": {
+        "status": "NOT RUN",
+        "note": "The only game-process smoke so far is Minecraft 1.21.1 / NeoForge 21.1.262. It does not exercise this lane."
+      }
+    },
+    "optional_comparison": {
+      "id": "optional-engine-comparison",
+      "role": "optional, not an initial release multiplier",
+      "status": "NOT RUN",
+      "minecraft": {
+        "version": "1.21.11"
+      },
+      "java": {
+        "major": 21
+      },
+      "iris": {
+        "version": "1.10.8+1.21.11-fabric",
+        "modrinth_version_id": "ka9PDlsN",
+        "filename": "iris-fabric-1.10.8+mc1.21.11.jar",
+        "size": 2807718,
+        "sha512": "f0cad4b6af593b6fc25738c4ef5a2b346125f9693d25a0d486858e54798d2ea87b24d1497e1bb4391729d7d9e490f42771f7fb468d4e1420e372d8643f9e2055",
+        "declared_sodium_dependency": "rkdTcxoT"
+      },
+      "sodium": {
+        "version": "mc1.21.11-0.8.14-fabric",
+        "modrinth_version_id": "rkdTcxoT",
+        "filename": "sodium-fabric-0.8.14+mc1.21.11.jar",
+        "size": 1909150,
+        "sha512": "04c43f9e8534b87a52c42ffd51b0e344d4ef92dc9cc52da33d13af6a18bf74b05380d2027f1e0db982698d0aff274c42741c1e21b313b0cd75ed3af005fc98d9"
+      }
+    }
+  },
+  "renderer": {
+    "product": "MobileGlues Googlebook distribution",
+    "core": {
+      "selected_commit": "97558a69157b033b890958b1e49258c5b51a80c6",
+      "release_pinned_core": "f56af31d3e490d95808b3adc4ace20234249a37a",
+      "plugin_commit": "f5105e4ddd1752cccdcc6421c402960d40ec3d9d",
+      "test_build_core": "a524755b5681bbf6b7259d68ea341cabfa0623c6",
+      "test_build_plugin": "59de4b5",
+      "status": "REPRODUCED",
+      "note": "The released plugin's pinned core differs from the audited core main. Reproduce both before attributing an APK defect."
+    },
+    "submodules": {
+      "MobileGlues-cpp/3rdparty/SPIRV-Cross": "a0fba56c34a6700f1724bf9b751da5b488a3775c",
+      "MobileGlues-cpp/3rdparty/glslang": "f5f664dee8146676b04a332a7233959fc3ce9681",
+      "MobileGlues-cpp/3rdparty/xxhash": "c2866db364b6ea3a11933e62235ddc166ba18565",
+      "MobileGlues-cpp/include/ska": "21c1cec95abee1beef827e4a7c95f692875d9594"
+    },
+    "android_build": {
+      "ndk": "28.2.13676358 (r28c)",
+      "abi": "arm64-v8a",
+      "platform": "android-26",
+      "stl": "c++_static",
+      "page_size_alignment": "LOAD align 0x4000 (16 KB); target device reports 4096-byte pages",
+      "status": "REPRODUCED"
+    },
+    "artifacts": {
+      "standalone_so_sha256": "ef515913cd2abb9fb62f5d708d012136cb939d6d9e6957f94098d1d053648fda",
+      "test_apk_sha256": "e728b6e9bd0d290df4059a401aed3aa7bd48c6f55d1d3bccb7cb0af4fbd72162",
+      "test_packaged_library_sha256": "85f6dcf2d29ac6e7bbe82fe70f660daaba44f6018f1849a86118991ced3cd3a0",
+      "installed_release_apk_sha256": "a7e1eb29731fdece7ab3af7fb00692b856f1808a7544436e7b3eb6c08355581a",
+      "note": "These build hashes are evidence for the historical tuple, not a release lock for either runtime lane."
+    },
+    "iris_image_bridge": {
+      "version": "1.0.17",
+      "sha256": "2e1c083c841f795717569536591d91e10b83ac20a1ea68e9af29acb9bad86397",
+      "scope": "compute custom images; explicit layout(binding, format) before ESSL compilation",
+      "status": "STAGED",
+      "note": "A distribution component, not a shaderpack edit. Graphics-stage image formats remain open."
+    },
+    "qualification": {
+      "status": "UNQUALIFIED",
+      "reason": "No pinned runtime lane has passed startup, effect-by-effect fidelity, performance or lifecycle gates."
+    }
+  },
+  "provider": {
+    "selection_policy": "Choose one coherent EGL/GLES provider before graphics initialization. Record the observed provider. A provider change requires a fresh graphics process and a new cache namespace. Do not mix one provider's EGL with another provider's GLES entry points.",
+    "observed": {
+      "device_profile": "compat/device-profiles/x1e80100-hp-googlebook-14-quartz.json",
+      "requested": null,
+      "actual": "system ANGLE (Android 17 default)",
+      "egl_vendor": "Android",
+      "egl_version": "1.5 Android META-EGL",
+      "gles_vendor": "Google Inc. (Qualcomm)",
+      "gles_version": "OpenGL ES 3.2 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+      "gles_renderer": "ANGLE (Qualcomm, Vulkan 1.4.295 (Adreno (TM)  X1-85 (0x43050C01)), Qualcomm Technologies Inc. Adreno Vulkan Driver-512.886.6)",
+      "gles_shading_language": "OpenGL ES GLSL ES 3.20 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+      "source": "below-wrapper probe on C1L63708PZ"
+    },
+    "gates": {
+      "max_shader_storage_block_size": 134217728,
+      "max_texture_image_units": 32,
+      "max_compute_work_group_invocations": 1024,
+      "compute_local_size_8_8_8": "PASS",
+      "vertex_image_store_rgba16f": "PASS",
+      "r8ui_r16ui_images": "FAIL (raw provider); r32ui substitution is staged",
+      "wsr_128_ssbo_bytes": 50855936,
+      "wsr_192_ssbo_bytes": 114229248,
+      "wsr_256_ssbo_bytes": 202899456,
+      "wsr_256_status": "BLOCKED by the 134217728-byte provider limit"
+    },
+    "candidates": [
+      {
+        "id": "system-gles",
+        "status": "NOT RUN",
+        "note": "Vendor GLES path; must be compared on the same correctness suite."
+      },
+      {
+        "id": "android17-system-angle",
+        "status": "OBSERVED",
+        "note": "The manifest request is a preference, not a selection guarantee."
+      },
+      {
+        "id": "app-local-angle",
+        "status": "NOT RUN",
+        "note": "Requires a release-loadable build with coherent EGL/GLES symbols and Android window handling."
+      },
+      {
+        "id": "zink-vendor-vulkan",
+        "status": "NOT RUN",
+        "note": "Bounded feasibility experiment only; Mesa feature/format/limit requirements are broader than a Vulkan version."
+      },
+      {
+        "id": "turnip",
+        "status": "NOT RUN",
+        "note": "Only if Android loading, kernel interface, allocation and window integration are viable on the exact device."
+      }
+    ]
+  },
+  "distribution": {
+    "launcher_lock": "compat/launcher-lock.json",
+    "shaderpacks": "compat/shaderpacks.json",
+    "device_profiles": "compat/device-profiles/",
+    "status": "UNQUALIFIED"
+  }
+}

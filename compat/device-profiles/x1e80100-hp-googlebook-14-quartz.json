@@ -1,0 +1,260 @@
+{
+  "schema_version": 1,
+  "profile_id": "x1e80100-hp-googlebook-14-quartz",
+  "profile_revision": 1,
+  "updated": "2026-10-19",
+  "qualification_status": "NOT RUN",
+  "support_classification": "UNQUALIFIED",
+  "reference_model": {
+    "name": "XPS Googlebook",
+    "source": "https://store.google.com/us/product/xps_googlebook_specs?hl=en-US",
+    "soc": "Snapdragon X Elite X1E-80-100",
+    "ram": "16 GB LPDDR5X",
+    "display": "2560 x 1600",
+    "refresh": "30-120 Hz variable",
+    "note": "Official reference specification. It is not the connected unit and not an OEM/firmware/driver identity."
+  },
+  "target": {
+    "oem": "HP",
+    "model": "Googlebook 14",
+    "product": "quartz",
+    "soc": "Snapdragon X Elite X1E80100",
+    "gpu": "Adreno X1-85",
+    "abi": "arm64-v8a",
+    "page_size": 4096,
+    "ram_bytes": 16186368,
+    "ram_class": "16 GB",
+    "display": "2880 x 1800",
+    "density": 260,
+    "refresh": "120 Hz mode observed",
+    "model_equivalence": "Not established with the XPS reference model. Same SoC class does not make panel, firmware, driver or provider behavior equivalent."
+  },
+  "observed": {
+    "serial": "C1L63708PZ",
+    "os": "Android 17 / API 37",
+    "sdk": 37,
+    "build_fingerprint": "HP/quartz/quartz:17/CL3B.260622.276.R2/16560795:user/release-keys",
+    "security_patch": "2026-09-01",
+    "page_size": 4096,
+    "provider": {
+      "requested": null,
+      "actual": "system ANGLE (Android 17 default)",
+      "egl_vendor": "Android",
+      "egl_version": "1.5 Android META-EGL",
+      "gles_vendor": "Google Inc. (Qualcomm)",
+      "gles_version": "OpenGL ES 3.2 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+      "gles_renderer": "ANGLE (Qualcomm, Vulkan 1.4.295 (Adreno (TM)  X1-85 (0x43050C01)), Qualcomm Technologies Inc. Adreno Vulkan Driver-512.886.6)",
+      "gles_shading_language": "OpenGL ES GLSL ES 3.20 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+      "gles_extension_count": 203,
+      "same_provider_in_probe_and_game_process": "NOT ESTABLISHED"
+    },
+    "limits": {
+      "MAX_TEXTURE_SIZE": 16384,
+      "MAX_3D_TEXTURE_SIZE": 2048,
+      "MAX_ARRAY_TEXTURE_LAYERS": 2048,
+      "MAX_CUBE_MAP_TEXTURE_SIZE": 16384,
+      "MAX_TEXTURE_IMAGE_UNITS": 32,
+      "MAX_VERTEX_TEXTURE_IMAGE_UNITS": 32,
+      "MAX_COMBINED_TEXTURE_IMAGE_UNITS": 192,
+      "MAX_VERTEX_IMAGE_UNIFORMS": 192,
+      "MAX_FRAGMENT_IMAGE_UNIFORMS": 192,
+      "MAX_COMPUTE_IMAGE_UNIFORMS": 192,
+      "MAX_COMBINED_IMAGE_UNIFORMS": 192,
+      "MAX_VERTEX_SHADER_STORAGE_BLOCKS": 64,
+      "MAX_FRAGMENT_SHADER_STORAGE_BLOCKS": 64,
+      "MAX_COMPUTE_SHADER_STORAGE_BLOCKS": 64,
+      "MAX_COMBINED_SHADER_STORAGE_BLOCKS": 64,
+      "MAX_SHADER_STORAGE_BLOCK_SIZE": 134217728,
+      "MAX_COMPUTE_WORK_GROUP_INVOCATIONS": 1024
+    }
+  },
+  "runtime": {
+    "lane": "historical game-process smoke, not a pinned lane",
+    "launcher": "FCL 1.3.4.0 (com.tungsten.fcl)",
+    "minecraft": "1.21.1",
+    "loader": "NeoForge 21.1.262",
+    "java": "21.0.1-internal (FCL app_runtime/jre21)",
+    "iris": "1.8.14-beta.1+mc1.21.1",
+    "sodium": "0.8.13+mc1.21.1",
+    "renderer": "test plugin core a524755, debug signing",
+    "pack": "ComplementaryReimagined_r5.9.2.zip, High, active without fallback",
+    "pinned_lane_requirement": "The 1.20.1/Fabric and 26.3/Fabric lanes in compat/runtime-lock.json remain NOT RUN on this device record."
+  },
+  "pins": {
+    "runtime_lock": "compat/runtime-lock.json",
+    "runtime_lock_sha256": "e9cdda2624eda97c79d68a32efd55300b62eeadbe69c0874d681056909890c9a",
+    "shaderpack_lock": "compat/shaderpacks.json",
+    "shaderpack_lock_sha256": "18981a25aba5c78868c101fdc89bc1e421d952f7715ecd627c9400efdee591a0",
+    "launcher_lock": "compat/launcher-lock.json",
+    "launcher_lock_sha256": "edfff7042bcb8f1b3a22c8f2785dfb0e0096af6ac6a78fe98751870aedddc870",
+    "capability_report_sha256": "d7a3ba31520ff393dd2ec43cf663a4e479ec38955b65836bd3887a9c8618185d",
+    "wrapper_suite_sha256": "51b9ef67e5108114b5c7d693b1c94b281aa6d1d24499a839d107d8c5d5fb0ab5",
+    "device_identity_sha256": "0d2bd59a4d19f67dad9d0c51fc8f95d4b2cfea4f38573486f6ba68757a6ab2bd",
+    "renderer_test_apk_sha256": "e728b6e9bd0d290df4059a401aed3aa7bd48c6f55d1d3bccb7cb0af4fbd72162",
+    "renderer_test_library_sha256": "85f6dcf2d29ac6e7bbe82fe70f660daaba44f6018f1849a86118991ced3cd3a0",
+    "standalone_so_sha256": "ef515913cd2abb9fb62f5d708d012136cb939d6d9e6957f94098d1d053648fda",
+    "note": "Hashes identify the historical evidence tuple. They are not a release lock for either pinned runtime lane."
+  },
+  "evidence": [
+    {
+      "path": "docs/mobileglues-googlebook/validation/2026-10-18-x1e-device-identity.txt",
+      "level": "target device",
+      "sha256": "0d2bd59a4d19f67dad9d0c51fc8f95d4b2cfea4f38573486f6ba68757a6ab2bd"
+    },
+    {
+      "path": "docs/mobileglues-googlebook/validation/2026-10-18-x1e-provider-probe.json",
+      "level": "target device, below wrapper",
+      "sha256": "d7a3ba31520ff393dd2ec43cf663a4e479ec38955b65836bd3887a9c8618185d"
+    },
+    {
+      "path": "docs/mobileglues-googlebook/validation/2026-10-19-x1e-wrapper-image-bridge.json",
+      "level": "target device, wrapper level",
+      "sha256": "51b9ef67e5108114b5c7d693b1c94b281aa6d1d24499a839d107d8c5d5fb0ab5"
+    },
+    {
+      "path": "docs/mobileglues-googlebook/execution-state.md",
+      "level": "handoff record",
+      "note": "Game-process smoke and staged ACT/WSR results; logs and captures are referenced there and stored outside Git."
+    }
+  ],
+  "hard_gates": [
+    {
+      "id": "compute_512",
+      "requirement": "8 x 8 x 8 local group, at least 512 total invocations",
+      "status": "PASS",
+      "level": "below wrapper and wrapper",
+      "evidence": "capability probe compute_512_invocations value 1298; wrapper_probe compute_512 value 0x512"
+    },
+    {
+      "id": "vertex_image_store_rgba16f",
+      "requirement": "vertex-stage image store",
+      "status": "PASS",
+      "level": "below wrapper and wrapper",
+      "evidence": "capability probe image value 42; wrapper_probe vertex_image_store"
+    },
+    {
+      "id": "r8ui_r16ui_images",
+      "requirement": "integer 3D image formats used by ACT/WSR",
+      "status": "FAIL",
+      "level": "below wrapper",
+      "evidence": "ESSL rejects r8ui/r16ui layout qualifiers; r32ui substitution writes and reads back",
+      "note": "Wrapper r32ui backing is staged. Full r8ui/r16ui lowering is not implemented; do not claim support."
+    },
+    {
+      "id": "wsr_ssbo_128",
+      "requirement": "50,855,936-byte storage buffer, access near the end",
+      "status": "PASS",
+      "level": "staged game process",
+      "evidence": "WSR 128 water and room scenes; log mclo.gs/adG0NiA"
+    },
+    {
+      "id": "wsr_ssbo_192",
+      "requirement": "114,229,248-byte storage buffer, access near the end",
+      "status": "PASS",
+      "level": "staged game process",
+      "evidence": "WSR 192 water/terrain reflection; log mclo.gs/FMnnMkC"
+    },
+    {
+      "id": "wsr_ssbo_256",
+      "requirement": "202,899,456-byte single storage buffer",
+      "status": "BLOCKED",
+      "level": "target device provider",
+      "evidence": "MAX_SHADER_STORAGE_BLOCK_SIZE is 134,217,728 bytes; allocation/map succeed but the shader cannot write the last element",
+      "note": "Extra system RAM does not repair a smaller accessible storage-block range. This blocks the required Ultra WSR 256 profile."
+    },
+    {
+      "id": "rgb8_snorm_render_target",
+      "requirement": "Complementary colortex1 signed-normalized target",
+      "status": "FAIL",
+      "level": "below wrapper",
+      "evidence": "raw FBO incomplete 36054; wrapper RGB8_SNORM backing is PASS staged",
+      "note": "The wrapper workaround is evidenced; the raw provider contract remains a failure."
+    },
+    {
+      "id": "provider_identity_probe_vs_game",
+      "requirement": "same provider binary in the probe and game process",
+      "status": "NOT RUN",
+      "level": "target device",
+      "note": "F3 and logs show ANGLE/Adreno in game, but library-path identity has not been compared."
+    },
+    {
+      "id": "current_lane_startup",
+      "requirement": "Minecraft 26.3 / Java 25 / Iris 1.11.7 / Sodium 0.9.2 startup",
+      "status": "NOT RUN",
+      "level": "target device",
+      "note": "Android SDL/LWJGL closure and function-provider bridge are unresolved."
+    },
+    {
+      "id": "legacy_lane_startup",
+      "requirement": "Minecraft 1.20.1 / Java 17 / Fabric / Iris 1.7.6 / Sodium 0.5.12-beta.2 startup",
+      "status": "NOT RUN",
+      "level": "target device",
+      "note": "The observed 1.21.1/NeoForge smoke is not this lane."
+    },
+    {
+      "id": "standard_pack_effect_fidelity",
+      "requirement": "effect-by-effect standard fidelity against a desktop GL reference",
+      "status": "NOT RUN",
+      "level": "target device",
+      "note": "High initializes without fallback; named effects are not isolated."
+    },
+    {
+      "id": "performance_minimum",
+      "requirement": "sustained 30 FPS at 1920 x 1200 with the selected standard preset",
+      "status": "NOT RUN",
+      "level": "target device",
+      "note": "Historical spot checks were 20-22 FPS at 2880 x 1585, not a controlled 1920 x 1200 run."
+    },
+    {
+      "id": "desktop_lifecycle",
+      "requirement": "resize, focus, fullscreen, suspend/resume and context recovery",
+      "status": "NOT RUN",
+      "level": "target device"
+    },
+    {
+      "id": "x2e_qualification",
+      "requirement": "independent X2E/OEM device result",
+      "status": "NOT APPLICABLE",
+      "level": "different profile",
+      "note": "No retail X2E Googlebook has been measured."
+    }
+  ],
+  "test_results": [
+    {
+      "name": "provider_probe",
+      "status": "PASS",
+      "detail": "5 below-wrapper tests: 512-invocation compute, rgba16f vertex image store, r32ui substitution, depth sampling; r8ui/r16ui rejected"
+    },
+    {
+      "name": "wrapper_contract_suite",
+      "status": "PASS",
+      "detail": "25 of 25 cases in the image-bridge suite; covers source handling, errors, statuses, limits, frag-data, SSBO binding, compute, vertex images, formats and extensions"
+    },
+    {
+      "name": "game_process_smoke",
+      "status": "PASS",
+      "detail": "Minecraft 1.21.1 / NeoForge launched with the test renderer; Complementary r5.9.2 High active without fallback"
+    },
+    {
+      "name": "standard_effect_matrix",
+      "status": "NOT RUN",
+      "detail": "No PBR, shadow, bloom, TAA/history or SSR isolation"
+    },
+    {
+      "name": "advanced_effect_matrix",
+      "status": "PARTIAL",
+      "detail": "ACT 192, WSR 128 and WSR 192 staged; WSR 256 blocked; player reflections and independent compute pack not run"
+    },
+    {
+      "name": "performance",
+      "status": "NOT RUN",
+      "detail": "No three-run, ten-minute steady-state measurement"
+    },
+    {
+      "name": "desktop_lifecycle",
+      "status": "NOT RUN"
+    }
+  ],
+  "recommended_presets": [],
+  "not_qualified_reason": "The device has provider and staged pack evidence, but no pinned runtime lane has booted, no pack has passed effect-by-effect fidelity, and performance, lifecycle and recovery gates are unmeasured."
+}

@@ -1,10 +1,23 @@
 {
   "schema": 1,
-  "updated": "2026-10-18",
+  "updated": "2026-10-19",
   "plan": {
-    "path": "docs/MobileGlues_Googlebook_X1E_Optimization_Plan.md",
-    "version": "1.0",
-    "research_cutoff": "2026-10-19T00:00:00Z"
+    "path": "docs/01_MobileGlues_Googlebook_Architecture.md",
+    "documents": [
+      "docs/01_MobileGlues_Googlebook_Architecture.md",
+      "docs/02_MobileGlues_Googlebook_Implementation_Plan.md",
+      "docs/03_MobileGlues_Googlebook_Validation_and_Sources.md"
+    ],
+    "version": "2.0",
+    "stage_scheme": "S0-S9",
+    "research_cutoff": "2026-10-19T00:00:00Z",
+    "superseded_plan": "docs/MobileGlues_Googlebook_X1E_Optimization_Plan.md"
+  },
+  "compat": {
+    "runtime_lock": "compat/runtime-lock.json",
+    "launcher_lock": "compat/launcher-lock.json",
+    "shaderpacks": "compat/shaderpacks.json",
+    "device_profiles": "compat/device-profiles/"
   },
   "core": {
     "path": "/home/polar/MobileGlues",
@@ -40,6 +53,7 @@
     "MobileGlues-cpp/3rdparty/xxhash": "c2866db364b6ea3a11933e62235ddc166ba18565",
     "MobileGlues-cpp/include/ska": "21c1cec95abee1beef827e4a7c95f692875d9594"
   },
+  "game_tuple_note": "Reproduced local tuple retained from the historical plan. Proposed distribution lanes and exact pins are in compat/runtime-lock.json; these rows are not current-lane qualification.",
   "game_tuple": {
     "modern_lane": {
       "minecraft": "26.1.2",

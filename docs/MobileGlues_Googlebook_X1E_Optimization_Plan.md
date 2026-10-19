@@ -1,5 +1,12 @@
 # MobileGlues X1E-80-100 Googlebook Implementation Plan
 
+> **Superseded 19 October 2026.** This historical plan is retained for traceability and for the
+> `Stage 0`-`Stage 8` identifiers used in earlier execution records. Current requirements are
+> `docs/01_MobileGlues_Googlebook_Architecture.md`,
+> `docs/02_MobileGlues_Googlebook_Implementation_Plan.md` and
+> `docs/03_MobileGlues_Googlebook_Validation_and_Sources.md`. Do not use this file for new work
+> or new support claims.
+
 Research cutoff: 19 October 2026 UTC. Version 1.0.
 
 ## 1. Objective and recommended approach
