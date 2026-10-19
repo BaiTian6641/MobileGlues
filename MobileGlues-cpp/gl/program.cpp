@@ -268,6 +268,90 @@ void glDeleteProgram(GLuint program) {
     CHECK_GL_ERROR
 }
 
+namespace {
+
+bool rewrite_storage_block_binding(std::string& source, const std::string& block, GLuint binding) {
+    const std::string block_pattern = R"((?:\w+\s+)*buffer\s+)";
+    // Three shapes the translated ESSL can have for a storage block:
+    //   layout(std430, binding = 0) buffer Name { ... };
+    //   layout(std430) buffer Name { ... };
+    //   buffer Name { ... };              (no qualifier at all)
+    // Replace an existing binding or insert one, but only for the named block.
+    const std::string layout_prefix = R"(layout\s*\(([^)]*)\)\s*)";
+    std::regex existing(layout_prefix + block_pattern + block + R"(\b)");
+    std::smatch match;
+    if (std::regex_search(source, match, existing)) {
+        std::string qualifiers = match[1].str();
+        std::regex binding_re(R"(\bbinding\s*=\s*\d+)");
+        if (std::regex_search(qualifiers, binding_re)) {
+            qualifiers = std::regex_replace(qualifiers, binding_re, "binding = " + std::to_string(binding));
+        } else {
+            qualifiers += ", binding = " + std::to_string(binding);
+        }
+        const std::string replacement = "layout(" + qualifiers + ") buffer " + block;
+        source.replace(match.position(), match.length(), replacement);
+        return true;
+    }
+
+    std::regex bare(block_pattern + block + R"(\b)");
+    if (std::regex_search(source, match, bare)) {
+        source.insert(match.position(), "layout(binding = " + std::to_string(binding) + ") ");
+        return true;
+    }
+    return false;
+}
+
+} // namespace
+
+void glShaderStorageBlockBinding(GLuint program, GLuint storageBlockIndex, GLuint storageBlockBinding) {
+    LOG()
+    LOG_D("glShaderStorageBlockBinding(%u, %u, %u)", program, storageBlockIndex, storageBlockBinding)
+    if (!GLES.glGetProgramResourceName) {
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        return;
+    }
+    char name[256] = {0};
+    GLsizei name_length = 0;
+    GLES.glGetProgramResourceName(program, GL_SHADER_STORAGE_BLOCK, storageBlockIndex, sizeof(name) - 1,
+                                  &name_length, name);
+    if (name_length <= 0) {
+        mg_set_gl_error(GL_INVALID_VALUE);
+        return;
+    }
+
+    MgProgramObject& state = g_mg_programs[mg_object_key(program)];
+    state.storage_block_bindings[name] = storageBlockBinding;
+
+    bool changed = false;
+    for (GLuint shader_name : state.attached_shaders) {
+        MgShaderObject* shader = mg_find_shader(shader_name);
+        if (!shader || shader->converted_source.empty()) continue;
+        std::string rewritten = shader->converted_source;
+        if (!rewrite_storage_block_binding(rewritten, name, storageBlockBinding)) continue;
+        if (rewritten == shader->converted_source) continue;
+        shader->converted_source = rewritten;
+        const GLchar* source = shader->converted_source.data();
+        GLint source_length = static_cast<GLint>(shader->converted_source.size());
+        GLES.glShaderSource(shader_name, 1, &source, &source_length);
+        GLES.glCompileShader(shader_name);
+        GLint status = GL_FALSE;
+        GLES.glGetShaderiv(shader_name, GL_COMPILE_STATUS, &status);
+        if (status != GL_TRUE) {
+            GLchar info_log[512] = {0};
+            GLES.glGetShaderInfoLog(shader_name, sizeof(info_log), nullptr, info_log);
+            LOG_E("Failed to compile shader %u after storage-block rebinding:\n%s", shader_name, info_log)
+        }
+        changed = true;
+    }
+    if (changed) {
+        // The desktop API changes the binding without requiring a relink. The
+        // backend has no equivalent call, so apply the source change and relink
+        // through the frontend so fragment-output bindings are re-applied too.
+        glLinkProgram(program);
+    }
+    CHECK_GL_ERROR
+}
+
 GLint glGetFragDataLocation(GLuint program, const GLchar* name) {
     LOG()
     LOG_D("glGetFragDataLocation(%u, %s)", program, name ? name : "(null)")

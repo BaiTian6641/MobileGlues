@@ -21,10 +21,20 @@
 #include <sstream>
 #include "cache.h"
 #include "../../version.h"
+#include "../../gles/loader.h"
 
 #define DEBUG 0
 
 static TBuiltInResource InitResources() {
+    // The table was a desktop-shaped hardcoded snapshot, and it said
+    // maxVertexImageUniforms = 0 and maxImageUnits = 8 even on a backend that
+    // reports 192. glslang enforces these limits, so a valid vertex-image shader
+    // was rejected before it reached the driver. Query the effective backend
+    // contract once and keep the defaults only as a fallback.
+    static TBuiltInResource cached{};
+    static bool cached_valid = false;
+    if (cached_valid) return cached;
+
     TBuiltInResource Resources{};
 
     Resources.maxLights = 32;
@@ -120,6 +130,86 @@ static TBuiltInResource InitResources() {
     Resources.maxTaskWorkGroupSizeZ_NV = 1;
     Resources.maxMeshViewCountNV = 4;
 
+    if (GLES.glGetIntegerv) {
+        auto q = [](GLenum pname, int fallback) {
+            GLint value = fallback;
+            GLES.glGetIntegerv(pname, &value);
+            return value > 0 ? value : fallback;
+        };
+        auto qi = [](GLenum pname, GLuint index, int fallback) {
+            GLint value = fallback;
+            if (GLES.glGetIntegeri_v) GLES.glGetIntegeri_v(pname, index, &value);
+            return value > 0 ? value : fallback;
+        };
+        Resources.maxTextureUnits = q(GL_MAX_TEXTURE_IMAGE_UNITS, Resources.maxTextureUnits);
+        Resources.maxTextureImageUnits = Resources.maxTextureUnits;
+        Resources.maxVertexTextureImageUnits =
+            q(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, Resources.maxVertexTextureImageUnits);
+        Resources.maxCombinedTextureImageUnits =
+            q(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, Resources.maxCombinedTextureImageUnits);
+        Resources.maxVertexAttribs = q(GL_MAX_VERTEX_ATTRIBS, Resources.maxVertexAttribs);
+        Resources.maxVertexUniformVectors = q(GL_MAX_VERTEX_UNIFORM_VECTORS, Resources.maxVertexUniformVectors);
+        Resources.maxFragmentUniformVectors = q(GL_MAX_FRAGMENT_UNIFORM_VECTORS, Resources.maxFragmentUniformVectors);
+        Resources.maxVertexUniformComponents = Resources.maxVertexUniformVectors * 4;
+        Resources.maxFragmentUniformComponents = Resources.maxFragmentUniformVectors * 4;
+        Resources.maxVaryingVectors = q(GL_MAX_VARYING_VECTORS, Resources.maxVaryingVectors);
+        Resources.maxVaryingComponents = q(GL_MAX_VARYING_COMPONENTS, Resources.maxVaryingComponents);
+        Resources.maxVertexOutputComponents =
+            q(GL_MAX_VERTEX_OUTPUT_COMPONENTS, Resources.maxVertexOutputComponents);
+        Resources.maxFragmentInputComponents =
+            q(GL_MAX_FRAGMENT_INPUT_COMPONENTS, Resources.maxFragmentInputComponents);
+        Resources.maxVertexOutputVectors = Resources.maxVertexOutputComponents / 4;
+        Resources.maxFragmentInputVectors = Resources.maxFragmentInputComponents / 4;
+        Resources.maxDrawBuffers = q(GL_MAX_DRAW_BUFFERS, Resources.maxDrawBuffers);
+        Resources.maxSamples = q(GL_MAX_SAMPLES, Resources.maxSamples);
+        Resources.maxImageUnits = q(GL_MAX_IMAGE_UNITS, Resources.maxImageUnits);
+        Resources.maxVertexImageUniforms = q(GL_MAX_VERTEX_IMAGE_UNIFORMS, Resources.maxVertexImageUniforms);
+        Resources.maxFragmentImageUniforms =
+            q(GL_MAX_FRAGMENT_IMAGE_UNIFORMS, Resources.maxFragmentImageUniforms);
+        Resources.maxComputeImageUniforms = q(GL_MAX_COMPUTE_IMAGE_UNIFORMS, Resources.maxComputeImageUniforms);
+        Resources.maxCombinedImageUniforms = q(GL_MAX_COMBINED_IMAGE_UNIFORMS, Resources.maxCombinedImageUniforms);
+        Resources.maxCombinedImageUnitsAndFragmentOutputs = q(GL_MAX_COMBINED_SHADER_OUTPUT_RESOURCES,
+                                                               Resources.maxCombinedImageUnitsAndFragmentOutputs);
+        Resources.maxCombinedShaderOutputResources = q(GL_MAX_COMBINED_SHADER_OUTPUT_RESOURCES,
+                                                       Resources.maxCombinedShaderOutputResources);
+        Resources.maxComputeWorkGroupCountX =
+            qi(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, Resources.maxComputeWorkGroupCountX);
+        Resources.maxComputeWorkGroupCountY =
+            qi(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, Resources.maxComputeWorkGroupCountY);
+        Resources.maxComputeWorkGroupCountZ =
+            qi(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, Resources.maxComputeWorkGroupCountZ);
+        Resources.maxComputeWorkGroupSizeX =
+            qi(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, Resources.maxComputeWorkGroupSizeX);
+        Resources.maxComputeWorkGroupSizeY =
+            qi(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, Resources.maxComputeWorkGroupSizeY);
+        Resources.maxComputeWorkGroupSizeZ =
+            qi(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, Resources.maxComputeWorkGroupSizeZ);
+        Resources.maxComputeTextureImageUnits =
+            q(GL_MAX_COMPUTE_TEXTURE_IMAGE_UNITS, Resources.maxComputeTextureImageUnits);
+        Resources.maxComputeAtomicCounters =
+            q(GL_MAX_COMPUTE_ATOMIC_COUNTERS, Resources.maxComputeAtomicCounters);
+        Resources.maxComputeAtomicCounterBuffers =
+            q(GL_MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS, Resources.maxComputeAtomicCounterBuffers);
+        Resources.maxVertexAtomicCounters = q(GL_MAX_VERTEX_ATOMIC_COUNTERS, Resources.maxVertexAtomicCounters);
+        Resources.maxFragmentAtomicCounters =
+            q(GL_MAX_FRAGMENT_ATOMIC_COUNTERS, Resources.maxFragmentAtomicCounters);
+        Resources.maxCombinedAtomicCounters =
+            q(GL_MAX_COMBINED_ATOMIC_COUNTERS, Resources.maxCombinedAtomicCounters);
+        Resources.maxAtomicCounterBindings =
+            q(GL_MAX_ATOMIC_COUNTER_BUFFER_BINDINGS, Resources.maxAtomicCounterBindings);
+        Resources.maxAtomicCounterBufferSize =
+            q(GL_MAX_ATOMIC_COUNTER_BUFFER_SIZE, Resources.maxAtomicCounterBufferSize);
+        Resources.minProgramTexelOffset =
+            q(GL_MIN_PROGRAM_TEXEL_OFFSET, Resources.minProgramTexelOffset);
+        Resources.maxProgramTexelOffset =
+            q(GL_MAX_PROGRAM_TEXEL_OFFSET, Resources.maxProgramTexelOffset);
+        Resources.maxViewports = q(GL_MAX_VIEWPORTS, Resources.maxViewports);
+        Resources.maxClipDistances = q(GL_MAX_CLIP_DISTANCES, Resources.maxClipDistances);
+        Resources.maxCullDistances = q(GL_MAX_CULL_DISTANCES, Resources.maxCullDistances);
+        Resources.maxCombinedClipAndCullDistances =
+            q(GL_MAX_COMBINED_CLIP_AND_CULL_DISTANCES, Resources.maxCombinedClipAndCullDistances);
+    }
+
     Resources.limits.nonInductiveForLoops = true;
     Resources.limits.whileLoops = true;
     Resources.limits.doWhileLoops = true;
@@ -154,7 +244,9 @@ static TBuiltInResource InitResources() {
     Resources.maxTaskWorkGroupSizeZ_EXT = 128;
     Resources.maxMeshViewCountEXT = 4;
 
-    return Resources;
+    cached = Resources;
+    cached_valid = true;
+    return cached;
 }
 
 int getGLSLVersion(const char* glsl_code) {
@@ -348,9 +440,19 @@ std::string processOutColorLocations(const std::string& glslCode) {
 
 std::string GLSLtoGLSLES(const char* glsl_code, GLenum glsl_type, uint essl_version, uint glsl_version,
                          int& return_code) {
+    // Translation output depends on more than the source and the version
+    // string: the stage selects different post-processing, and the backend
+    // profile selects the preprocessing branch. Bump the schema whenever a
+    // translation rule changes so old cache entries cannot be reused.
+    constexpr int kTranslationCacheSchema = 2;
     std::string sha256_string(glsl_code);
-    sha256_string += "\n//" + std::to_string(MAJOR) + "." + std::to_string(MINOR) + "." + std::to_string(REVISION) +
-                     "|" + std::to_string(essl_version);
+    sha256_string += "\n//schema=" + std::to_string(kTranslationCacheSchema) +
+                     "|" + std::to_string(MAJOR) + "." + std::to_string(MINOR) + "." + std::to_string(REVISION) +
+                     "|stage=" + std::to_string(glsl_type) + "|essl=" + std::to_string(essl_version) +
+                     "|backend=" + std::to_string(hardware->es_version) +
+                     "|compute=" + std::to_string(global_settings.ext_compute_shader ? 1 : 0) +
+                     "|dsa=" + std::to_string(global_settings.ext_direct_state_access ? 1 : 0) +
+                     "|hide=" + std::to_string(static_cast<int>(global_settings.hide_mg_env_level));
     const char* cachedESSL = Cache::get_instance().get(sha256_string.c_str());
     if (cachedESSL) {
         LOG_D("GLSL Hit Cache:\n%s\n-->\n%s", glsl_code, cachedESSL)
@@ -367,7 +469,11 @@ std::string GLSLtoGLSLES(const char* glsl_code, GLenum glsl_type, uint essl_vers
         Cache::get_instance().put(sha256_string.c_str(), converted.c_str());
     }
 
-    return (return_code >= 0) ? converted : glsl_code;
+    // A failed translation must not hand raw desktop GLSL to the ES driver: the
+    // backend error that follows is then a different shader, and the application
+    // sees a misleading failure. Return the empty result so the compile fails
+    // against the stage that actually went wrong.
+    return converted;
 }
 
 std::string replace_line_starting_with(const std::string& glslCode, const std::string& starting,
@@ -864,7 +970,13 @@ std::string GLSLtoGLSLES_2(const char* glsl_code, GLenum glsl_type, uint essl_ve
 
     // Post-processing ESSL
 
-    if (glsl_type != GL_COMPUTE_SHADER) {
+    // ESSL 3.10 supports layout(binding=...) on uniform blocks, samplers,
+    // images and shader-storage blocks. Keep it when the target can express it:
+    // stripping SSBO bindings loses the pack's binding 0/3 contract before the
+    // application can even call glBindBufferBase. ES 3.0 targets still need the
+    // old rewrite because their ESSL has no storage blocks and the layer binds
+    // the resources itself.
+    if (glsl_type != GL_COMPUTE_SHADER && essl_version < 310) {
         essl = removeLayoutBinding(essl);
     }
     essl = processOutColorLocations(essl);

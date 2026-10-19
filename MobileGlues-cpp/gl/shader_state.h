@@ -42,6 +42,7 @@ struct MgShaderObject {
 struct MgProgramObject {
     std::vector<GLuint> attached_shaders;
     std::unordered_map<std::string, GLuint> frag_data_locations;
+    std::unordered_map<std::string, GLuint> storage_block_bindings;
 };
 
 extern std::unordered_map<MgObjectKey, MgShaderObject, MgObjectKeyHash> g_mg_shaders;
