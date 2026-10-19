@@ -1,0 +1,53 @@
+# Performance track
+
+Status: started 2026-10-19. **No X1E benchmark numbers yet** — the target device disconnected
+before the first post-change run. Nothing below is a measured speedup claim.
+
+## Target interpretation
+
+The Snapdragon X1E80100 / Adreno X1-85 sits in the Radeon 780M class. The goal is not to beat a
+desktop dGPU; it is to remove wrapper-induced CPU/GPU work while preserving standard GL behavior.
+WSR 128 is the supported advanced target. WSR 256 remains blocked by the 128 MiB SSBO limit and is
+future X2E work. Player reflections now render but are performance/power-unqualified.
+
+## Implemented this pass
+
+| Change | Why | Expected effect | Measurement |
+|---|---|---|---|
+| Skip the depth-guard scan when no sampler object is bound; skip units with no sampler before texture lookup; remove the per-draw 1.5 KB `Moved` zero-fill | The guard runs on every draw/dispatch; Iris binds samplers on many passes, but compute and sampler-free phases paid a 128-unit scan and memset for no work | Lower CPU per draw/dispatch; exact, no visual change | `wrapper_probe guard_bench`: `plain_ns`, `guard_ns`, `delta_ns`. **PENDING on X1E** |
+| Per-physical-unit image-binding shadow; skip identical `glBindImageTexture` calls from `glBindImageTexture`, `mg_materialize_image_bindings` and program switches | Each program switch and image-uniform write replayed every image; reflection scenes have several live images and frequent switches | Removes redundant ANGLE/Vulkan descriptor binds; no deferral, so ordering is unchanged | `wrapper_probe image_rebind_bench`: `ns_per_same_bind`. **PENDING on X1E** |
+| Probe backend `glGetError` only when a format was lowered or is unknown | The common R32UI/RGBA image bind paid a backend error round trip per call | Removes one round trip from the common image-bind path | Compare `image_rebind_bench` before/after; **PENDING** |
+| Fast path for `glUniform1i`/`glUniform1iv` when the current program has no image uniforms; per-program `has_image_uniforms` flag | Sampler/scalar writes were doing share-group and location hash lookups for a feature the program does not use | Removes two hash probes from the common uniform path | `perfetto`/`simpleperf` uniform-write samples; **PENDING** |
+
+Source review: `PerformanceAudit` agent, 2026-10-19. The audit ranked image replay first, the
+unconditional image-bind error probe second, and the uniform hash path third. It explicitly marked
+the shadow-pass voxelization and player raytrace as inherent pack GPU work; no quality reduction is
+proposed.
+
+## Next candidates (ranked, not yet implemented)
+
+1. Measure the shadow pass with `GL_EXT_disjoint_timer_query`/`GL_AMD_performance_monitor`, with
+   `WORLD_SPACE_REFLECTIONS` 0 vs 1, to separate wrapper CPU from pack GPU work.
+2. Batch image-binding materialization once per draw/dispatch instead of replaying on each image
+   uniform write. Only after the dedupe numbers show remaining duplicate work.
+3. 3D image clear: use recorded extents, clear several voxels per invocation, and replace the 2D
+   image-unit scan with tracked state. Measure with a 128×64×128 R32UI clear timer.
+4. Redundant `glBindVertexArray`/`glBindBuffer` elision after making the depth-clear triangle restore
+   the application's VAO and `GL_ARRAY_BUFFER`.
+
+## Measurement procedure
+
+```sh
+# Wrapper CPU microbenchmarks
+adb -s C1L63708PZ push build/android-arm64-release/libmobileglues.so /data/local/tmp/
+adb -s C1L63708PZ push MobileGlues-cpp/tools/wrapper_probe/wrapper_probe_arm64 /data/local/tmp/
+adb -s C1L63708PZ shell 'cd /data/local/tmp && MG_DIR_PATH=/data/local/tmp/mgconfig \
+  MG_PROBE_OUTPUT=/data/local/tmp/guard.json MG_LIBRARY=/data/local/tmp/libmobileglues.so \
+  LD_LIBRARY_PATH=/data/local/tmp ./wrapper_probe_arm64 guard_bench'
+adb -s C1L63708PZ shell 'cd /data/local/tmp && MG_DIR_PATH=/data/local/tmp/mgconfig \
+  MG_PROBE_OUTPUT=/data/local/tmp/rebind.json MG_LIBRARY=/data/local/tmp/libmobileglues.so \
+  LD_LIBRARY_PATH=/data/local/tmp ./wrapper_probe_arm64 image_rebind_bench'
+```
+
+In-game A/B: same world, camera route, resolution, pack profile and warmup; capture F3 frame time
+and logcat. `performance/power` remains a separate gate from correctness.

@@ -46,9 +46,11 @@ Fabric remains the legacy lane and is still unbeaten.
   required advanced WSR target for the X1E release; WSR 192 is optional staged headroom. WSR 256 is
   optional/future X2E work, `BLOCKED` on X1E by the provider's 134,217,728-byte storage-block limit,
   and is not an X1E release blocker.
-- Active task: close the required advanced gates (ACT 192 and WSR 128) with effect-specific evidence,
-  then return to standard named-effect fidelity. Optional player reflections and WSR 256 remain
-  future work, never claimed as supported on X1E.
+- Active task: performance track (S7). Player reflections are a staged functional pass
+  (user-reported) but fail the performance/power gate; WSR 128 without player reflections remains
+  the supported advanced target. First wrapper CPU changes are committed: image-binding replay
+  dedupe, image-bind error-probe gating, uniform fast path, and depth-guard scan skip. WSR 256
+  remains future X2E work, never claimed on X1E.
 - Image binding / ACT repair (bridge 1.0.17): fixed name-to-unit registry shared by the transformer and
   Iris ProgramImages; `voxel_img` per-frame clear restored. On X1E, ACT 192 colors are distinct, WSR 192
   is stable in motion, and the earlier light ghosting/flicker is gone. Residual: the pack's half-rate
@@ -387,14 +389,18 @@ performed.
 
 ## Exact next action
 
-Close the required advanced gates on the original pack: qualify **Very High ACT 192** and the
-**custom WSR 128 profile** (`COLORED_LIGHTING=128`, `WORLD_SPACE_REFLECTIONS=1`) effect by effect,
-then add a native core `glClearBufferSubData` implementation so the Iris zero-fill bridge is no
-longer required. WSR 128 is the advanced release gate. Standard named-effect fidelity remains the
-primary release work.
+Reconnect the X1E and run the two CPU microbenchmarks in `performance.md`:
 
-Ultra ACT 256/WSR 256 is **optional/future X2E** work only. If it is characterized, record the
-provider's 134,217,728 B `MAX_SHADER_STORAGE_BLOCK_SIZE` rejecting the 202,899,456 B request as a
-known deviation; do not edit packs and do not present it as an X1E release gate. Optional player
-reflections (`WORLD_SPACE_PLAYER_REF=1`) remain future work. Keep graphics-stage image formats,
-performance, and lifecycle gates separate.
+```sh
+./wrapper_probe_arm64 guard_bench
+./wrapper_probe_arm64 image_rebind_bench
+```
+
+Then run the same in-game route with WSR 128, player reflections off, and WSR 128 + player
+reflections on. Record F3 frame time, median/p95, power and thermal state. The optimization is
+**implemented but unmeasured** until that run; do not claim a speedup from source inspection.
+
+After the CPU numbers, measure the per-frame 3D image clears and the shadow-pass voxelization with
+`GL_EXT_disjoint_timer_query`/`GL_AMD_performance_monitor`. Keep WSR 256 as optional/future X2E
+work; do not edit packs or present the 202,899,456-byte request as an X1E gate. Keep correctness,
+performance and lifecycle gates separate.

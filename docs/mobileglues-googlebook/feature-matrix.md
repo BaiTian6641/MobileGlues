@@ -169,6 +169,15 @@ fidelity reference.
 | SSBO/image binding round-trip | **partial** | r16ui refusal visible; r32ui accepted; no r8ui/r16ui lowering yet |
 | Cache identity invalidation | pass | Host `cache_key_test`: distinct keys for source, stage, ESSL, backend, texture-buffer emulation, texture-query-LOD, compute, DSA, hide level and PATCH; device suite 38/38 |
 
+## Performance track (implemented, measurement pending)
+
+| Change | Status | Evidence |
+| --- | --- | --- |
+| Depth-guard scan skip when no sampler / no sampler on unit; no per-draw Moved zero-fill | implemented, unmeasured | `performance.md`; `wrapper_probe guard_bench` |
+| Per-physical-unit image-binding dedupe | implemented, unmeasured | `performance.md`; `wrapper_probe image_rebind_bench` |
+| Image-bind backend error probe gated to lowered/unknown formats | implemented, unmeasured | source |
+| Uniform fast path for programs without image uniforms | implemented, unmeasured | source |
+
 ## Game-process smoke (X1E, installed renderer 2.0.0)
 
 Staged evidence for the supported delivery-lane tuple.
