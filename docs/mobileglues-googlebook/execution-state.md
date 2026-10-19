@@ -7,8 +7,27 @@ Last updated: 2026-10-19 (bridge 1.0.17).
 
 Stage labels below retain the historical `Stage 0`-`Stage 8` numbering used when the evidence
 was captured. The approximate `S0`-`S9` mapping and lane status are in `README.md`. In current
-terms: S0 partial; S1-provider partial; S1-legacy partial but the pinned lane is NOT RUN;
-S1-current NOT RUN; S2/S3 partial; S4 partial; S5/S6 staged with WSR 256 blocked; S7-S9 NOT RUN.
+terms: S0 partial; S1-provider partial; S1-legacy NOT RUN; S1-current PARTIAL on a preliminary
+21.1.262 game process with the exact 21.1.264 tuple NOT RUN; S2/S3 partial; S4 partial; S5/S6
+staged with WSR 256 blocked; S7-S9 NOT RUN.
+
+## Delivery lane lock (2026-10-19)
+
+The required lane is now Minecraft 1.21.1 on NeoForge 21.1.264 with Java 21
+(`java-runtime-delta`), Iris 1.8.14-beta.1 NeoForge (`KduFYu4t`) and Sodium 0.8.13 NeoForge
+(`uMOpc5uV`). Ordinary shaderpack ZIPs must import, select their own profile and render their
+enabled effects in this lane. The stable fallback pair is Iris 1.8.12 NeoForge (`t3ruzodq`) with
+Sodium 0.6.13 NeoForge (`Pb3OXVqC`); Iris 1.8.12 must never be paired with Sodium 0.8.13.
+
+The existing game-process evidence was captured on **NeoForge 21.1.262** with Iris
+1.8.14-beta.1 and Sodium 0.8.13. It is preliminary evidence for this lane: it proves the launcher,
+JVM, native bridge and Iris/Sodium path can start, and that original packs can initialize. It
+does not qualify the lane. The exact 21.1.264 tuple, effect fidelity, performance and lifecycle
+gates remain **NOT RUN**.
+
+Minecraft 26.3 / Java 25 / LWJGL 3.4.3 SDL on Fabric is a future/experimental lane; its
+bytecode and manifest findings stay recorded as future-lane evidence. Minecraft 1.20.1 / Java 17
+Fabric remains the legacy lane and is still unbeaten.
 
 ## Current stage and active task
 
@@ -16,7 +35,8 @@ S1-current NOT RUN; S2/S3 partial; S4 partial; S5/S6 staged with WSR 256 blocked
   complete for the tested contracts; remaining capability/cache/ownership items stay open.
 - Stage 3 (historical): both original Complementary r5.9.2 styles initialize at High without fallback;
   named-effect fidelity matrix remains open. The game process was Minecraft 1.21.1 / NeoForge
-  21.1.262, not the pinned 1.20.1/Fabric or 26.3/Fabric lane.
+  21.1.262, i.e. a preliminary build of the delivery lane, not the locked 21.1.264 tuple and not the
+  pinned 1.20.1/Fabric legacy lane.
 - Stage 4 (historical): ACT 192 staged pass on the original pack.
 - Stage 5 (historical): WSR 128 and WSR 192 staged passes on the original pack; WSR 256 blocked by
   the provider's 134,217,728-byte storage-block limit.
@@ -81,11 +101,47 @@ game process.
   `gl/program.cpp` (source rewrite + frontend relink) and tested on the X1E device.
 - The translator/limit/image/SSBO observations in the plan are being re-audited against this exact checkout.
 - A real FCL game process was launched on `C1L63708PZ` (Minecraft 1.21.1 / NeoForge 21.1.262,
-  9 mods) with the installed MobileGlues 2.0.0 renderer. The main menu rendered, but the installed
-  build's logcat rejected `#version 400` shaders and generated `iris_Normal` syntax errors. This is
-  smoke evidence for the launcher/provider path, not pack qualification.
+  Iris 1.8.14-beta.1, Sodium 0.8.13, 9 mods) with the installed MobileGlues 2.0.0 renderer. The main menu
+  rendered, but the installed build's logcat rejected `#version 400` shaders and generated `iris_Normal`
+  syntax errors. This is staged smoke evidence for the delivery lane's launcher/provider path on the
+  previous NeoForge patch, not qualification of the 21.1.264 tuple and not pack qualification.
 - Host semantic tests pass unchanged: `sh MobileGlues-cpp/tests/run.sh` → 0 failures.
 - Reproducible ARM64 build succeeds with NDK r28c; artifact is 16 KB-aligned and ThinLTO is active.
+- Explicit image bindings are now authoritative: the transformer preserves `layout(binding=N)` from
+  the pack or the Iris bridge, and only assigns a fallback unit when none exists; that fallback map is
+  scoped per share group instead of process-global. X1E `wrapper_probe explicit_image_binding` wrote
+  and read `0x12345678` through `layout(binding=5)` with no `glUniform1i` call. Build SHA-256
+  `86a73e18…9093`; result `b9c94bfc…4fad`. This is wrapper-level evidence, not pack qualification.
+- Per-context logical image bindings are now replayed through the current program's unit map on
+  `glUseProgram`, relink and image-uniform updates. The X1E `wrapper_probe all` suite passes 31/31,
+  including `act_pingpong` (`values=11,22`, `program_values=11,22`) with images bound before the
+  program and uniforms set after it. Build SHA-256 `cc2b5e2f…8252`; result
+  `2026-10-19-x1e-wrapper-all-final.json` (`cb092e6b…4f80`).
+- Review follow-up: restored the depth-size guard in `glCopyTexSubImage2D` that commit `be5e9a1`
+  introduced; its uncommitted removal would have re-exposed the ANGLE device-loss path. Removed the
+  `WORLD_SPACE_PLAYER_REF` source rewrite: Iris preprocesses the option with jcpp before
+  `glShaderSource` and the translator regenerates ESSL, so the guard could never match. The option
+  remains unsupported and is not silently disabled.
+- Game-process run (13:14, NeoForge 21.1.262): reached terrain, then FCL showed its crash screen.
+  Uploaded log `https://mclo.gs/KgWJ5oC`. The renderer log showed every active image uniform mapped
+  to core unit 0 (Iris's default repeated binding), so the pack aliased its images. A duplicate-
+  binding heuristic now overrides repeated formatless bindings while preserving unique bridge
+  bindings; X1E `wrapper_probe duplicate_image_binding` passes `11,22`, and the full suite is 32/32.
+  The same log contains an independent `SodiumServiceModLocator` duplicate-class `LinkageError` and
+  `Failed to create fence object`; the crash cause must remain separated from the renderer alias.
+  This run is a failure, not a pass.
+- A resolver build logged `relinked to separate duplicate image units` for every affected program
+  but the reflected units remained 0; uploaded log `https://mclo.gs/PeqII57` shows the same Sodium
+  and fence failures. The line-based parser was not seeing multi-declaration/multi-line sources.
+  It has been replaced with a whole-source declaration parser that stores name -> unit per shader
+  and feeds reflection directly. The X1E suite passes 32/32; build `a3f5d9d9…0f0c`; result
+  `validation/2026-10-19-x1e-wrapper-all-global.json`. The in-game retry is the deciding check.
+- In-game result (13:45, Minecraft 1.21.1 / NeoForge 21.1.262): the 1.21.1 world loaded and rendered
+  with the original pack, logcat showed distinct image units 0-3 for programs 435/438/256/441/433,
+  and Save and Quit to Title succeeded. Captures
+  `2026-10-19-1.21.1-neoforge-21.1.262-world.png` and `...-title.png`. A 26.2 world downgrade prompt
+  was canceled; that world was not loaded. This is a staged 21.1.262 pass only. The exact
+  NeoForge 21.1.264 tuple, effect-by-effect fidelity, performance and lifecycle remain NOT RUN.
 
 ### Stage 1/2 implementation evidence (X1E, wrapper level)
 
@@ -212,11 +268,18 @@ Still open in these stages:
 
 ## Blockers
 
-1. **WSR 256 provider limit.** `MAX_SHADER_STORAGE_BLOCK_SIZE` is 134,217,728 B; the pack requests
+1. **Exact delivery tuple not launched.** The game process is NeoForge 21.1.262 with Iris
+   1.8.14-beta.1 / Sodium 0.8.13. The locked 1.21.1 / NeoForge 21.1.264 tuple has not booted, so
+   `S1-current` is not passed. Relaunch the exact tuple with the workspace plugin and record the
+   process/provider/pack tuple.
+2. **WSR 256 provider limit.** `MAX_SHADER_STORAGE_BLOCK_SIZE` is 134,217,728 B; the pack requests
    202,899,456 B. This is a provider boundary, not a wrapper regression. WSR 128/192 pass.
-2. **Named-effect fidelity is incomplete.** PBR, shadow edges, bloom, TAA/history isolation, and player
+3. **Named-effect fidelity is incomplete.** PBR, shadow edges, bloom, TAA/history isolation, and player
    reflections are not yet effect-by-effect qualified on both original styles.
-3. **Performance/lifecycle gates pending.** Sustained 60 FPS at 1920×1200, 20-minute thermal run,
+4. **Pack-load diagnostics in the exact tuple.** Custom-uniform warnings (`BIOME_PALE_GARDEN`,
+   `BIOME_SULFUR_CAVES`, `endFlashIntensity`) appear with the 21.1.262 / Iris 1.8.14-beta.1 pair and can
+   suppress effects; resolve with a compatible Iris/pack tuple rather than editing packs.
+5. **Performance/lifecycle gates pending.** Sustained 60 FPS at 1920×1200, 20-minute thermal run,
    resize/focus/context recovery, packaging/release, and X2E onboarding remain open.
 
 ## Latest test evidence

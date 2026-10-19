@@ -7,6 +7,22 @@ Project: MobileGlues X1E Googlebook implementation. The requirements baseline is
 `docs/mobileglues-googlebook/`; versioned distribution locks live in `compat/`. The older
 `docs/MobileGlues_Googlebook_X1E_Optimization_Plan.md` is historical and superseded.
 
+## Target runtime lane
+
+The delivery lane is Minecraft 1.21.1 on NeoForge 21.1.264 with Java 21
+(`java-runtime-delta`), Iris 1.8.14-beta.1+1.21.1-neoforge (Modrinth `KduFYu4t`) and
+Sodium mc1.21.1-0.8.13-neoforge (`uMOpc5uV`). Ordinary shaderpack ZIPs must import,
+select their own profile and render their enabled effects in that lane with
+desktop-equivalent OpenGL/GLSL semantics. The stable fallback pair is Iris 1.8.12
+NeoForge (`t3ruzodq`) with Sodium 0.6.13 NeoForge (`Pb3OXVqC`); never pair Iris 1.8.12
+with Sodium 0.8.13.
+
+The installed instance is NeoForge 21.1.262; its game-process smoke is preliminary
+evidence only. The exact 1.21.1 / 21.1.264 tuple and all effect, performance and
+lifecycle gates are **NOT RUN**. Minecraft 26.3 / Java 25 / LWJGL 3.4.3 SDL on Fabric
+is future/experimental; Minecraft 1.20.1 / Java 17 Fabric is legacy. Neither replaces
+the delivery lane, and 26.3 findings in the docs are retained as future-lane evidence.
+
 ## Target hardware
 
 A real target device is connected over ADB:

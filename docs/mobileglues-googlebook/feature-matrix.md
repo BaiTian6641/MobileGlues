@@ -9,9 +9,24 @@ open.
 
 This file preserves evidence captured under the historical X1E plan. Its stage labels and status
 vocabulary are not the current `S0`-`S9` table; see `README.md` and `../README.md` for the mapping and
-current lane status. The game-process rows use Minecraft 1.21.1 / NeoForge 21.1.262, not the pinned
-1.20.1/Fabric or 26.3/Fabric lanes, and the connected unit is an HP Googlebook 14 rather than the XPS
-reference specification.
+current lane status. The connected unit is an HP Googlebook 14 rather than the XPS reference
+specification.
+
+## Target delivery lane
+
+| Field | Value |
+| --- | --- |
+| Minecraft | 1.21.1, Java 21 (`java-runtime-delta`), LWJGL 3.3.3 GLFW |
+| Loader | NeoForge 21.1.264 |
+| Iris | 1.8.14-beta.1+1.21.1-neoforge, Modrinth `KduFYu4t` |
+| Sodium | mc1.21.1-0.8.13-neoforge, Modrinth `uMOpc5uV` |
+| Stable fallback pair | Iris 1.8.12 NeoForge (`t3ruzodq`) with Sodium 0.6.13 NeoForge (`Pb3OXVqC`); never 1.8.12 with 0.8.13 |
+| Status | **NOT RUN** on the exact tuple; staged evidence exists only on NeoForge 21.1.262 |
+
+Every game-process row below was captured on **Minecraft 1.21.1 / NeoForge 21.1.262** with Iris
+1.8.14-beta.1 and Sodium 0.8.13. That is the same lane on the previous loader patch, so it is
+preliminary delivery-lane evidence, not qualification. No row is upgraded by this header. The
+1.20.1/Fabric legacy and 26.3/Fabric future lanes have no game-process rows here.
 
 ## Renderer / build rows
 
@@ -51,7 +66,8 @@ Evidence: `validation/2026-10-18-x1e-provider-probe.json` (SHA-256
 
 ## Game-process results (X1E, test plugin)
 
-The test plugin APK packaged core `0557189` (NDK 27.3 debug build) and was installed
+Preliminary delivery-lane evidence on NeoForge 21.1.262 (target lock is 21.1.264). The test plugin
+APK packaged core `0557189` (NDK 27.3 debug build) and was installed
 on `C1L63708PZ`. FCL launched `neoforge-21.1.262`; the log's env map points
 `SDL_OPENGL_LIBRARY` / `LD_LIBRARY_PATH` at the newly installed plugin APK, so the
 running renderer is this workspace's build. Iris 1.8.14-beta.1 + Sodium 0.8.13 are
@@ -94,7 +110,7 @@ fidelity reference.
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 128, WSR 1) | WSR 128 | ARM64 / X1E / ANGLE | pass (staged) | original pack; WSR images 128×64×128; SSBO 50,855,936 B; log `mclo.gs/adG0NiA` |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 192, WSR 1) | WSR 192 + ACT 192 | ARM64 / X1E / ANGLE | pass (staged, bridge 1.0.17) | original pack; distinct cyan/warm ACT; WSR stable in motion; bridge hash `2e1c083c…6397`; residual: visible half-rate floodfill circle on light placement/world entry |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | WSR 256 | ARM64 / X1E / ANGLE | blocked | provider `MAX_SHADER_STORAGE_BLOCK_SIZE=134,217,728`; request 202,899,456 B |
-| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | player reflections (binding 3) | ARM64 / X1E / unknown | not tested | — |
+| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | player reflections (binding 3) | ARM64 / X1E / ANGLE | not tested / unsupported | Enabled option uses vertex-stage atomics and an image store that lose the ANGLE device; the wrapper does not silently disable it |
 | Complementary Unbound r5.9.2 | `2b4e9c71…21d2` | High | standard fidelity suite | ARM64 / X1E / unknown | not tested | — |
 | BSL v10.1.8 | `36b0a50f…30b5` | default | standard fidelity suite | ARM64 / X1E / unknown | not tested | — |
 | BSL v10.1.8 | `36b0a50f…30b5` | multicolored block light | ACT image/compute | ARM64 / X1E / unknown | not tested | — |
@@ -110,7 +126,10 @@ fidelity reference.
 | `glShaderSource` multi-string / explicit-length regression | pass | host `tests/run.sh`; X1E `wrapper_probe source_multi`, `source_multi_implicit` |
 | RGB8_SNORM render-target backing | pass | X1E `wrapper_probe rgb8_snorm_attachment`: both TexImage2D and TexStorage2D FBOs complete |
 | Desktop GLSL version normalization | pass for simple shaders | X1E `wrapper_probe desktop_glsl_120/150/330/400/460` |
-| Full wrapper contract suite | pass (25/25) | `validation/2026-10-19-x1e-wrapper-image-bridge.json` |
+| Full wrapper contract suite | pass (25/25 historical; 32/32 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-global.json` |
+| Explicit image bindings preserved / fallback scoped per share group | pass | X1E `wrapper_probe explicit_image_binding`, `layout(binding=5)` write/read `0x12345678`; build `86a73e18…9093`; `validation/2026-10-19-x1e-wrapper-explicit-image.json` |
+| Dynamic image units across bind-before-program and program switch | pass | X1E `wrapper_probe act_pingpong`: `values=11,22`, `program_values=11,22`; logical bindings replayed on `glUseProgram` and image-uniform updates; build `cc2b5e2f…8252` |
+| Duplicate/default image binding alias | pass | X1E `wrapper_probe duplicate_image_binding`: repeated formatless `binding=0` separated to units 0/1, values `11,22`; whole-source parser build `a3f5d9d9…0f0c`; `validation/2026-10-19-x1e-wrapper-all-global.json` |
 | Failed compile/link status remains observable | pass | X1E `wrapper_probe compile_failure`, `link_failure` at `enableNoError=0/1/2` |
 | Per-program frag-data bindings / interleaving | pass | X1E `wrapper_probe frag_data_*`; `glGetFragDataLocation` round-trip |
 | Shader/program state keyed by share group | implemented, not multi-context tested | source + X1E single-context tests |
@@ -123,6 +142,7 @@ fidelity reference.
 
 ## Game-process smoke (X1E, installed renderer 2.0.0)
 
+Staged preliminary evidence for the delivery lane on the previous NeoForge patch.
 FCL 1.3.4.0 launched its existing NeoForge 1.21.1 instance
 (`neoforge-21.1.262`, 9 mods) under the installed MobileGlues 2.0.0 renderer.
 The Minecraft main menu rendered and the process stayed alive. Logcat from that
@@ -130,15 +150,43 @@ launch showed the installed build rejecting `#version 400` shaders, reporting
 unsupported `GL_ARB_shader_image_load_store` / `GL_ARB_gpu_shader5` /
 `GL_ARB_shading_language_packing` / `GL_ARB_shader_storage_buffer_object`
 warnings, and failing generated `iris_Normal` syntax. Those logs are from the
-**installed 2.0.0 library**, not this workspace's build. No shaderpack was loaded
-and the instance is not one of the plan's Fabric lanes. The game-process smoke
-therefore proves only that the launcher/provider path starts; it closes no
-fidelity, Iris, or pack gate.
+**installed 2.0.0 library**, not this workspace's build. No shaderpack was loaded.
+The game-process smoke therefore proves only that the launcher/provider path
+starts on 21.1.262; it does not test the locked NeoForge 21.1.264 tuple and
+closes no fidelity, Iris, or pack gate.
+
+## Game-process runs (X1E, workspace plugin)
+
+A later launch with the workspace plugin reached terrain and then crashed. FCL's uploaded log
+`https://mclo.gs/KgWJ5oC` shows two separate facts:
+
+- The renderer mapped all four active image uniforms to core unit 0, aliasing the pack's images.
+  A duplicate-binding heuristic now separates repeated formatless bindings while preserving unique
+  explicit bridge bindings; the wrapper suites pass 32/32 and `duplicate_image_binding` returns
+  `11,22`.
+- The same log contains a `SodiumServiceModLocator` duplicate-class `LinkageError` and repeated
+  `Failed to create fence object`. These are not established as renderer defects; the Sodium/mod
+  instance must be isolated before the crash is attributed.
+
+This run is a failure, not a pass. It does not qualify the delivery lane or any shaderpack.
+
+### 13:45 staged pass (NeoForge 21.1.262)
+
+With the whole-source image parser build, FCL launched the same Minecraft 1.21.1 / NeoForge 21.1.262
+instance. The 1.21.1 world loaded and rendered with the original pack; logcat showed distinct image
+units 0–3 for programs 435, 438, 256, 441 and 433. The world was saved and quit to title. Captures:
+`2026-10-19-1.21.1-neoforge-21.1.262-world.png` and `...-title.png`. A 26.2 world downgrade prompt was
+canceled; no 26.2 world was loaded. The earlier Sodium/fence failure did not reproduce in this run.
+
+This is a staged pass for NeoForge 21.1.262 only. The exact 1.21.1 / NeoForge 21.1.264 tuple,
+effect-by-effect fidelity, performance, endurance and lifecycle gates remain NOT RUN.
 
 ## Device gates (all pending)
 
 | Gate | Required evidence |
 | --- | --- |
+| Exact delivery tuple boot (1.21.1 / NeoForge 21.1.264 / Iris 1.8.14-beta.1 / Sodium 0.8.13) | game-process log naming the exact loader and mod versions |
+| Unmodified pack ZIP import and profile selection | F3 capture plus Iris log for an original r5.9.3 ZIP |
 | Same provider in probe and game process | provider library paths, EGL vendor/version, GLES renderer |
 | Vertex image stores / 512-invocation groups | behavioral probe pass/fail on X1E |
 | R8UI/R16UI image representation | allocation, integer read/write, sampling, clear/copy |

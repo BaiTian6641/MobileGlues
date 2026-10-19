@@ -11,6 +11,11 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-stage2.json` | 2026-10-19 | target device, wrapper level | same harness | full suite including SSBO binding, 512 compute, and vertex image store |
 | `2026-10-19-x1e-wrapper-final.json` | 2026-10-19 | target device, wrapper level | same harness | 23/23 contract cases, including RGB8_SNORM and desktop GLSL versions |
 | `2026-10-19-x1e-wrapper-image-bridge.json` | 2026-10-19 | target device, wrapper level | same harness | 25/25 cases including extension consistency and formatless-image metadata bridge |
+| `2026-10-19-x1e-wrapper-explicit-image.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 explicit_image` against ARM64 build `86a73e18…9093` | PASS: explicit `layout(binding=5)` preserved; write/read value `0x12345678` |
+| `2026-10-19-x1e-wrapper-all-final.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `cc2b5e2f…8252` | 31/31 PASS, including dynamic image units `act_pingpong` values `11,22` and explicit bindings |
+| `2026-10-19-x1e-wrapper-duplicate-image.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 duplicate_image` | PASS: two formatless images at duplicate `binding=0` separated to units 0/1; values `11,22` |
+| `2026-10-19-x1e-wrapper-all-dup.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `5f8907a1…66ec` | 32/32 PASS after duplicate-binding handling |
+| `2026-10-19-x1e-wrapper-all-global.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `a3f5d9d9…0f0c` | 32/32 PASS with whole-source image declaration parsing |
 
 ## Game-process captures and logs
 
@@ -47,6 +52,8 @@ pack screen; the saved copies are evidence snapshots.
 | `2026-10-19-r592-wsr192-room.png` | `cc74efb895105222c15ffb31bd509b326e361c8a0f2cb7104a629469c5c6c745` | WSR 192/ACT 192 room frame |
 | `2026-10-19-game-r592-wsr192.log` | `315446f192f24c6f881437170cfe26a6c05510c22340c837099ccf5b8d3c44cd` | WSR 192 log (`mclo.gs/FMnnMkC`) |
 | `2026-10-18-game-main-menu-old-plugin.png` | `0258b18ccaecd64433880e1463c0a1d329feda7fa17f45201f51d3224571c85e` | installed 2.0.0 renderer smoke before test plugin |
+| `2026-10-19-1.21.1-neoforge-21.1.262-world.png` | `c34d52587361c715b37394d21918f6a08a92c93a03d4c903d8e567e842cc766d` | staged 21.1.262 world rendered with the original pack and workspace renderer |
+| `2026-10-19-1.21.1-neoforge-21.1.262-title.png` | `3c45814f66152721724c054f4bf5b7f2cc265cad24062488194fba191267ddff` | title screen: Minecraft 1.21.1 / NeoForge 21.1.262 (9 mods), pack active |
 
 ## Wrapper harness reproduction
 

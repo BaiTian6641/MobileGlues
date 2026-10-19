@@ -58,24 +58,28 @@ Unknown devices start with conservative, truthful capabilities and an unqualifie
 | MobileGlues public release | V2.0.0; the release includes launcher-provided ANGLE integration and multidraw benchmarking | Preserve these facilities and strengthen their qualification |
 | Core source audit | `97558a69157b033b890958b1e49258c5b51a80c6`, dated 22 September 2026 | Reproduce source findings before treating them as device failures |
 | Plugin source | `f5105e4ddd1752cccdcc6421c402960d40ec3d9d`; core submodule `f56af31d3e490d95808b3adc4ace20234249a37a` | The release source and newer core main are different baselines |
-| Current Minecraft lane | 26.3 uses Java 25 and LWJGL 3.4.3 with SDL, ShaderC and SPIRV-Cross modules | A legacy GLFW-only bridge is insufficient |
+| Current delivery lane | Minecraft 1.21.1 on NeoForge 21.1.264 with Java 21 (`java-runtime-delta`) and LWJGL 3.3.3 GLFW; Iris 1.8.14-beta.1 and Sodium 0.8.13 NeoForge builds | This is the lane ordinary shaderpack ZIPs must work in; Android LWJGL/GLFW closure and NeoForge startup are the release blockers |
+| Delivery-lane fallback | Iris 1.8.12 NeoForge requires Sodium 0.6.13 NeoForge; it must never be paired with Sodium 0.8.13 | Keep a pinned, tested fallback pair rather than mixing versions |
+| Future/experimental lane | Minecraft 26.3 uses Java 25 and LWJGL 3.4.3 with SDL, ShaderC and SPIRV-Cross modules | Neither required nor qualified; a GLFW-only bridge is still insufficient for it |
 | Legacy modded lane | Minecraft 1.20.1 with an explicitly matched Fabric/Iris/Sodium stack | Retain a distinct compatibility and regression lane |
 | Complementary | Published r5.9.3 is the main project qualification target; retain r5.9.2 for regression | Pin original release assets, not only repository HEAD |
 | Sodium support | Upstream excludes OpenGL translation layers from its supported configurations | This project owns its tested compatibility and downstream fixes |
 
-Sources: [MobileGlues release](https://github.com/MobileGL-Dev/MobileGlues-release/releases/tag/V2.0.0), [core snapshot](https://github.com/MobileGL-Dev/MobileGlues/tree/97558a69157b033b890958b1e49258c5b51a80c6), [Minecraft 26.3 manifest](https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json), [Complementary releases](https://modrinth.com/shader/complementary-reimagined/versions), [Sodium policy](https://github.com/CaffeineMC/sodium).
+Sources: [MobileGlues release](https://github.com/MobileGL-Dev/MobileGlues-release/releases/tag/V2.0.0), [core snapshot](https://github.com/MobileGL-Dev/MobileGlues/tree/97558a69157b033b890958b1e49258c5b51a80c6), [Minecraft 1.21.1 manifest](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json), [NeoForge 21.1.264 installer](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar), [Minecraft 26.3 manifest](https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json), [Complementary releases](https://modrinth.com/shader/complementary-reimagined/versions), [Sodium policy](https://github.com/CaffeineMC/sodium).
 
-The version matrix in the validation document is a starting lock proposal, not a statement that these builds already work on Googlebook. Resolve every remaining dependency and asset hash in Stage 0.
+The version matrix in the validation document is a starting lock proposal, not a statement that these builds already work on Googlebook. The exact delivery tuple (1.21.1 / NeoForge 21.1.264 / Iris 1.8.14-beta.1 / Sodium 0.8.13) has not been launched on a device; the observed 21.1.262 instance is preliminary evidence only. Resolve every remaining dependency and asset hash in Stage 0.
 
 ## 4. Architecture and ownership
 
 ```mermaid
 flowchart TD
     A["Googlebook launcher and instance manager"] --> B["Versioned Android Java runtime"]
-    B --> C["Minecraft 1.20.1 and legacy GLFW bridge"]
-    B --> D["Minecraft 26.3 and SDL bridge"]
+    B --> C["Minecraft 1.21.1 NeoForge and GLFW bridge"]
+    B --> D["Future: Minecraft 26.3 and SDL bridge"]
+    B --> K["Legacy: Minecraft 1.20.1 Fabric and GLFW"]
     C --> E["Iris and Sodium integration"]
     D --> E
+    K --> E
     E --> F["MobileGlues desktop OpenGL contract"]
     F --> G["System EGL and GLES provider"]
     F --> H["Qualified app-local ANGLE"]
@@ -96,15 +100,17 @@ Each process chooses one coherent provider path. The diagram does not authorize 
 | Device policy | Tested backend choices and specific driver workarounds | X2E is an X1E performance preset |
 | Qualification tools | Reproducible scenes, capability probes, differential rendering, performance and endurance reports | An emulator or desktop driver certifies retail Adreno behavior |
 
-### Current Minecraft requires its own bootstrap contract
+### The delivery lane requires its own bootstrap contract
 
-Minecraft 26.2 introduced an experimental Vulkan option while retaining OpenGL; the preference setting can fall back. Minecraft 26.3 also changed shader compilation under OpenGL. Verify the backend actually executing during every run. A Minecraft Vulkan session does not exercise MobileGlues and cannot count as an Iris-over-MobileGlues pass. [S04](https://www.minecraft.net/en-us/article/minecraft-java-edition-26-2) [S05](https://feedback.minecraft.net/hc/en-us/articles/48913133328013-Minecraft-Java-Edition-26-3)
+The delivery lane is Minecraft 1.21.1 on NeoForge 21.1.264 with Java 21 (`java-runtime-delta`). Its manifest selects LWJGL 3.3.3 with the GLFW, OpenGL, OpenAL, STB, FreeType, jemalloc, JNA and tinyfd modules. It contains no Android-classifier native libraries, no SDL, no ShaderC and no RenderPearl/SDL function-provider contract. The launcher therefore provides the Android window/EGL surface and the desktop-GL bridge underneath an unmodified GLFW-era client. Stage 0 locks the Java 21 runtime and LWJGL 3.3.3 closure, proves baseline source reproducibility, and records missing Android components as owned blockers. Stage 1 builds and validates the loadable Android runtime closure through NeoForge startup and Iris/Sodium loading. [S06](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json)
 
-The official 26.3 dependency manifest contains no Android-classifier native libraries. Stage 0 identifies and locks the required Java 25/LWJGL 3.4.3 dependency closure, proves baseline source reproducibility, and records missing Android components as owned blockers. Stage 1 builds and validates the loadable Android runtime closure. RenderPearl is part of the game's Java code; do not invent a separate proprietary native RenderPearl library requirement. [S06](https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json)
+In this lane, MobileGlues is reached through the launcher's native GL bridge: the game's LWJGL GL capability object must resolve its function pointers to the actual loadable MobileGlues frontend, and the launcher's EGL/GLES surface plus provider must be the one the game process uses. A function provider that supplies callbacks without the real library path is insufficient for desktop-equivalent behavior. Verify transformed entry points, not just `glGetError`. Reverify this contract per game and loader version.
 
-Inspection of the official client bytecode identifies a concrete integration test: `GL.getFunctionProvider()` must satisfy the game's `org.lwjgl.system.SharedLibrary` cast and return the actual loadable MobileGlues frontend through `getPath()`. SDL must load that same frontend, and SDL/LWJGL must agree on the `glGetError` function address. A callback-only function provider is insufficient. The OpenGL pipeline recompilation path converts SPIR-V back to GLSL 330 and submits shader source. ShaderC usage therefore does not, by itself, establish a requirement for `GL_ARB_gl_spirv`. Reverify these paths when the game version changes. The artifact and inspection method are recorded in the source register.
+Minecraft 26.2 introduced an experimental Vulkan option while retaining OpenGL; the preference setting can fall back. A future 26.3 lane changes shader compilation under OpenGL and, per inspected bytecode, casts `GL.getFunctionProvider()` to `org.lwjgl.system.SharedLibrary` and passes its `getPath()` to SDL, which must agree with LWJGL on `glGetError`. That artifact also confirms an OpenGL shader path using ShaderC and SPIRV-Cross outputting GLSL 330 before ordinary GL source/compile calls. This is retained as future-lane evidence only; it is neither required nor implemented in the delivery lane. [S04](https://www.minecraft.net/en-us/article/minecraft-java-edition-26-2) [S05](https://feedback.minecraft.net/hc/en-us/articles/48913133328013-Minecraft-Java-Edition-26-3)
 
-Qualify the current Iris integration against Minecraft's OpenGL backend. A Vulkan implementation underneath the GL frontend still presents the OpenGL contract to Minecraft/Iris; it does not establish support for Minecraft's native Vulkan backend. Audit the exact locked Iris/Sodium binaries for feature checks and platform restrictions, then own any necessary licensed downstream adaptation with distinct versions, hashes and accurate diagnostics. Development-branch findings in the validation document are leads to recheck against the selected release.
+The delivery lane's Iris 1.8.14-beta.1 NeoForge build is a beta, and its metadata points to Sodium 0.8.13 NeoForge. The stable fallback is Iris 1.8.12 NeoForge with Sodium 0.6.13 NeoForge; Iris 1.8.12 with Sodium 0.8.13 is an untested pair and must not be shipped. Inspect the exact selected binaries for loader, LWJGL, ABI and provider restrictions, maintain any necessary licensed downstream adaptation with distinct versions, hashes and diagnostics, and record which pair produced every result. A game-process start at NeoForge 21.1.262 with these mods exists as preliminary evidence; the exact 21.1.264 tuple remains NOT RUN.
+
+Qualify Iris against the game's actual OpenGL backend in every lane. A Vulkan implementation underneath the GL frontend still presents the OpenGL contract to Minecraft/Iris; it does not establish support for any native Vulkan backend. Development-branch findings in the validation document are leads to recheck against the selected release.
 
 ## 5. Provider strategy
 
@@ -253,5 +259,5 @@ A Googlebook release is complete only when:
 - X2E qualification is independent of X1E.
 - Known unsupported combinations are explicit and do not masquerade as passes.
 
-The first implementation milestone is a trustworthy end-to-end graphics baseline on one real X1E-80-100 Googlebook, with the current and legacy runtime bootstrap risks already exposed.
+The first implementation milestone is a trustworthy end-to-end graphics baseline on one real X1E-80-100 Googlebook, with the delivery-lane and legacy runtime bootstrap risks already exposed.
 

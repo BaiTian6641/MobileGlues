@@ -8,6 +8,12 @@ This directory separates maintained requirements from captured evidence. A suppo
 valid only when it names the exact device, runtime, renderer, provider and shaderpack tuple and
 points to retained evidence.
 
+The delivery lane is Minecraft 1.21.1 on NeoForge 21.1.264 with Java 21, Iris
+1.8.14-beta.1 NeoForge and Sodium 0.8.13 NeoForge. Ordinary shaderpack ZIPs must import, select
+their own preset and render their enabled effects in that lane. Minecraft 26.3 / Java 25 is
+future/experimental; Minecraft 1.20.1 / Java 17 Fabric is legacy. No delivery-lane tuple is
+qualified yet.
+
 ## Authority order
 
 1. `01_MobileGlues_Googlebook_Architecture.md` defines product scope, architecture, provider
@@ -39,8 +45,13 @@ specification and retain the evidence. Never relabel or delete evidence to make 
 The maintained plan uses `S0`-`S9`. Runtime-lane results stay separate:
 
 - `S1-legacy`: Minecraft 1.20.1 / Java 17 / Fabric / Iris / Sodium.
-- `S1-current`: Minecraft 26.3 / Java 25 / Fabric / Iris / Sodium.
+- `S1-current`: the delivery lane, Minecraft 1.21.1 / Java 21 / NeoForge 21.1.264 / Iris
+  1.8.14-beta.1 NeoForge / Sodium 0.8.13 NeoForge. The installed 21.1.262 instance is
+  preliminary evidence; the exact tuple is NOT RUN.
 - `S1-provider`: below-wrapper and in-process EGL/GLES provider evidence.
+
+Minecraft 26.3 / Java 25 / LWJGL 3.4.3 on Fabric is a future/experimental lane, not the
+current requirement; `S1-legacy` remains the 1.20.1 Fabric lane.
 
 Aggregate S1 is `PARTIAL/BLOCKED` while a required lane has no passing real-device startup.
 Older execution records use `Stage 0`-`Stage 8`; the approximate mapping is in

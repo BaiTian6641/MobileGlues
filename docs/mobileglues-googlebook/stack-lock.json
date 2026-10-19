@@ -19,6 +19,61 @@
     "shaderpacks": "compat/shaderpacks.json",
     "device_profiles": "compat/device-profiles/"
   },
+  "distribution_target": {
+    "lane": "S1-current-1.21.1-neoforge",
+    "reference": "compat/runtime-lock.json#lanes.current",
+    "role": "delivery lane; unmodified shaderpack ZIPs must import, select a profile and render without effect suppression",
+    "status": "PARTIAL; the exact pinned tuple is NOT RUN",
+    "minecraft": {
+      "version": "1.21.1",
+      "manifest": "https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json",
+      "client_sha1": "30c73b1c5da787909b2f73340419fdf13b9def88"
+    },
+    "java": {
+      "component": "java-runtime-delta",
+      "major": 21
+    },
+    "loader": {
+      "type": "neoforge",
+      "version": "21.1.264",
+      "installer_url": "https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar",
+      "installer_sha1": "f801601bafa7f5957295353930e2cb61dcfddc6c",
+      "installer_sha256": "d7c035dd5436a7c524dfbad6df191b0ef34179fd3edfee9dc99262af3b80239b"
+    },
+    "iris": {
+      "version": "1.8.14-beta.1+1.21.1-neoforge",
+      "modrinth_version_id": "KduFYu4t",
+      "filename": "iris-neoforge-1.8.14-beta.1+mc1.21.1.jar",
+      "size": 2540723,
+      "sha512": "33fddb430e16222902eac75b8b3d57c381b0f3cc729f3b56c4628df12ca108f23a0b11e2feb167923d6d14d1fc7e8ee1a977ec421b19d1951bdca74c4092b9c5"
+    },
+    "sodium": {
+      "version": "mc1.21.1-0.8.13-neoforge",
+      "modrinth_version_id": "uMOpc5uV",
+      "filename": "sodium-neoforge-0.8.13+mc1.21.1.jar",
+      "size": 1292934,
+      "sha512": "4f537696af95411e9daf15795fb5fcbc49913d488a96fa912fa8f1d7db408710995e8a1461190f3cd0f8217bf9e35e9539176592428ed587ca2d7aa84450a390"
+    },
+    "stable_fallback": {
+      "iris": {
+        "version": "1.8.12+1.21.1-neoforge",
+        "modrinth_version_id": "t3ruzodq",
+        "filename": "iris-neoforge-1.8.12+mc1.21.1.jar",
+        "size": 2438548,
+        "sha512": "57b8026a3c3c433cf6123d63dc6ce7e11f6d480a72926370db1fc7f2b06059bc16a753ecd7e7af659c19e90b592103196b0e89585ce4f0744a4ca433f59bcf1a"
+      },
+      "sodium": {
+        "version": "mc1.21.1-0.6.13-neoforge",
+        "modrinth_version_id": "Pb3OXVqC",
+        "filename": "sodium-neoforge-0.6.13+mc1.21.1.jar",
+        "size": 1162994,
+        "sha512": "ce58f34d05d96c0a109a5cea23c741f6bdb2e6be31fc087c5989274cefca5f10ba0c08c62083cf554a51f2c7667bf46e4164383f675c844e77633aef2659996b"
+      },
+      "pairing_rule": "Sodium 0.8.13 is not the declared pairing for Iris 1.8.12; t3ruzodq declares Pb3OXVqC."
+    },
+    "observed_precedent": "Only NeoForge 21.1.262 has a game-process smoke; see game_tuple.observed_device_instance and compat/launcher-lock.json. The exact 21.1.264 tuple is NOT RUN.",
+    "support_claim": "none"
+  },
   "core": {
     "path": "/home/polar/MobileGlues",
     "repository": "https://github.com/MobileGL-Dev/MobileGlues",
@@ -53,7 +108,7 @@
     "MobileGlues-cpp/3rdparty/xxhash": "c2866db364b6ea3a11933e62235ddc166ba18565",
     "MobileGlues-cpp/include/ska": "21c1cec95abee1beef827e4a7c95f692875d9594"
   },
-  "game_tuple_note": "Reproduced local tuple retained from the historical plan. Proposed distribution lanes and exact pins are in compat/runtime-lock.json; these rows are not current-lane qualification.",
+  "game_tuple_note": "Reproduced local tuple retained from the historical plan. The 1.21.1 NeoForge delivery target is distribution_target; the 26.3/Fabric proposal is the future lane. Exact pins live in compat/runtime-lock.json. None of these rows is a qualification.",
   "game_tuple": {
     "modern_lane": {
       "minecraft": "26.1.2",

@@ -21,9 +21,119 @@
   },
   "lanes": {
     "current": {
-      "id": "S1-current",
-      "role": "required",
+      "id": "S1-current-1.21.1-neoforge",
+      "role": "required delivery lane",
+      "status": "PARTIAL",
+      "delivery_target": true,
+      "minecraft": {
+        "version": "1.21.1",
+        "manifest": "https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json",
+        "client_sha1": "30c73b1c5da787909b2f73340419fdf13b9def88"
+      },
+      "java": {
+        "component": "java-runtime-delta",
+        "major": 21,
+        "android_runtime": "21.0.1-internal (FCL app_runtime/jre21)",
+        "status": "OBSERVED",
+        "note": "The Mojang component is the desktop requirement. The launcher-supplied Android ARM64 runtime is recorded from the 21.1.262 smoke and is not locked for the 21.1.264 tuple."
+      },
+      "loader": {
+        "type": "neoforge",
+        "version": "21.1.264",
+        "installer_url": "https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar",
+        "installer_sha1": "f801601bafa7f5957295353930e2cb61dcfddc6c",
+        "installer_sha256": "d7c035dd5436a7c524dfbad6df191b0ef34179fd3edfee9dc99262af3b80239b",
+        "pin_status": "PINNED",
+        "status": "NOT RUN",
+        "observed_build": "21.1.262 (launcher instance neoforge-21.1.262, game-process smoke only)",
+        "note": "21.1.264 is the delivery target. The only game-process smoke executed NeoForge 21.1.262; the exact pinned 21.1.264 tuple has no run."
+      },
+      "iris": {
+        "version": "1.8.14-beta.1+1.21.1-neoforge",
+        "modrinth_version_id": "KduFYu4t",
+        "loader_family": "neoforge",
+        "filename": "iris-neoforge-1.8.14-beta.1+mc1.21.1.jar",
+        "size": 2540723,
+        "sha512": "33fddb430e16222902eac75b8b3d57c381b0f3cc729f3b56c4628df12ca108f23a0b11e2feb167923d6d14d1fc7e8ee1a977ec421b19d1951bdca74c4092b9c5",
+        "published": "2026-06-13",
+        "note": "Beta release. It is the latest published Iris build for 1.21.1 NeoForge and publishes no declared mod dependency."
+      },
+      "sodium": {
+        "version": "mc1.21.1-0.8.13-neoforge",
+        "modrinth_version_id": "uMOpc5uV",
+        "loader_family": "neoforge",
+        "filename": "sodium-neoforge-0.8.13+mc1.21.1.jar",
+        "size": 1292934,
+        "sha512": "4f537696af95411e9daf15795fb5fcbc49913d488a96fa912fa8f1d7db408710995e8a1461190f3cd0f8217bf9e35e9539176592428ed587ca2d7aa84450a390",
+        "published": "2026-08-28",
+        "dependency_source": "Selected NeoForge 0.8.13 build; observed alongside Iris 1.8.14-beta.1 in the 21.1.262 smoke. Iris KduFYu4t declares no dependency, so this pairing is a selection, not metadata-declared."
+      },
+      "pairing_note": "Use one loader family. A Fabric Sodium build is never a substitute for the NeoForge build in this lane.",
+      "stable_fallback": {
+        "role": "stable fallback if the Iris 1.8.14-beta.1 tuple fails to load",
+        "pin_status": "PINNED",
+        "status": "NOT RUN",
+        "iris": {
+          "version": "1.8.12+1.21.1-neoforge",
+          "modrinth_version_id": "t3ruzodq",
+          "loader_family": "neoforge",
+          "filename": "iris-neoforge-1.8.12+mc1.21.1.jar",
+          "size": 2438548,
+          "sha512": "57b8026a3c3c433cf6123d63dc6ce7e11f6d480a72926370db1fc7f2b06059bc16a753ecd7e7af659c19e90b592103196b0e89585ce4f0744a4ca433f59bcf1a",
+          "declared_sodium_dependency": "Pb3OXVqC"
+        },
+        "sodium": {
+          "version": "mc1.21.1-0.6.13-neoforge",
+          "modrinth_version_id": "Pb3OXVqC",
+          "loader_family": "neoforge",
+          "filename": "sodium-neoforge-0.6.13+mc1.21.1.jar",
+          "size": 1162994,
+          "sha512": "ce58f34d05d96c0a109a5cea23c741f6bdb2e6be31fc087c5989274cefca5f10ba0c08c62083cf554a51f2c7667bf46e4164383f675c844e77633aef2659996b",
+          "dependency_source": "Iris t3ruzodq declares this version as a required dependency"
+        },
+        "pairing_rule": "Iris 1.8.12 pairs only with Sodium 0.6.13. Sodium 0.8.13 (uMOpc5uV) is not the declared pairing for Iris 1.8.12 and must not be installed with it; 0.8.13 belongs to the Iris 1.8.14-beta.1 tuple."
+      },
+      "bridge": {
+        "type": "glfw",
+        "lwjgl": "3.3.3 (observed in the game log)",
+        "status": "OBSERVED IN GAME-PROCESS SMOKE (NeoForge 21.1.262)",
+        "note": "Minecraft 1.21.1 uses LWJGL 3.3.3/GLFW. FCL's renderer plugin also injects SDL_* library-routing hooks (SDL_OPENGL_LIBRARY, SDL_EGL_LIBRARY); those are not the game's windowing API. Provider and library identity in the game process remain unmeasured for the 21.1.264 tuple."
+      },
+      "observed_instance": {
+        "launcher": "FCL 1.3.4.0 (com.tungsten.fcl)",
+        "launcher_instance": "neoforge-21.1.262",
+        "minecraft": "1.21.1",
+        "loader": "NeoForge 21.1.262",
+        "java": "21.0.1-internal (FCL app_runtime/jre21)",
+        "iris": "1.8.14-beta.1+mc1.21.1",
+        "sodium": "0.8.13+mc1.21.1",
+        "renderer": "test plugin core a524755, debug signing",
+        "pack": "ComplementaryReimagined_r5.9.2.zip, High, active without fallback",
+        "status": "PARTIAL"
+      },
+      "qualification": {
+        "status": "PARTIAL",
+        "exact_target_tuple": "NOT RUN",
+        "passed_sub_gates": [
+          "Minecraft 1.21.1 + NeoForge 21.1.262 + Iris 1.8.14-beta.1 + Sodium 0.8.13 launched and initialized a shader pipeline without fallback",
+          "Original shaderpack ZIP imported and selected through ordinary launcher file access",
+          "Staged ACT 192, WSR 128 and WSR 192 scenes on the regression pack",
+          "Whole 1.21.1 world loaded and rendered with the original pack on the workspace renderer; image units 0-3 distinct; save/quit to title (NeoForge 21.1.262 staged run)"
+        ],
+        "blockers": [
+          "NeoForge 21.1.264 exact tuple has no game-process run",
+          "effect-by-effect fidelity, performance and lifecycle gates",
+          "WSR 256 blocked by the 134,217,728-byte provider storage-block limit",
+          "r8ui/r16ui integer image formats rejected by the provider; r32ui substitution is staged"
+        ],
+        "note": "The lane is PARTIAL because a nearby loader build executed. The pinned 21.1.264 tuple is NOT RUN and no shaderpack is release-qualified."
+      }
+    },
+    "future": {
+      "id": "S1-future-26.3",
+      "role": "future/experimental; not a delivery lane",
       "status": "NOT RUN",
+      "note": "The previous 26.3/Fabric proposal. Keep the pins for later evaluation; do not gate the 1.21.1 delivery lane on it.",
       "minecraft": {
         "version": "26.3",
         "manifest": "https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json",
@@ -94,12 +204,13 @@
           "Android Java 25 runtime and JNI closure",
           "SDL/GL function-provider bridge and address agreement",
           "launcher instance creation, original ZIP import and initial scene"
-        ]
+        ],
+        "note": "Future/experimental lane. It carries no delivery commitment and is not a prerequisite for the 1.21.1 NeoForge lane."
       }
     },
     "legacy": {
       "id": "S1-legacy",
-      "role": "required",
+      "role": "legacy compatibility; not a delivery lane",
       "status": "NOT RUN",
       "minecraft": {
         "version": "1.20.1",
@@ -152,7 +263,7 @@
       },
       "qualification": {
         "status": "NOT RUN",
-        "note": "The only game-process smoke so far is Minecraft 1.21.1 / NeoForge 21.1.262. It does not exercise this lane."
+        "note": "The only game-process smoke so far is Minecraft 1.21.1 / NeoForge 21.1.262 on the current lane. It does not exercise this lane."
       }
     },
     "optional_comparison": {
@@ -208,9 +319,9 @@
       "status": "REPRODUCED"
     },
     "artifacts": {
-      "standalone_so_sha256": "ef515913cd2abb9fb62f5d708d012136cb939d6d9e6957f94098d1d053648fda",
-      "test_apk_sha256": "e728b6e9bd0d290df4059a401aed3aa7bd48c6f55d1d3bccb7cb0af4fbd72162",
-      "test_packaged_library_sha256": "85f6dcf2d29ac6e7bbe82fe70f660daaba44f6018f1849a86118991ced3cd3a0",
+      "standalone_so_sha256": "a3f5d9d91a73c44560a3165f72ed803fe9a3101d2911093e44766ecbe4ce0f0c",
+      "test_apk_sha256": "debe26226e6bdf7ff5a70935f23f2731ae27538ea7cc98283378a23e6720ea3e",
+      "test_packaged_library_sha256": "a86c30a9b2732085684e90b053185ed356600d5b386a808a95feb3f36f415cd7",
       "installed_release_apk_sha256": "a7e1eb29731fdece7ab3af7fb00692b856f1808a7544436e7b3eb6c08355581a",
       "note": "These build hashes are evidence for the historical tuple, not a release lock for either runtime lane."
     },

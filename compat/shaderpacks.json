@@ -3,6 +3,13 @@
   "updated": "2026-10-19",
   "research_date": "2026-10-19",
   "source_policy": "Original publisher archives are test inputs. Keep them byte-identical, store only hashes and acquisition metadata in Git, and never ship a visually reduced derivative under the original pack name.",
+  "lane_reference": {
+    "source": "compat/runtime-lock.json#lanes",
+    "current": "S1-current-1.21.1-neoforge: Minecraft 1.21.1 / Java 21 / NeoForge 21.1.264 delivery lane (exact tuple NOT RUN)",
+    "legacy": "S1-legacy: Minecraft 1.20.1 / Java 17 / Fabric",
+    "future": "S1-future-26.3: Minecraft 26.3 / Java 25 / Fabric, future/experimental",
+    "optional_comparison": "optional-engine-comparison: Minecraft 1.21.11 / Java 21"
+  },
   "profiles": {
     "high": {
       "author_profile": "High",
@@ -78,7 +85,8 @@
       "optional_player_reflection": {
         "additional_ssbo_bytes": 5376,
         "atlas": "64 x 64 RGBA8",
-        "status": "NOT RUN"
+        "status": "NOT RUN",
+        "compatibility_note": "Enabled WS Player Reflections use vertex-stage atomics and an image store that lose the ANGLE Vulkan device on X1E. The wrapper does not silently rewrite or disable the pack option; it remains unsupported until the vertex path is implemented."
       }
     },
     "formats": {
@@ -103,7 +111,7 @@
       "sha512": "45304b1d7862afdb2177b7e6226fc9c6737911d17a4ad46cc9c519ca4deb935f05072cd337cd8b19a15bb8062b57b54eceec7bdee4cd572d94858e2946d37d85",
       "role": "required standard and advanced corpus",
       "profiles": ["high", "very_high", "ultra", "complementary"],
-      "lanes": ["current", "legacy"],
+      "lanes": ["current", "legacy", "future"],
       "qualification": {
         "status": "STAGED",
         "effect_matrix": "NOT RUN",
@@ -124,7 +132,7 @@
       "sha512": "a085d1d8cda67cd17a2b414eeba48bbd809da069f269bab46246235ec8fe714a275013c70d0504527b0987d810deddddba4564332414ab3b3bd7435932ff808c",
       "role": "required distinct visual style and advanced corpus",
       "profiles": ["high", "very_high", "ultra", "complementary"],
-      "lanes": ["current", "legacy"],
+      "lanes": ["current", "legacy", "future"],
       "qualification": {
         "status": "NOT RUN",
         "effect_matrix": "NOT RUN",
@@ -142,7 +150,7 @@
       "sha512": "28e138fcd5b53b8f84cceb572d383c9584fd255ffab6a2b726f0ad425d162c2540e31160e0e85402b6df81e29aa0124cdf6b6701ed5e78f0ac4c75135cd555f4",
       "role": "regression against the prior source generation",
       "profiles": ["high", "very_high", "ultra", "complementary"],
-      "lanes": ["legacy"],
+      "lanes": ["current", "legacy"],
       "qualification": {
         "status": "STAGED",
         "blockers": [
@@ -159,7 +167,7 @@
         "not_yet_qualified": [
           "effect-by-effect PBR, shadows, bloom, TAA/history and SSR",
           "player reflections",
-          "current runtime lane"
+          "the exact 1.21.1 NeoForge 21.1.264 tuple; evidence is from NeoForge 21.1.262"
         ]
       }
     },
@@ -174,7 +182,7 @@
       "sha512": "75ed262c8504343bfb83721fa500b60f4dceb767e211a500aa7e3c065b4a8ddf7bf6737b884ea99dfff68072f7cae6d82c5d863379b7487cc13e172a9c5ddae8",
       "role": "regression against the prior source generation",
       "profiles": ["high", "very_high", "ultra", "complementary"],
-      "lanes": ["legacy"],
+      "lanes": ["current", "legacy"],
       "qualification": {
         "status": "STAGED",
         "effect_matrix": "NOT RUN",
@@ -193,7 +201,7 @@
       "sha512": "94a3c25d6820868db624e11347873e6b572e7cd571967d9ac6f4690ca5d37ca302a7645d85eec800e0654541e3825fba14d37b5a25d3996aaf038178552be26f",
       "role": "required independent standard pack",
       "profiles": ["default", "multicolored_blocklight"],
-      "lanes": ["current", "legacy"],
+      "lanes": ["current", "legacy", "future"],
       "qualification": {
         "status": "NOT RUN",
         "note": "Default profile is a conventional raster workload. The optional multicolored block-light path uses integer voxel images, floating lighting volumes and compute; qualify it separately."
@@ -209,7 +217,7 @@
       "sha512": "2dec87084dccf91a72a06235ecbfb3627f066699b5f70583f06077cba61433aedbfa6af28eb68bf1cdc726149cc3d9a587517cfab59e6a24e9d6a40b6874d655",
       "role": "independent compute-oriented pack",
       "profiles": ["default_skylight", "optional_subgroup"],
-      "lanes": ["legacy", "current"],
+      "lanes": ["current", "legacy", "future"],
       "qualification": {
         "status": "NOT RUN",
         "note": "Published 2026-10-19. Pin it and retain a prior-version comparison. Default skylight uses a 256-invocation compute reduction with an RGBA16F image and shared memory; the optional subgroup path needs separate support detection."
@@ -223,12 +231,12 @@
       "size": 8301317,
       "sha256": "a8cd9d4338c7d3d1fffecc4525348a31ea3d219ef31382c51d5ddc3b4b0114e1",
       "sha512": "1e32f41e67e527c3c60149677a05b61c6d305e440812e29abba745b8ed304954780ca48d58b834c49835790bc3c4d38f37c893c5cbdfea9edc07b72e1dabd296",
-      "role": "advanced stress on a compatible legacy lane",
+      "role": "advanced stress on a compatible 1.20.1 or 1.21.1 lane",
       "profiles": ["default"],
-      "lanes": ["legacy"],
+      "lanes": ["current", "legacy"],
       "qualification": {
         "status": "NOT RUN",
-        "note": "Publisher metadata lists 1.20.1 through 1.21.10 but not 26.3. Start on a compatible legacy lane; do not run it on the current lane and call the version mismatch a renderer result."
+        "note": "Publisher metadata lists 1.20.1 through 1.21.10 but not 26.3. It is therefore absent from the future lane; do not run it on 26.3 and call the version mismatch a renderer result."
       }
     }
   ],

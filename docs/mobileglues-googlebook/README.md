@@ -39,14 +39,14 @@ and pack tuple.
 
 | Lane/stage | Status | What the evidence covers |
 | --- | --- | --- |
-| S0 | PARTIAL | Core `97558a6`, plugin `f5105e4`, NDK r28c ARM64 build and probe tooling reproduced. Launcher selection, current-lane native closure and exact new asset lock remain open. |
-| S1-legacy | PARTIAL / lane NOT RUN | Only a Minecraft 1.21.1 / NeoForge 21.1.262 smoke exists. The pinned 1.20.1 / Fabric lane in `compat/runtime-lock.json` has not been booted. |
-| S1-current | NOT RUN | Minecraft 26.3 / Java 25 / Iris 1.11.7 / Sodium 0.9.2 has not been bootstrapped. Android LWJGL 3.4.3 and the SDL/GL function-provider contract are unresolved. |
+| S0 | PARTIAL | Core `97558a6`, plugin `f5105e4`, NDK r28c ARM64 build and probe tooling reproduced. Launcher selection, delivery-lane native closure and exact asset lock remain open. |
+| S1-legacy | NOT RUN | The pinned 1.20.1 / Fabric lane in `compat/runtime-lock.json` has not been booted. The 1.21.1 / NeoForge game-process smoke belongs to `S1-current`, not this lane. |
+| S1-current | PARTIAL / exact tuple NOT RUN | Delivery lane is Minecraft 1.21.1 / Java 21 / NeoForge 21.1.264 / Iris 1.8.14-beta.1 NeoForge / Sodium 0.8.13 NeoForge. Only a staged game-process smoke on NeoForge 21.1.262 exists; 21.1.264, pack import in the exact tuple, and effect gates remain NOT RUN. |
 | S1-provider | PARTIAL | Below-wrapper and wrapper probes ran on the X1E HP unit through system ANGLE. App-local ANGLE and the bounded Zink/Turnip experiments were not run. |
 | S2 | PARTIAL | Multi-string `glShaderSource`, frontend errors, compile/link/FBO status, limits, extension admission, per-program fragment-output state and SSBO block binding are repaired and probed. Cache identity, retained reflection and remaining stubs stay open. |
 | S3 | PARTIAL | Compiler and resource-mapping work exists; the exact compiler corpus, source maps, reflection table and cache-key completeness are not closed. |
 | S4 | PARTIAL | Formats, framebuffer routing, 3D image storage and SSBO mapping have staged device evidence. R8UI/R16UI lowering is absent; synchronization and persistent-map contracts are incomplete. |
-| S5 | STAGED | Both original r5.9.2 styles reach High with no fallback on a non-lane instance; r5.9.3 High also initializes. Named-effect fidelity is not tested. |
+| S5 | STAGED | Both original r5.9.2 styles reach High with no fallback in the 21.1.262 game process (preliminary delivery-lane evidence); r5.9.3 High also initializes. Named-effect fidelity is not tested. |
 | S6 | STAGED / BLOCKED | ACT 192, WSR 128 and WSR 192 pass staged scenes on r5.9.2. WSR 256 is blocked by the provider's 134,217,728-byte storage-block limit. Player reflections and the independent compute pack are not run. |
 | S7 | NOT RUN | No controlled optimization or sustained performance result. |
 | S8 | NOT RUN | No retail X2E device or independent profile. |

@@ -2,7 +2,7 @@
 
 Research date: 19 October 2026. This roadmap implements the requirements in `01_MobileGlues_Googlebook_Architecture.md`. Acceptance methods and source evidence are in `03_MobileGlues_Googlebook_Validation_and_Sources.md`.
 
-The critical path is: reproduce the runtime and graphics stack, establish truthful capabilities, repair shader and resource semantics, validate complete effects, then optimize and release. Current Minecraft bootstrap and the GLES feasibility decision must happen early.
+The critical path is: reproduce the runtime and graphics stack, establish truthful capabilities, repair shader and resource semantics, validate complete effects, then optimize and release. Delivery-lane (Minecraft 1.21.1 / NeoForge 21.1.264) bootstrap and the GLES feasibility decision must happen early; unmodified pack import and effect rendering are the product blocker.
 
 ## 1. Workstreams and ownership
 
@@ -46,7 +46,7 @@ Keep large captures, proprietary game assets, and pack ZIPs out of source contro
 | Stage | Outcome | Dependencies | Parallel work |
 | --- | --- | --- | --- |
 | S0 | Pinned, reproducible source and runtime baselines | None | Hardware inventory, pack inspection, launcher review |
-| S1 | Real Googlebook startup and early provider feasibility decision | S0 | Legacy/current runtime bootstrap; GLES/Zink comparison; early X2 probes |
+| S1 | Real Googlebook startup and early provider feasibility decision | S0 | Delivery/legacy runtime bootstrap; GLES/Zink comparison; early X2 probes |
 | S2 | Truthful GL contract and reliable function routing | S0; hardware part of S1 | Compiler groundwork and format microtests |
 | S3 | Correct shader/program/reflection/caching model | S2 interfaces | Resource implementation from S4 |
 | S4 | Correct render targets, formats, buffers and execution ordering | S2; S3 resource mapping | S3 compiler corpus |
@@ -74,7 +74,7 @@ Make every result attributable to an exact source, binary, driver, runtime and s
 
 **S0.3 Select one launcher integration.** Inspect maintained Fold Craft Launcher and Zalith Launcher 2 integration paths because MobileGlues already interoperates with them. Select one primary integration through source review and a release-build prototype. Record the decision and exact commit. Reuse account handling, installation, instance management and update facilities; this project does not need a new launcher platform.
 
-**S0.4 Freeze two runtime lanes.** Define legacy Minecraft 1.20.1/Fabric and current Minecraft 26.3/Fabric locks. Each lock includes the game manifest, Java runtime, LWJGL Java/native modules, SDL/GLFW adaptation, loader, Iris, Sodium, support mods and renderer identity. Follow dependency metadata rather than choosing each component's newest version independently.
+**S0.4 Freeze the runtime lanes.** Define the delivery lane (Minecraft 1.21.1 / NeoForge 21.1.264 / Java 21), the legacy lane (Minecraft 1.20.1 / Fabric), and the future/experimental lane (Minecraft 26.3 / Fabric). Each lock includes the game manifest, Java runtime, LWJGL Java/native modules, windowing adaptation (GLFW for the delivery and legacy lanes, SDL for the future lane), loader, Iris, Sodium, support mods and renderer identity. The delivery lock also records the stable fallback pairing: Iris 1.8.12 NeoForge with Sodium 0.6.13 NeoForge, never with Sodium 0.8.13. Follow dependency metadata rather than choosing each component's newest version independently.
 
 **S0.5 Freeze original packs.** Acquire the selected official Complementary Reimagined/Unbound r5.9.3, r5.9.2 regression assets, BSL 10.1.8 and the selected additional pack through permitted channels. Record original asset hashes, provenance, options, licensing and supported game metadata.
 
@@ -88,7 +88,7 @@ A reproducible baseline build; runtime/pack lock files; an audit of upstream ver
 
 ### Exit gate
 
-Another clean build environment can reproduce the chosen baseline source artifacts. All upstream runtime/native dependency requirements and selected pack assets are identified and hash-locked; a not-yet-built Android component has a pinned source/build specification and an owned porting gap. S0 records these gaps explicitly. Implemented, loadable Android Java 25 and SDL/LWJGL dependency closure is an S1 gate, so source reproducibility must not be labeled release-runtime readiness.
+Another clean build environment can reproduce the chosen baseline source artifacts. All upstream runtime/native dependency requirements and selected pack assets are identified and hash-locked; a not-yet-built Android component has a pinned source/build specification and an owned porting gap. S0 records these gaps explicitly. An implemented, loadable Android Java 21 and LWJGL 3.3.3 GLFW dependency closure is an S1 gate, so source reproducibility must not be labeled release-runtime readiness. The future lane's Java 25/SDL closure is a separate, non-release gate.
 
 ## 4. S1 Prove the Android runtime and provider envelope
 
@@ -102,13 +102,17 @@ Establish that the required game paths can initialize in an ordinary Googlebook 
 
 **S1.2 Complete legacy startup.** Bring the pinned Android Java runtime, legacy LWJGL/GLFW bridge and MobileGlues to a deterministic vanilla scene, then the pinned Sodium/Iris baseline. Verify GL entry-point resolution and window size/input events.
 
-**S1.3 Complete current startup.** Establish Android-compatible Java 25 and matching LWJGL 3.4.3 JNI modules for 26.3. Audit SDL, OpenGL, ShaderC, SPIRV-Cross, VMA/Vulkan, OpenAL, STB, FreeType, jemalloc and core LWJGL dependencies. Include the launcher's actual AWT/font/Cacio requirements, JVM flags, native loading and crash handling in a minimal runtime smoke test. Pin LWJGL compiler JNI modules independently from MobileGlues' compiler dependencies; similar names do not establish ABI compatibility. Do not substitute Linux ARM64/glibc binaries for Android libraries.
+**S1.3 Complete delivery-lane startup.** Establish Android-compatible Java 21 (`java-runtime-delta`) and matching LWJGL 3.3.3 GLFW/OpenGL/OpenAL/STB/FreeType/jemalloc/JNA modules for Minecraft 1.21.1, then boot NeoForge 21.1.264 and load Iris 1.8.14-beta.1 NeoForge with Sodium 0.8.13 NeoForge. Audit GLFW, OpenGL, OpenAL, STB, FreeType, jemalloc and core LWJGL dependencies, plus NeoForge module discovery and Mixin/bootstrap behaviour on Android. Include the launcher's actual AWT/font/Cacio requirements, JVM flags, native loading and crash handling in a minimal runtime smoke test. An unmodified pack ZIP must then import and reach its selected profile. Pin LWJGL JNI modules independently from MobileGlues' compiler dependencies; similar names do not establish ABI compatibility. Do not substitute Linux ARM64/glibc binaries for Android libraries.
 
-**S1.4 Unify the SDL/LWJGL GL loader.** Ensure `GL.getFunctionProvider()` satisfies Minecraft 26.3's `org.lwjgl.system.SharedLibrary` cast and exposes the actual loadable MobileGlues frontend through `getPath()`. SDL must load that same frontend, and both must resolve the same `glGetError` address. Verify transformed functions, not just this one address. Qualify Iris against Minecraft's OpenGL backend and capture the actual path after startup. A Vulkan implementation below the GL frontend does not imply that Iris works with Minecraft's native Vulkan backend.
+The observed NeoForge 21.1.262 instance that reached its main menu is preliminary lane evidence only. The exact 21.1.264 tuple is NOT RUN until a real-device launch reaches a controlled scene with the locked Iris/Sodium pair.
+
+**S1.3-future Complete 26.3 startup (experimental).** Establish Android-compatible Java 25 and matching LWJGL 3.4.3 JNI modules for 26.3. Audit SDL, ShaderC, SPIRV-Cross, VMA/Vulkan and the remaining modules. This lane is not required for release, does not gate S5, and must not be described as qualifying the delivery lane.
+
+**S1.4 Unify the GL loader with MobileGlues.** For the delivery lane, ensure the game's LWJGL GL capability object resolves its desktop entry points to the actual loadable MobileGlues frontend and that the launcher's EGL/GLES surface and provider are the ones the game process uses. Verify transformed functions, not just `glGetError`. Qualify Iris against the game's OpenGL backend and capture the actual path after startup. The inspected 26.3 SDL contract — `GL.getFunctionProvider()` satisfying an `org.lwjgl.system.SharedLibrary` cast, its `getPath()` passed to SDL's loader, and SDL/LWJGL agreeing on function addresses — is future-lane evidence, not a delivery-lane requirement. A Vulkan implementation below the GL frontend does not imply that Iris works with any native Vulkan backend.
 
 **S1.5 Test production providers.** Probe the default system provider, the Android 17 system ANGLE preference when available, and a coherent app-local ANGLE build when release-loadable. Record requested and actual choices. Run each in a fresh graphics process.
 
-Test the real launcher's native closure in a non-debug release build on the reference device's actual page size and target-SDK loading rules. Verify read-only native loading where required, then add 16 KB emulator/device coverage as components become available. Repeat these early smoke tests for both runtime lanes; S9 expands the final packaging matrix.
+Test the real launcher's native closure in a non-debug release build on the reference device's actual page size and target-SDK loading rules. Verify read-only native loading where required, then add 16 KB emulator/device coverage as components become available. Repeat these early smoke tests for the delivery and legacy runtime lanes; S9 expands the final packaging matrix.
 
 **S1.6 Compare requirements against limits.** Parse the actual preprocessed pack programs and reflected active resources. Measure sampler/image/UBO/SSBO limits, required formats, atomics, render targets, compute limits and relevant synchronization features. Test Complementary's 512-invocation compute group, vertex-stage integer image writes, and Ultra's 202,899,456-byte single SSBO early. Validate access across the complete buffer range. Build a gap table with direct support, exact emulation, blocker and cost.
 
@@ -133,7 +137,7 @@ Selecting an alternate complete GL route requires a revised component lock, name
 
 ### Exit gate
 
-Both `S1-legacy` and `S1-current` must render controlled vanilla and pinned Iris/Sodium scenes on real X1E hardware through their release-loadable native closure. An identified, owned bootstrap blocker enables planning and unaffected work, but leaves that lane `BLOCKED` and aggregate S1 `PARTIAL/BLOCKED`. It cannot satisfy current-lane S5 or complete-product release.
+Both `S1-legacy` (1.20.1 / Fabric) and `S1-current` (1.21.1 / NeoForge 21.1.264) must render controlled vanilla and pinned Iris/Sodium scenes with ordinary shaderpack ZIPs on real X1E hardware through their release-loadable native closure. An identified, owned bootstrap blocker enables planning and unaffected work, but leaves that lane `BLOCKED` and aggregate S1 `PARTIAL/BLOCKED`. It cannot satisfy current-lane S5 or complete-product release. A game-process start on a different NeoForge patch of the same Minecraft version is preliminary evidence for `S1-current`; it does not pass the gate.
 
 The initial GLES/alternative decision and capability reports exist. No stage assumes that a GPU family name guarantees a required format, feature, or GL version.
 
@@ -247,7 +251,7 @@ Make normal official shaderpack ZIPs work with their intended selected effects.
 
 **S5.5 Validate BSL and another implementation.** Use a second pack with a different pass structure to expose assumptions specific to Complementary. Add one compact diagnostic pack whose effect outputs can be tested numerically.
 
-**S5.6 Test both runtime lanes.** Reuse scenes where possible but keep references specific to each game version. Do not compare captures made under materially different game/loader behavior as though only MobileGlues changed.
+**S5.6 Test the delivery and legacy lanes.** Reuse scenes where possible but keep references specific to each game version and loader. Do not compare captures made under materially different game/loader behavior as though only MobileGlues changed. The 26.3 lane is future work and cannot substitute for a delivery-lane result.
 
 ### Exit gate
 
@@ -316,7 +320,7 @@ Extend support through evidence rather than inherited tuning.
 
 **S8.2 Re-run semantic tests.** Cover formats, compilation, reflection, synchronization, mapped buffers and hard-feature limits. A newer GPU can introduce new driver failures.
 
-**S8.3 Re-run the required pack corpus.** Include standard, advanced lighting and WSR profiles under both runtime lanes. Keep any runtime incompatibility separate from graphics differences.
+**S8.3 Re-run the required pack corpus.** Include standard, advanced lighting and WSR profiles under the delivery and legacy runtime lanes. Keep any runtime incompatibility separate from graphics differences.
 
 **S8.4 Recalibrate policies.** Measure provider and multidraw choices, compilation workers, memory budgets and presentation modes. Derive X2 recommendations from sustained results.
 
@@ -371,7 +375,7 @@ A gate that lacks hardware evidence is `NOT RUN` or `BLOCKED`, never `PASS`.
 
 A practical sequence is a probe/diagnostic release, a standard-shader preview, an advanced-feature beta, an X2-qualified beta, then the complete product release.
 
-For a small experienced team, reserve roughly 2–4 weeks for initial discovery and bootstrap feasibility, 3–6 months for a credible standard-shader product, and 6–12 months or more for broad advanced-feature and two-generation qualification. These are planning estimates, not measured forecasts. The S1 outcome can change them substantially, especially if Java 25/SDL adaptation or a complete alternate GL stack requires major work.
+For a small experienced team, reserve roughly 2–4 weeks for initial discovery and bootstrap feasibility, 3–6 months for a credible standard-shader product, and 6–12 months or more for broad advanced-feature and two-generation qualification. These are planning estimates, not measured forecasts. The S1 outcome can change them substantially, especially if the Android NeoForge/LWJGL closure or a complete alternate GL stack requires major work.
 
 A single coding agent still needs real hardware results and independent review. Parallel agents can reduce research and implementation time; they cannot infer driver correctness or substitute for device access.
 

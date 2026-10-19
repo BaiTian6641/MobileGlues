@@ -2,7 +2,7 @@
 
 Research date: 19 October 2026. This file defines what to test, what constitutes a pass, and which evidence informed the architecture and implementation plan.
 
-Source inspection, downloaded-artifact inspection, calculated resource sizes, and proposed acceptance targets are identified separately. No Snapdragon device benchmark or successful Googlebook game run was performed for this plan.
+Source inspection, downloaded-artifact inspection, calculated resource sizes, and proposed acceptance targets are identified separately. No Snapdragon device benchmark or qualified game run was performed for this plan. Staged game-process smokes and provider probes exist on the HP X1E unit and are recorded in `mobileglues-googlebook/`; they are preliminary evidence at a different evidence level, not acceptance results.
 
 ## 1. Initial runtime lock
 
@@ -10,17 +10,48 @@ These are selected upstream inputs for qualification. They are not an already-ce
 
 | Lane | Minecraft | Java major | Iris | Sodium | Status |
 | --- | --- | --- | --- | --- | --- |
-| Current required | 26.3 | 25 | 1.11.7 Fabric, Modrinth `vTN4NRGW` | 0.9.2 Fabric, `bAZQdGpg` | Exact published dependency selection; Android qualification required |
+| Delivery (current required) | 1.21.1 | 21 (`java-runtime-delta`) | 1.8.14-beta.1+1.21.1-neoforge, Modrinth `KduFYu4t` | mc1.21.1-0.8.13-neoforge, Modrinth `uMOpc5uV` | Exact tuple NOT RUN on device; the observed 21.1.262 instance is preliminary evidence |
+| Delivery fallback | 1.21.1 | 21 | 1.8.12+1.21.1-neoforge, `t3ruzodq` | mc1.21.1-0.6.13-neoforge, `Pb3OXVqC` | Stable pair; never pair Iris 1.8.12 with Sodium 0.8.13 |
+| Future/experimental | 26.3 | 25 | 1.11.7 Fabric, `vTN4NRGW` | 0.9.2 Fabric, `bAZQdGpg` | Not required for release; exact published dependency selection, unqualified |
 | Legacy required | 1.20.1 | 17 | 1.7.6 | 0.5.13 candidate | Resolve metadata discrepancy and validate the pair |
 | Optional engine comparison | 1.21.11 | 21 | 1.10.8 | 0.8.14 | Add if it isolates a regression; not an initial release multiplier |
 
-The current Iris metadata explicitly points to the selected Sodium release. The legacy Iris JAR accepts Sodium 0.5.x, while its Modrinth dependency metadata points to 0.5.12-beta.2. Stage 0 must document which complete tuple it selects and why; do not hide that discrepancy in an automatic updater.
+The delivery lane is Minecraft 1.21.1 on NeoForge with Java 21 and LWJGL 3.3.3 GLFW; it is the lane ordinary shaderpack ZIPs must load in. The observed installed instance is Minecraft 1.21.1 / NeoForge 21.1.262 / Iris 1.8.14-beta.1 / Sodium 0.8.13, and only its game-process smoke exists. The exact target tuple — NeoForge 21.1.264 with the locked Iris/Sodium pair — has not been launched, so no delivery-lane result is qualified.
 
-Pin Fabric Loader, relevant Fabric API/support mods, launcher, Android JVM package, native modules, renderer/provider builds, resource packs and game settings as well. The first three rows do not constitute the whole runtime lock.
+### Delivery tuple identities
 
-For the 1.20.1 machinery/train test, select a compatible Create Fabric build and its required rendering support mods explicitly. A Forge/Create/Oculus/Embeddium configuration is a separate lane. Iris/Fabric results do not certify it.
+```text
+Minecraft 1.21.1 manifest
+https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json
+client SHA-1: 30c73b1c5da787909b2f73340419fdf13b9def88
+Java: java-runtime-delta, major 21; LWJGL 3.3.3 (GLFW path)
 
-Sources: [Iris release](https://modrinth.com/mod/iris/version/vTN4NRGW), [Sodium release](https://modrinth.com/mod/sodium/version/bAZQdGpg), [Mojang 26.3 manifest](https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json), publisher API records and JAR metadata inspected during this audit.
+NeoForge 21.1.264 installer
+https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar
+SHA-1:   f801601bafa7f5957295353930e2cb61dcfddc6c
+SHA-256: d7c035dd5436a7c524dfbad6df191b0ef34179fd3edfee9dc99262af3b80239b
+
+Iris 1.8.14-beta.1+1.21.1-neoforge (Modrinth KduFYu4t)
+file:      iris-neoforge-1.8.14-beta.1+mc1.21.1.jar
+size:      2540723
+SHA-512:   33fddb430e16222902eac75b8b3d57c381b0f3cc729f3b56c4628df12ca108f23a0b11e2feb167923d6d14d1fc7e8ee1a977ec421b19d1951bdca74c4092b9c5
+
+Sodium mc1.21.1-0.8.13-neoforge (Modrinth uMOpc5uV)
+file:      sodium-neoforge-0.8.13+mc1.21.1.jar
+size:      1292934
+SHA-512:   4f537696af95411e9daf15795fb5fcbc49913d488a96fa912fa8f1d7db408710995e8a1461190f3cd0f8217bf9e35e9539176592428ed587ca2d7aa84450a390
+
+Fallback pair: Iris 1.8.12+1.21.1-neoforge (t3ruzodq) with
+Sodium mc1.21.1-0.6.13-neoforge (Pb3OXVqC)
+```
+
+The delivery Iris release is a beta. Its metadata points to Sodium 0.8.13; the stable fallback pairing must be recorded and tested as its own tuple rather than assumed interchangeable. Stage 0 must document which complete tuple it selects and why; do not hide that in an automatic updater.
+
+Pin the NeoForge version, relevant NeoForge/support mods, launcher, Android JVM package, native modules, renderer/provider builds, resource packs and game settings as well. The lane rows do not constitute the whole runtime lock.
+
+For the 1.20.1 machinery/train test, select a compatible Create Fabric build and its required rendering support mods explicitly. A Forge/Create/Oculus/Embeddium configuration is a separate lane. Iris/Fabric results do not certify it. Do the equivalent NeoForge-versioned selection for a delivery-lane Create test before claiming modded-geometry coverage there.
+
+Sources: [Minecraft 1.21.1 manifest](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json), [NeoForge 21.1.264](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar), [Iris 1.8.14-beta.1](https://modrinth.com/mod/iris/version/KduFYu4t), [Sodium 0.8.13](https://modrinth.com/mod/sodium/version/uMOpc5uV), [Iris 1.8.12](https://modrinth.com/mod/iris/version/t3ruzodq), [Sodium 0.6.13](https://modrinth.com/mod/sodium/version/Pb3OXVqC), [Iris 26.3 release](https://modrinth.com/mod/iris/version/vTN4NRGW), [Sodium 26.3 release](https://modrinth.com/mod/sodium/version/bAZQdGpg), [Mojang 26.3 manifest](https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json), publisher API records and JAR metadata inspected during this audit.
 
 ## 2. Shaderpack lock and qualification role
 
@@ -33,7 +64,7 @@ Sources: [Iris release](https://modrinth.com/mod/iris/version/vTN4NRGW), [Sodium
 | Photon | v1.4 | `BnGklH5y` | Independent compute-bearing pack |
 | Rethinking Voxels | r0.1-beta9 | `cpD4esk9` | Advanced stress on a publisher-listed game version |
 
-Photon v1.4 was published on 19 October 2026. Its newness is a reason to pin it and retain a prior-version comparison, not to assume stability. Rethinking Voxels' inspected version metadata does not list 26.3; start its tests on a compatible legacy lane.
+Photon v1.4 was published on 19 October 2026. Its newness is a reason to pin it and retain a prior-version comparison, not to assume stability. Rethinking Voxels' inspected version metadata does not list 26.3; start its tests on a lane its metadata explicitly supports.
 
 ### Original ZIP identities
 
@@ -101,7 +132,7 @@ Calculated raw allocations for ACT 256 with WSR are:
 | Ultra rain-puddle image | 0.015625 MiB |
 | Listed resources including puddle image | 345.578125 MiB |
 
-The single SSBO requests **202,899,456 bytes**. Check `GL_MAX_SHADER_STORAGE_BLOCK_SIZE` and real access across the whole range. Sufficient system RAM cannot compensate for a smaller accessible storage-block range. The listed resources exclude ordinary framebuffers, history, atlas/world data, other optional resources, driver overhead and Java memory. Ultra's `RAIN_PUDDLES=2` enables the listed 128 × 128 R8UI image. Optional player reflections additionally allocate a 5,376-byte SSBO and a 64 × 64 RGBA8 atlas; qualify that option separately. [Allocation declarations](https://github.com/ComplementaryDevelopment/ComplementaryReimagined/blob/main/shaders/shaders.properties)
+The single SSBO requests **202,899,456 bytes**. Check `GL_MAX_SHADER_STORAGE_BLOCK_SIZE` and real access across the whole range. Sufficient system RAM cannot compensate for a smaller accessible storage-block range. The listed resources exclude ordinary framebuffers, history, atlas/world data, other optional resources, driver overhead and Java memory. Ultra's `RAIN_PUDDLES=2` enables the listed 128 × 128 R8UI image. Optional player reflections additionally allocate a 5,376-byte SSBO and a 64 × 64 RGBA8 atlas; qualify that option separately. On the X1E ANGLE provider the enabled option uses vertex-stage atomics and an image store that lose the device; the wrapper must not silently rewrite the option, so it remains NOT RUN until that path is implemented. [Allocation declarations](https://github.com/ComplementaryDevelopment/ComplementaryReimagined/blob/main/shaders/shaders.properties)
 
 The size calculation uses declared dimensions and bytes per texel; it is not a measurement of physical GPU allocation. Padding and backing-format expansion can increase actual use. Reducing the grid or disabling WSR produces a different profile.
 
@@ -204,7 +235,7 @@ Use a versioned world and camera-path manifest. The desktop reference must run t
 | R06 Temporal motion | Fast pans, disocclusion, teleport and dimension change | History corruption, reprojection and stale resources |
 | R07 Weather and dimensions | Day/night, rain, Nether and End | Variant compilation and dimension-specific programs |
 | R08 Desktop transitions | Resize, maximize, fullscreen, minimize, restore and display change | Surface dimensions, target ownership, focus/input and history |
-| R09 Modded geometry | Pinned material/entity mods, then Create Fabric machines and trains | Vertex formats, IDs, dynamic geometry and CPU/GPU attribution |
+| R09 Modded geometry | Pinned material/entity mods, then Create machines and trains on the pinned lane | Vertex formats, IDs, dynamic geometry and CPU/GPU attribution |
 | R10 Optional LOD integration | Distant Horizons or Voxy in separate instances | Explicit loader/pack integration outside vanilla coverage |
 
 Select a deterministic workload for each scene. Record seed, world hash, coordinates/path, resolution, render distance, simulation distance, shadow settings, texture/resource packs, exposure controls, weather/time and temporal warmup.
@@ -328,9 +359,25 @@ Sodium development source inspected:
 
 Development branch commits are not automatically the source identities of released JARs. Resolve release provenance before distributing downstream builds.
 
-## 12. Current Minecraft artifact evidence
+## 12. Game artifact evidence
 
-The official manifest selects Java 25 and LWJGL 3.4.3, including SDL, ShaderC, SPIRV-Cross, VMA and Vulkan modules. It does not list GLFW or Android-native classifiers.
+### 12.1 Delivery lane: Minecraft 1.21.1
+
+The official 1.21.1 manifest selects Java 21 (`java-runtime-delta`) and LWJGL 3.3.3 with GLFW, OpenGL, OpenAL, STB, FreeType, jemalloc, JNA and tinyfd modules. Like the 26.3 manifest, it does not list Android-native classifiers, so the launcher must supply the Android window/EGL surface and the desktop-GL bridge. The client artifact is `30c73b1c5da787909b2f73340419fdf13b9def88`, installed through NeoForge 21.1.264.
+
+Only a game-process start exists for this lane: FCL launched an installed Minecraft 1.21.1 / NeoForge 21.1.262 instance with Iris 1.8.14-beta.1 and Sodium 0.8.13, the main menu rendered, and the installed MobileGlues 2.0.0 build rejected `#version 400` shaders and produced `iris_Normal` syntax errors. A workspace-built plugin then initialized the original Complementary packs at High without fallback. These are staged, non-qualifying observations on 21.1.262; the 21.1.264 tuple, effect fidelity, performance and lifecycle gates remain NOT RUN.
+
+A later workspace-plugin run reached terrain and then crashed; FCL's uploaded log is `https://mclo.gs/KgWJ5oC`. The renderer log exposed every active image uniform mapped to core unit 0, which the whole-source image parser now fixes and the X1E wrapper suite covers. The same log contains an independent `SodiumServiceModLocator` duplicate-class `LinkageError` and repeated `Failed to create fence object`; isolate the Sodium/mod instance before attributing that crash to the renderer. Neither run qualifies the lane.
+
+A subsequent whole-source-parser build loaded the same 1.21.1 / NeoForge 21.1.262 world, rendered the original pack, logged distinct image units 0–3 for the affected programs, and saved and quit to title. The earlier Sodium/fence failure did not reproduce. This is a staged pass for 21.1.262; the exact 21.1.264 tuple, effect-by-effect fidelity, performance and lifecycle gates remain NOT RUN. [Minecraft 1.21.1 manifest](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json) [NeoForge 21.1.264](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar)
+
+The delivery lane's Iris and Sodium binaries must each be audited for loader/LWJGL/provider restrictions. Sodium 0.8.13 has not been audited against this exact MobileGlues build; any Android adaptation is a maintained downstream build with its own version and hash.
+
+### 12.2 Future lane: Minecraft 26.3 artifact evidence
+
+This subsection is retained as future-lane evidence. It describes neither a required lane nor a delivery-lane blocker.
+
+The 26.3 manifest selects Java 25 and LWJGL 3.4.3, including SDL, ShaderC, SPIRV-Cross, VMA and Vulkan modules. It does not list GLFW or Android-native classifiers.
 
 The official client SHA-1 is `e877b6a07acd633fb3bb475002175cec036e7b87`. Inspection used `javap -c -p` on:
 
@@ -375,14 +422,19 @@ Audited Iris 26.3 source still uses the OpenGL shader path and contains a guard 
 
 ### Game and loader
 
-22. [Minecraft 26.2 release](https://www.minecraft.net/en-us/article/minecraft-java-edition-26-2) — experimental Vulkan and backend preferences.
-23. [Minecraft 26.3 release](https://feedback.minecraft.net/hc/en-us/articles/48913133328013-Minecraft-Java-Edition-26-3) — shader compilation/interface changes.
-24. [Minecraft 26.3 manifest](https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json) — authoritative runtime and dependency selection.
-25. [Iris repository](https://github.com/IrisShaders/Iris) — pack loader, support boundaries and license notes.
-26. [Iris 1.11.7](https://modrinth.com/mod/iris/version/vTN4NRGW) — selected current release.
-27. [Sodium repository](https://github.com/CaffeineMC/sodium) — translation-layer support policy and license.
-28. [Sodium 0.9.2](https://modrinth.com/mod/sodium/version/bAZQdGpg) — selected current dependency.
-29. [Zalith Launcher 2](https://github.com/ZalithLauncher/ZalithLauncher2) — integration candidate to inspect and pin.
+22. [Minecraft 1.21.1 manifest](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json) — authoritative delivery-lane runtime and dependency selection (Java 21, LWJGL 3.3.3).
+23. [NeoForge 21.1.264 installer](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar) — delivery-lane loader artifact and hashes.
+24. [Iris 1.8.14-beta.1 NeoForge](https://modrinth.com/mod/iris/version/KduFYu4t) — selected delivery-lane release.
+25. [Sodium 0.8.13 NeoForge](https://modrinth.com/mod/sodium/version/uMOpc5uV) — selected delivery-lane dependency.
+26. [Iris 1.8.12 NeoForge](https://modrinth.com/mod/iris/version/t3ruzodq) and [Sodium 0.6.13 NeoForge](https://modrinth.com/mod/sodium/version/Pb3OXVqC) — stable fallback pair; never pair 1.8.12 with 0.8.13.
+27. [Minecraft 26.2 release](https://www.minecraft.net/en-us/article/minecraft-java-edition-26-2) — experimental Vulkan and backend preferences (future lane).
+28. [Minecraft 26.3 release](https://feedback.minecraft.net/hc/en-us/articles/48913133328013-Minecraft-Java-Edition-26-3) — shader compilation/interface changes (future lane).
+29. [Minecraft 26.3 manifest](https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json) — future-lane runtime and dependency selection.
+30. [Iris repository](https://github.com/IrisShaders/Iris) — pack loader, support boundaries and license notes.
+31. [Iris 1.11.7](https://modrinth.com/mod/iris/version/vTN4NRGW) — future-lane release.
+32. [Sodium repository](https://github.com/CaffeineMC/sodium) — translation-layer support policy and license.
+33. [Sodium 0.9.2](https://modrinth.com/mod/sodium/version/bAZQdGpg) — future-lane dependency.
+34. [Zalith Launcher 2](https://github.com/ZalithLauncher/ZalithLauncher2) — integration candidate to inspect and pin.
 
 ### Shaderpacks
 
@@ -421,7 +473,7 @@ Require an independent review for changes to capability claims, shader transform
 
 Use Git actively: preserve user changes, commit focused working increments, retain source pins, and avoid resetting history to hide failed approaches. Create or use the owner's intended remote only when identified; do not reuse another project's repository.
 
-Agents may continue unblocked implementation while a hardware lane is blocked. They must keep lane-specific state. A missing X2 device, current runtime failure, or unavailable GPU test cannot be converted into aggregate completion.
+Agents may continue unblocked implementation while a hardware lane is blocked. They must keep lane-specific state. A missing X2 device, delivery-lane runtime failure, or unavailable GPU test cannot be converted into aggregate completion.
 
 For each release claim, a reviewer should be able to answer:
 

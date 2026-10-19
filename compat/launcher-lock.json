@@ -29,8 +29,8 @@
       "package": "com.fcl.plugin.mobileglues",
       "installed_version": "2.0.0",
       "installed_apk_sha256": "a7e1eb29731fdece7ab3af7fb00692b856f1808a7544436e7b3eb6c08355581a",
-      "test_apk_sha256": "e728b6e9bd0d290df4059a401aed3aa7bd48c6f55d1d3bccb7cb0af4fbd72162",
-      "test_packaged_library_sha256": "85f6dcf2d29ac6e7bbe82fe70f660daaba44f6018f1849a86118991ced3cd3a0",
+      "test_apk_sha256": "debe26226e6bdf7ff5a70935f23f2731ae27538ea7cc98283378a23e6720ea3e",
+      "test_packaged_library_sha256": "a86c30a9b2732085684e90b053185ed356600d5b386a808a95feb3f36f415cd7",
       "status": "TEST BUILD INSTALLED; NOT RELEASE-SIGNED"
     },
     "observed_game_process": {
@@ -51,11 +51,38 @@
         "https://mclo.gs/z3qIi68",
         "https://mclo.gs/hH2OIs5"
       ],
-      "qualification": "Game-process smoke only. This is not the pinned 1.20.1/Fabric or 26.3/Fabric lane."
+      "qualification": "Game-process smoke only. The loader build is 21.1.262, not the pinned 1.21.1/NeoForge 21.1.264 target tuple; this is also not the 1.20.1/Fabric legacy lane.",
+      "staged_world_run": {
+        "date": "2026-10-19",
+        "renderer": "workspace plugin core a3f5d9d9 build",
+        "result": "1.21.1 world loaded and rendered with the original pack; image units 0-3 distinct; saved and quit to title",
+        "captures": [
+          "2026-10-19-1.21.1-neoforge-21.1.262-world.png",
+          "2026-10-19-1.21.1-neoforge-21.1.262-title.png"
+        ],
+        "qualification": "staged 21.1.262 only; exact 21.1.264 tuple and effect/performance gates remain NOT RUN"
+      }
+    },
+    "target_runtime": {
+      "lane": "S1-current-1.21.1-neoforge",
+      "reference": "compat/runtime-lock.json#lanes.current",
+      "role": "delivery tuple to validate next",
+      "minecraft": "1.21.1",
+      "java_component": "java-runtime-delta",
+      "java_major": 21,
+      "loader": "NeoForge 21.1.264",
+      "loader_installer_sha256": "d7c035dd5436a7c524dfbad6df191b0ef34179fd3edfee9dc99262af3b80239b",
+      "iris": "1.8.14-beta.1+1.21.1-neoforge (KduFYu4t)",
+      "sodium": "mc1.21.1-0.8.13-neoforge (uMOpc5uV)",
+      "stable_fallback": "Iris 1.8.12+1.21.1-neoforge (t3ruzodq) + Sodium mc1.21.1-0.6.13-neoforge (Pb3OXVqC)",
+      "status": "NOT RUN",
+      "launcher_support": "NOT CLAIMED",
+      "note": "The target tuple is recorded for the next launcher run. No launcher integration has been validated against NeoForge 21.1.264."
     },
     "qualification": {
       "status": "PARTIAL",
-      "reason": "Launch, renderer loading and original ZIP import were observed. Release-build source review, both pinned lanes, provider selection and recovery are not qualified."
+      "reason": "Launch, renderer loading and original ZIP import were observed on NeoForge 21.1.262. Release-build source review, the exact 21.1.264 target tuple, the legacy lane, provider selection and recovery are not qualified.",
+      "support_claim": "none"
     }
   },
   "candidate": {
