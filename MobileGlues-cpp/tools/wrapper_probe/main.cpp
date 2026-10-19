@@ -85,6 +85,10 @@ struct Api {
     PFNGLBINDBUFFERBASEPROC glBindBufferBase;
     PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation;
     PFNGLUNIFORM1UIPROC glUniform1ui;
+    PFNGLUNIFORM1IPROC glUniform1i;
+    void (*glGetUniformiv)(GLuint, GLint, GLint*);
+    void (*glProgramUniform1i)(GLuint, GLint, GLint);
+    PFNGLACTIVETEXTUREPROC glActiveTexture;
     PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
     PFNGLMEMORYBARRIERPROC glMemoryBarrier;
     PFNGLMAPBUFFERRANGEPROC glMapBufferRange;
@@ -92,6 +96,7 @@ struct Api {
     PFNGLBINDIMAGETEXTUREPROC glBindImageTexture;
     PFNGLTEXSTORAGE2DPROC glTexStorage2D;
     PFNGLTEXSTORAGE3DPROC glTexStorage3D;
+    PFNGLTEXIMAGE3DPROC glTexImage3D;
     PFNGLTEXIMAGE2DPROC glTexImage2D;
     PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers;
     PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
@@ -999,6 +1004,492 @@ void main() { outb.value = imageLoad(img, ivec3(0)).r; }
     return r;
 }
 
+Result test_act_volume() {
+    Result r;
+    const int W = 192, H = 96, D = 192;
+    const char* write_cs = R"(#version 310 es
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+layout(rgba16f, binding = 0) writeonly uniform highp image3D img;
+void main() {
+    ivec3 p = ivec3(gl_GlobalInvocationID);
+    if (any(greaterThanEqual(p, ivec3(192, 96, 192)))) return;
+    imageStore(img, p, vec4(float(p.x), float(p.y), float(p.z), 1.0));
+}
+)";
+    const char* read_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+layout(rgba16f, binding = 0) readonly uniform highp image3D img;
+layout(std430, binding = 1) buffer Out { uint v[12]; } outb;
+void main() {
+    ivec3 pts[4] = ivec3[](ivec3(0, 0, 0), ivec3(95, 47, 95), ivec3(191, 95, 191), ivec3(191, 95, 0));
+    for (int i = 0; i < 4; i++) {
+        vec4 s = imageLoad(img, pts[i]);
+        outb.v[i * 3 + 0] = uint(s.x);
+        outb.v[i * 3 + 1] = uint(s.y);
+        outb.v[i * 3 + 2] = uint(s.z);
+    }
+}
+)";
+    const char* sample_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+uniform highp sampler3D samp;
+layout(std430, binding = 1) buffer Out { uint v[3]; } outb;
+void main() {
+    vec4 s = texelFetch(samp, ivec3(95, 47, 95), 0);
+    outb.v[0] = uint(s.x);
+    outb.v[1] = uint(s.y);
+    outb.v[2] = uint(s.z);
+}
+)";
+
+    auto build_compute = [&](const char* src, GLuint& shader, GLuint& program, std::string& log) {
+        shader = api.glCreateShader(GL_COMPUTE_SHADER);
+        api.glShaderSource(shader, 1, &src, nullptr);
+        api.glCompileShader(shader);
+        GLint cstatus = GL_FALSE;
+        api.glGetShaderiv(shader, GL_COMPILE_STATUS, &cstatus);
+        GLint len = 0;
+        api.glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+        if (len > 0) {
+            log.resize(static_cast<size_t>(len), '\0');
+            api.glGetShaderInfoLog(shader, len, nullptr, log.data());
+        }
+        program = api.glCreateProgram();
+        api.glAttachShader(program, shader);
+        api.glLinkProgram(program);
+        GLint lstatus = GL_FALSE;
+        api.glGetProgramiv(program, GL_LINK_STATUS, &lstatus);
+        return cstatus == GL_TRUE && lstatus == GL_TRUE;
+    };
+
+    GLuint tex = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_3D, tex);
+    api.glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    api.glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    api.glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA16F, W, H, D);
+    const GLenum storage_error = api.glGetError();
+    api.glBindImageTexture(0, tex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA16F);
+    const GLenum bind_error = api.glGetError();
+
+    GLuint write_shader = 0, write_program = 0;
+    std::string write_log;
+    const bool write_ok = build_compute(write_cs, write_shader, write_program, write_log);
+
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 64, nullptr, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+
+    if (write_ok) {
+        api.glUseProgram(write_program);
+        api.glDispatchCompute(24, 12, 24);
+    }
+    api.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT |
+                        GL_SHADER_STORAGE_BARRIER_BIT);
+
+    GLuint read_shader = 0, read_program = 0;
+    std::string read_log;
+    const bool read_ok = build_compute(read_cs, read_shader, read_program, read_log);
+    GLuint values[12] = {};
+    if (read_ok) {
+        api.glUseProgram(read_program);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+        api.glFinish();
+        void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(values), GL_MAP_READ_BIT);
+        if (ptr) {
+            memcpy(values, ptr, sizeof(values));
+            api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        }
+    }
+
+    GLuint sample_shader = 0, sample_program = 0;
+    std::string sample_log;
+    const bool sample_ok = build_compute(sample_cs, sample_shader, sample_program, sample_log);
+    GLuint sample_values[3] = {};
+    GLint sampler_loc = -1;
+    if (sample_ok) {
+        api.glUseProgram(sample_program);
+        sampler_loc = api.glGetUniformLocation(sample_program, "samp");
+        api.glActiveTexture(GL_TEXTURE0);
+        api.glBindTexture(GL_TEXTURE_3D, tex);
+        if (sampler_loc >= 0) api.glUniform1i(sampler_loc, 0);
+        api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+        api.glFinish();
+        void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(sample_values), GL_MAP_READ_BIT);
+        if (ptr) {
+            memcpy(sample_values, ptr, sizeof(sample_values));
+            api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        }
+    }
+
+    const bool edge = values[0] == 0u && values[1] == 0u && values[2] == 0u;
+    const bool center = values[3] == 95u && values[4] == 47u && values[5] == 95u;
+    const bool far_corner = values[6] == 191u && values[7] == 95u && values[8] == 191u;
+    const bool z_zero = values[9] == 191u && values[10] == 95u && values[11] == 0u;
+    const bool sampled = sample_values[0] == 95u && sample_values[1] == 47u && sample_values[2] == 95u;
+    r.ok = storage_error == GL_NO_ERROR && bind_error == GL_NO_ERROR && write_ok && read_ok &&
+           sample_ok && sampler_loc >= 0 && edge && center && far_corner && z_zero && sampled;
+    r.detail = "storage_error=" + std::to_string(storage_error) + " bind_error=" + std::to_string(bind_error) +
+               " write=" + std::to_string(write_ok) + " read=" + std::to_string(read_ok) +
+               " sample=" + std::to_string(sample_ok) + " sampler_loc=" + std::to_string(sampler_loc) +
+               " edge=" + std::to_string(edge) + " center=" + std::to_string(center) +
+               " far=" + std::to_string(far_corner) + " z0=" + std::to_string(z_zero) +
+               " sampled=" + std::to_string(sampled) +
+               " image_values=" + std::to_string(values[6]) + "," + std::to_string(values[7]) + "," +
+               std::to_string(values[8]) + " sampler_values=" + std::to_string(sample_values[0]) + "," +
+               std::to_string(sample_values[1]) + "," + std::to_string(sample_values[2]) +
+               " write_log=" + write_log + " read_log=" + read_log + " sample_log=" + sample_log;
+
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteTextures(1, &tex);
+    api.glDeleteProgram(write_program);
+    api.glDeleteShader(write_shader);
+    api.glDeleteProgram(read_program);
+    api.glDeleteShader(read_shader);
+    api.glDeleteProgram(sample_program);
+    api.glDeleteShader(sample_shader);
+    return r;
+}
+
+Result test_act_pingpong() {
+    Result r;
+    const int W = 192, H = 96, D = 192;
+    const char* write_cs = R"(#version 310 es
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+layout(rgba16f) writeonly uniform highp image3D img0;
+layout(rgba16f) writeonly uniform highp image3D img1;
+void main() {
+    ivec3 p = ivec3(gl_GlobalInvocationID);
+    if (any(greaterThanEqual(p, ivec3(192, 96, 192)))) return;
+    imageStore(img0, p, vec4(11.0));
+    imageStore(img1, p, vec4(22.0));
+}
+)";
+    const char* read_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+layout(rgba16f) readonly uniform highp image3D img0;
+layout(rgba16f) readonly uniform highp image3D img1;
+layout(std430, binding = 2) buffer Out { uint v[2]; } outb;
+void main() {
+    outb.v[0] = uint(imageLoad(img0, ivec3(95, 47, 95)).x);
+    outb.v[1] = uint(imageLoad(img1, ivec3(95, 47, 95)).x);
+}
+)";
+
+    auto build_compute = [&](const char* src, GLuint& shader, GLuint& program, std::string& log) {
+        shader = api.glCreateShader(GL_COMPUTE_SHADER);
+        api.glShaderSource(shader, 1, &src, nullptr);
+        api.glCompileShader(shader);
+        GLint cstatus = GL_FALSE;
+        api.glGetShaderiv(shader, GL_COMPILE_STATUS, &cstatus);
+        GLint len = 0;
+        api.glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+        if (len > 0) {
+            log.resize(static_cast<size_t>(len), '\0');
+            api.glGetShaderInfoLog(shader, len, nullptr, log.data());
+        }
+        program = api.glCreateProgram();
+        api.glAttachShader(program, shader);
+        api.glLinkProgram(program);
+        GLint lstatus = GL_FALSE;
+        api.glGetProgramiv(program, GL_LINK_STATUS, &lstatus);
+        return cstatus == GL_TRUE && lstatus == GL_TRUE;
+    };
+
+    GLuint tex0 = 0, tex1 = 0;
+    api.glGenTextures(1, &tex0);
+    api.glGenTextures(1, &tex1);
+    for (GLuint tex : {tex0, tex1}) {
+        api.glBindTexture(GL_TEXTURE_3D, tex);
+        api.glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        api.glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        api.glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA16F, W, H, D);
+    }
+    while (api.glGetError() != GL_NO_ERROR) {}
+    api.glBindImageTexture(0, tex0, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA16F);
+    api.glBindImageTexture(1, tex1, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA16F);
+    const GLenum bind_error = api.glGetError();
+
+    GLuint write_shader = 0, write_program = 0;
+    std::string write_log;
+    const bool write_ok = build_compute(write_cs, write_shader, write_program, write_log);
+    GLint write_units[2] = {-1, -1};
+    if (write_ok) {
+        api.glUseProgram(write_program);
+        const GLint loc0 = api.glGetUniformLocation(write_program, "img0");
+        const GLint loc1 = api.glGetUniformLocation(write_program, "img1");
+        api.glUniform1i(loc0, 0);
+        api.glUniform1i(loc1, 1);
+        if (api.glGetUniformiv) {
+            api.glGetUniformiv(write_program, loc0, &write_units[0]);
+            api.glGetUniformiv(write_program, loc1, &write_units[1]);
+        }
+        api.glDispatchCompute(24, 12, 24);
+    }
+    api.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT |
+                        GL_SHADER_STORAGE_BARRIER_BIT);
+
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 16, nullptr, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, buffer);
+
+    GLuint read_shader = 0, read_program = 0;
+    std::string read_log;
+    const bool read_ok = build_compute(read_cs, read_shader, read_program, read_log);
+    GLuint values[2] = {};
+    GLuint program_values[2] = {};
+    GLint read_loc0 = -1, read_loc1 = -1;
+    GLint read_units[2] = {-1, -1};
+    auto map_values = [&](GLuint (&dst)[2]) {
+        api.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+        api.glFinish();
+        void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(dst), GL_MAP_READ_BIT);
+        if (ptr) {
+            memcpy(dst, ptr, sizeof(dst));
+            api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        }
+    };
+    if (read_ok) {
+        api.glUseProgram(read_program);
+        read_loc0 = api.glGetUniformLocation(read_program, "img0");
+        read_loc1 = api.glGetUniformLocation(read_program, "img1");
+        api.glUniform1i(read_loc0, 0);
+        api.glUniform1i(read_loc1, 1);
+        if (api.glGetUniformiv) {
+            api.glGetUniformiv(read_program, read_loc0, &read_units[0]);
+            api.glGetUniformiv(read_program, read_loc1, &read_units[1]);
+        }
+        api.glDispatchCompute(1, 1, 1);
+        map_values(values);
+
+        if (api.glProgramUniform1i) {
+            api.glProgramUniform1i(read_program, read_loc0, 0);
+            api.glProgramUniform1i(read_program, read_loc1, 1);
+            api.glDispatchCompute(1, 1, 1);
+            map_values(program_values);
+        }
+    }
+
+    const bool separate = values[0] == 11u && values[1] == 22u;
+    const bool program_separate = program_values[0] == 11u && program_values[1] == 22u;
+    const std::string translated = read_shader ? shader_source_text(read_shader) : std::string();
+    r.ok = bind_error == GL_NO_ERROR && write_ok && read_ok && read_loc0 >= 0 && read_loc1 >= 0 && separate;
+    r.detail = "bind_error=" + std::to_string(bind_error) + " write=" + std::to_string(write_ok) +
+               " read=" + std::to_string(read_ok) + " loc0=" + std::to_string(read_loc0) +
+               " loc1=" + std::to_string(read_loc1) +
+               " write_units=" + std::to_string(write_units[0]) + "," + std::to_string(write_units[1]) +
+               " read_units=" + std::to_string(read_units[0]) + "," + std::to_string(read_units[1]) +
+               " values=" + std::to_string(values[0]) + "," + std::to_string(values[1]) +
+               " program_values=" + std::to_string(program_values[0]) + "," +
+               std::to_string(program_values[1]) + " separate=" + std::to_string(separate) +
+               " program_separate=" + std::to_string(program_separate) +
+               " write_log=" + write_log + " read_log=" + read_log +
+               " read_source=" + translated.substr(0, std::min<size_t>(translated.size(), 1200));
+
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteTextures(1, &tex0);
+    api.glDeleteTextures(1, &tex1);
+    api.glDeleteProgram(write_program);
+    api.glDeleteShader(write_shader);
+    api.glDeleteProgram(read_program);
+    api.glDeleteShader(read_shader);
+    return r;
+}
+
+Result test_act_pingpong_binding() {
+    Result r;
+    const int W = 192, H = 96, D = 192;
+    const char* write_cs = R"(#version 310 es
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+layout(rgba16f, binding = 0) writeonly uniform highp image3D img0;
+layout(rgba16f, binding = 1) writeonly uniform highp image3D img1;
+void main() {
+    ivec3 p = ivec3(gl_GlobalInvocationID);
+    if (any(greaterThanEqual(p, ivec3(192, 96, 192)))) return;
+    imageStore(img0, p, vec4(11.0));
+    imageStore(img1, p, vec4(22.0));
+}
+)";
+    const char* read_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+layout(rgba16f, binding = 0) readonly uniform highp image3D img0;
+layout(rgba16f, binding = 1) readonly uniform highp image3D img1;
+layout(std430, binding = 2) buffer Out { uint v[2]; } outb;
+void main() {
+    outb.v[0] = uint(imageLoad(img0, ivec3(95, 47, 95)).x);
+    outb.v[1] = uint(imageLoad(img1, ivec3(95, 47, 95)).x);
+}
+)";
+
+    auto build_compute = [&](const char* src, GLuint& shader, GLuint& program, std::string& log) {
+        shader = api.glCreateShader(GL_COMPUTE_SHADER);
+        api.glShaderSource(shader, 1, &src, nullptr);
+        api.glCompileShader(shader);
+        GLint cstatus = GL_FALSE;
+        api.glGetShaderiv(shader, GL_COMPILE_STATUS, &cstatus);
+        GLint len = 0;
+        api.glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+        if (len > 0) {
+            log.resize(static_cast<size_t>(len), '\0');
+            api.glGetShaderInfoLog(shader, len, nullptr, log.data());
+        }
+        program = api.glCreateProgram();
+        api.glAttachShader(program, shader);
+        api.glLinkProgram(program);
+        GLint lstatus = GL_FALSE;
+        api.glGetProgramiv(program, GL_LINK_STATUS, &lstatus);
+        return cstatus == GL_TRUE && lstatus == GL_TRUE;
+    };
+
+    GLuint tex0 = 0, tex1 = 0;
+    api.glGenTextures(1, &tex0);
+    api.glGenTextures(1, &tex1);
+    for (GLuint tex : {tex0, tex1}) {
+        api.glBindTexture(GL_TEXTURE_3D, tex);
+        api.glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        api.glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        api.glTexStorage3D(GL_TEXTURE_3D, 1, GL_RGBA16F, W, H, D);
+    }
+    while (api.glGetError() != GL_NO_ERROR) {}
+    api.glBindImageTexture(0, tex0, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA16F);
+    api.glBindImageTexture(1, tex1, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA16F);
+    const GLenum bind_error = api.glGetError();
+
+    GLuint write_shader = 0, write_program = 0;
+    std::string write_log;
+    const bool write_ok = build_compute(write_cs, write_shader, write_program, write_log);
+    if (write_ok) {
+        api.glUseProgram(write_program);
+        api.glDispatchCompute(24, 12, 24);
+    }
+    api.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT |
+                        GL_SHADER_STORAGE_BARRIER_BIT);
+
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 16, nullptr, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, buffer);
+
+    GLuint read_shader = 0, read_program = 0;
+    std::string read_log;
+    const bool read_ok = build_compute(read_cs, read_shader, read_program, read_log);
+    GLuint values[2] = {};
+    if (read_ok) {
+        api.glUseProgram(read_program);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+        api.glFinish();
+        void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(values), GL_MAP_READ_BIT);
+        if (ptr) {
+            memcpy(values, ptr, sizeof(values));
+            api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        }
+    }
+
+    const bool separate = values[0] == 11u && values[1] == 22u;
+    r.ok = bind_error == GL_NO_ERROR && write_ok && read_ok && separate;
+    r.detail = "bind_error=" + std::to_string(bind_error) + " write=" + std::to_string(write_ok) +
+               " read=" + std::to_string(read_ok) + " values=" + std::to_string(values[0]) + "," +
+               std::to_string(values[1]) + " separate=" + std::to_string(separate) +
+               " write_log=" + write_log + " read_log=" + read_log;
+
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteTextures(1, &tex0);
+    api.glDeleteTextures(1, &tex1);
+    api.glDeleteProgram(write_program);
+    api.glDeleteShader(write_shader);
+    api.glDeleteProgram(read_program);
+    api.glDeleteShader(read_shader);
+    return r;
+}
+
+Result test_r32ui_volume() {
+    Result r;
+    const int W = 128, H = 64, D = 128;
+    const char* write_cs = R"(#version 310 es
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+layout(r32ui, binding = 0) writeonly uniform highp uimage3D img;
+void main() {
+    ivec3 p = ivec3(gl_GlobalInvocationID);
+    if (any(greaterThanEqual(p, ivec3(128, 64, 128)))) return;
+    imageStore(img, p, uvec4(7u));
+}
+)";
+    const char* read_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+layout(r32ui, binding = 0) readonly uniform highp uimage3D img;
+layout(std430, binding = 1) buffer Out { uint value; } outb;
+void main() { outb.value = imageLoad(img, ivec3(63, 31, 63)).r; }
+)";
+    auto build = [&](const char* src, GLuint& shader, GLuint& program, std::string& log) {
+        shader = api.glCreateShader(GL_COMPUTE_SHADER);
+        api.glShaderSource(shader, 1, &src, nullptr);
+        api.glCompileShader(shader);
+        GLint ok = GL_FALSE;
+        api.glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+        GLint len = 0; api.glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+        if (len > 0) { log.resize(len, '\0'); api.glGetShaderInfoLog(shader, len, nullptr, log.data()); }
+        program = api.glCreateProgram(); api.glAttachShader(program, shader); api.glLinkProgram(program);
+        GLint link = GL_FALSE; api.glGetProgramiv(program, GL_LINK_STATUS, &link);
+        return ok == GL_TRUE && link == GL_TRUE;
+    };
+    GLuint tex = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_3D, tex);
+    api.glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    api.glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    api.glTexImage3D(GL_TEXTURE_3D, 0, GL_R16UI, W, H, D, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+    const GLenum storage_error = api.glGetError();
+    api.glActiveTexture(GL_TEXTURE0);
+    api.glBindTexture(GL_TEXTURE_3D, tex);
+    api.glBindImageTexture(0, tex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+    const GLenum bind_error = api.glGetError();
+    GLuint ws = 0, wp = 0, rs = 0, rp = 0;
+    std::string wl, rl;
+    const bool write_ok = build(write_cs, ws, wp, wl);
+    const bool read_ok = build(read_cs, rs, rp, rl);
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 16, nullptr, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+    if (write_ok) {
+        api.glUseProgram(wp);
+        GLint loc = api.glGetUniformLocation(wp, "img");
+        if (loc >= 0) api.glUniform1i(loc, 0);
+        api.glDispatchCompute(16, 8, 16);
+    }
+    api.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT |
+                        GL_SHADER_STORAGE_BARRIER_BIT);
+    GLuint value = 0;
+    if (read_ok) {
+        api.glUseProgram(rp);
+        GLint loc = api.glGetUniformLocation(rp, "img");
+        if (loc >= 0) api.glUniform1i(loc, 0);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+        api.glFinish();
+        void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, 4, GL_MAP_READ_BIT);
+        if (ptr) { memcpy(&value, ptr, 4); api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER); }
+    }
+    r.ok = storage_error == GL_NO_ERROR && bind_error == GL_NO_ERROR && write_ok && read_ok && value == 7u;
+    r.detail = "storage_error=" + std::to_string(storage_error) + " bind_error=" + std::to_string(bind_error) +
+               " write=" + std::to_string(write_ok) + " read=" + std::to_string(read_ok) +
+               " value=" + std::to_string(value) + " write_log=" + wl + " read_log=" + rl;
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteTextures(1, &tex);
+    api.glDeleteProgram(wp); api.glDeleteShader(ws); api.glDeleteProgram(rp); api.glDeleteShader(rs);
+    return r;
+}
+
 Result test_integer_image_binding() {
     Result r;
     // ESSL 3.10 cannot name an r16ui image on this provider. The frontend must
@@ -1104,6 +1595,10 @@ int main(int argc, char** argv) {
     api.glBindBufferBase = sym<PFNGLBINDBUFFERBASEPROC>("glBindBufferBase");
     api.glGetUniformLocation = sym<PFNGLGETUNIFORMLOCATIONPROC>("glGetUniformLocation");
     api.glUniform1ui = sym<PFNGLUNIFORM1UIPROC>("glUniform1ui");
+    api.glUniform1i = sym<PFNGLUNIFORM1IPROC>("glUniform1i");
+    api.glGetUniformiv = sym<void (*)(GLuint, GLint, GLint*)>("glGetUniformiv");
+    api.glProgramUniform1i = sym<void (*)(GLuint, GLint, GLint)>("glProgramUniform1i");
+    api.glActiveTexture = sym<PFNGLACTIVETEXTUREPROC>("glActiveTexture");
     api.glDispatchCompute = sym<PFNGLDISPATCHCOMPUTEPROC>("glDispatchCompute");
     api.glMemoryBarrier = sym<PFNGLMEMORYBARRIERPROC>("glMemoryBarrier");
     api.glMapBufferRange = sym<PFNGLMAPBUFFERRANGEPROC>("glMapBufferRange");
@@ -1111,6 +1606,7 @@ int main(int argc, char** argv) {
     api.glBindImageTexture = sym<PFNGLBINDIMAGETEXTUREPROC>("glBindImageTexture");
     api.glTexStorage2D = sym<PFNGLTEXSTORAGE2DPROC>("glTexStorage2D");
     api.glTexStorage3D = sym<PFNGLTEXSTORAGE3DPROC>("glTexStorage3D");
+    api.glTexImage3D = sym<PFNGLTEXIMAGE3DPROC>("glTexImage3D");
     api.glTexImage2D = sym<PFNGLTEXIMAGE2DPROC>("glTexImage2D");
     api.glGenFramebuffers = sym<PFNGLGENFRAMEBUFFERSPROC>("glGenFramebuffers");
     api.glBindFramebuffer = sym<PFNGLBINDFRAMEBUFFERPROC>("glBindFramebuffer");
@@ -1176,6 +1672,10 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
     if (!strcmp(mode, "all") || !strcmp(mode, "integer_image")) run("integer_image", test_integer_image_binding);
+    if (!strcmp(mode, "all") || !strcmp(mode, "act_volume")) run("act_volume", test_act_volume);
+    if (!strcmp(mode, "all") || !strcmp(mode, "act_pingpong")) run("act_pingpong", test_act_pingpong);
+    if (!strcmp(mode, "all") || !strcmp(mode, "act_pingpong_binding")) run("act_pingpong_binding", test_act_pingpong_binding);
+    if (!strcmp(mode, "all") || !strcmp(mode, "r32ui_volume")) run("r32ui_volume", test_r32ui_volume);
     fprintf(g_out, "\n}\n");
 
     destroy_context();

@@ -444,7 +444,7 @@ std::string GLSLtoGLSLES(const char* glsl_code, GLenum glsl_type, uint essl_vers
     // string: the stage selects different post-processing, and the backend
     // profile selects the preprocessing branch. Bump the schema whenever a
     // translation rule changes so old cache entries cannot be reused.
-    constexpr int kTranslationCacheSchema = 2;
+    constexpr int kTranslationCacheSchema = 3;
     std::string sha256_string(glsl_code);
     sha256_string += "\n//schema=" + std::to_string(kTranslationCacheSchema) +
                      "|" + std::to_string(MAJOR) + "." + std::to_string(MINOR) + "." + std::to_string(REVISION) +
@@ -831,6 +831,19 @@ std::vector<unsigned int> glsl_to_spirv(GLenum shader_type, int glsl_version, co
 
     if (!shader.parse(&TBuiltInResource_resources, glsl_version, true, EShMsgDefault)) {
         LOG_D("GLSL Compiling ERROR: \n%s", shader.getInfoLog())
+        const char* info = shader.getInfoLog();
+        std::string source_preview = shader_src && shader_src[0] ? std::string(shader_src[0]).substr(0, 8000) : "";
+        __android_log_print(ANDROID_LOG_ERROR, "MobileGlues", "[MG-GLSL-ERROR] parse stage=%d version=%d:\n%s",
+                            static_cast<int>(shader_language), glsl_version, info ? info : "(null)");
+        fprintf(stderr, "[MG-GLSL-ERROR] parse stage=%d version=%d:\n%s\n", static_cast<int>(shader_language),
+                glsl_version, info ? info : "(null)");
+        fflush(stderr);
+        write_log("[MG-GLSL-ERROR] parse stage=%d version=%d:\n%s\n", static_cast<int>(shader_language),
+                  glsl_version, info ? info : "(null)");
+        __android_log_print(ANDROID_LOG_ERROR, "MobileGlues", "[MG-GLSL-ERROR] source:\n%.*s",
+                            static_cast<int>(source_preview.size()), source_preview.c_str());
+        write_log("[MG-GLSL-ERROR] source:\n%.*s\n", static_cast<int>(source_preview.size()),
+                  source_preview.c_str());
         errc = -1;
         return {};
     }
@@ -841,6 +854,13 @@ std::vector<unsigned int> glsl_to_spirv(GLenum shader_type, int glsl_version, co
 
     if (!program.link(EShMsgDefault)) {
         LOG_D("Shader Linking ERROR: %s", program.getInfoLog())
+        const char* info = program.getInfoLog();
+        __android_log_print(ANDROID_LOG_ERROR, "MobileGlues", "[MG-GLSL-ERROR] link stage=%d:\n%s",
+                            static_cast<int>(shader_language), info ? info : "(null)");
+        fprintf(stderr, "[MG-GLSL-ERROR] link stage=%d:\n%s\n", static_cast<int>(shader_language),
+                info ? info : "(null)");
+        fflush(stderr);
+        write_log("[MG-GLSL-ERROR] link stage=%d:\n%s\n", static_cast<int>(shader_language), info ? info : "(null)");
         errc = -1;
         return {};
     }
@@ -877,6 +897,12 @@ static bool spvc_ok(spvc_context context, spvc_result res, const char* what) {
         return true;
     }
     LOG_E("Error: %s failed in spirv-cross: %s", what, spvc_context_get_last_error_string(context))
+    const char* error = spvc_context_get_last_error_string(context);
+    __android_log_print(ANDROID_LOG_ERROR, "MobileGlues", "[MG-GLSL-ERROR] spirv-cross %s: %s", what,
+                        error ? error : "(null)");
+    fprintf(stderr, "[MG-GLSL-ERROR] spirv-cross %s: %s\n", what, error ? error : "(null)");
+    fflush(stderr);
+    write_log("[MG-GLSL-ERROR] spirv-cross %s: %s\n", what, error ? error : "(null)");
     return false;
 }
 
@@ -946,7 +972,46 @@ std::string spirv_to_essl(std::vector<unsigned int> spirv, uint essl_version, in
 
 static bool glslang_inited = false;
 std::string GLSLtoGLSLES_2(const char* glsl_code, GLenum glsl_type, uint essl_version, int& return_code) {
-    std::string correct_glsl_str = preprocess_glsl(glsl_code, glsl_type);
+    // ANGLE reserves `noperspective` in ESSL, while desktop packs use it on
+    // full-screen quad varyings (w = 1, so smooth interpolation is equivalent).
+    // Strip it before glslang sees the source.
+    static const std::regex noperspective(R"(\bnoperspective\b\s*)");
+    std::string normalized_source = std::regex_replace(glsl_code ? glsl_code : "", noperspective, "");
+    // Desktop packs built for GLSL 330 can still carry explicit layout(binding=)
+    // on SSBO/sampler declarations from Iris or from the pack. glslang rejects
+    // that below GLSL 420 unless the 420pack extension is enabled; ESSL 310
+    // supports the qualifier, so enabling it is a source-compatible bridge.
+    static const std::regex binding_qualifier(R"(layout\s*\([^)]*\bbinding\b)");
+    static const std::regex version_line(R"(#version\s+(\d+))");
+    static const std::regex extension_line(R"(^\s*#extension\s+.*$)", std::regex::multiline);
+    if (std::regex_search(normalized_source, binding_qualifier)) {
+        std::smatch version_match;
+        int desktop_version = 0;
+        if (std::regex_search(normalized_source, version_match, version_line)) {
+            desktop_version = std::atoi(std::string(version_match[1].first, version_match[1].second).c_str());
+        }
+        if (desktop_version > 0 && desktop_version < 420 &&
+            normalized_source.find("GL_ARB_shading_language_420pack") == std::string::npos) {
+            const std::string extension = "#extension GL_ARB_shading_language_420pack : enable\n";
+            size_t insert_at = std::string::npos;
+            for (std::sregex_iterator it(normalized_source.begin(), normalized_source.end(), extension_line), end;
+                 it != end; ++it) {
+                insert_at = static_cast<size_t>(it->position() + it->length());
+                if (insert_at < normalized_source.size() && normalized_source[insert_at] == '\n') insert_at++;
+            }
+            if (insert_at == std::string::npos) {
+                std::smatch version_match2;
+                if (std::regex_search(normalized_source, version_match2, version_line)) {
+                    insert_at = static_cast<size_t>(version_match2.position() + version_match2.length());
+                    if (insert_at < normalized_source.size() && normalized_source[insert_at] == '\n') insert_at++;
+                }
+            }
+            if (insert_at != std::string::npos) {
+                normalized_source.insert(insert_at, extension);
+            }
+        }
+    }
+    std::string correct_glsl_str = preprocess_glsl(normalized_source.c_str(), glsl_type);
     LOG_D("Firstly converted GLSL:\n%s", correct_glsl_str.c_str())
     int glsl_version = get_or_add_glsl_version(correct_glsl_str);
 
@@ -969,6 +1034,14 @@ std::string GLSLtoGLSLES_2(const char* glsl_code, GLenum glsl_type, uint essl_ve
     }
 
     // Post-processing ESSL
+
+    // ESSL requires a precision for every float declaration, and Iris injects
+    // these uniforms into both stages without one. Link then fails because the
+    // vertex and fragment defaults differ. Make the injected scalars/vectors
+    // explicitly highp in the translated source.
+    static const std::regex iris_uniform(
+        R"((\buniform\s+)(?!(?:highp|mediump|lowp)\b)((?:float|vec[234]|int|ivec[234]|mat[234](?:x[234])?))(\s+iris_[A-Za-z0-9_]+\s*;))");
+    essl = std::regex_replace(essl, iris_uniform, "$1highp $2$3");
 
     // ESSL 3.10 supports layout(binding=...) on uniform blocks, samplers,
     // images and shader-storage blocks. Keep it when the target can express it:

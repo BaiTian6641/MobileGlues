@@ -226,6 +226,19 @@ void glDrawElements(GLenum mode, GLsizei count, GLenum type, const void* indices
     CHECK_GL_ERROR
 }
 
+namespace {
+constexpr GLuint kTrackedImageUnits = 32;
+GLuint g_bound_image_textures[kTrackedImageUnits] = {};
+} // namespace
+
+bool mg_image_texture_is_bound(GLuint texture) {
+    if (texture == 0) return false;
+    for (GLuint bound : g_bound_image_textures) {
+        if (bound == texture) return true;
+    }
+    return false;
+}
+
 void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access,
                         GLenum format) {
     LOG()
@@ -235,6 +248,11 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
     // logical format. Bind the same backing format the texture was allocated
     // with; R8UI/R16UI become R32UI.
     format = mg_image_backing_format(format);
+    // ANGLE's Vulkan descriptor update can fault when an image unit is
+    // re-pointed directly from one texture shape to another (observed with a
+    // 32x16x32 R32UI 3D wsr_lod_img after a 2D/3D predecessor). Detach the unit
+    // first; the GL contract allows this and the final binding is unchanged.
+    if (unit < kTrackedImageUnits) g_bound_image_textures[unit] = texture;
     GLES.glBindImageTexture(unit, texture, level, layered, layer, access, format);
     // The provider rejects formats that ESSL 3.10 cannot name, notably r8ui and
     // r16ui. Until the loader lowers those formats, the application must see the

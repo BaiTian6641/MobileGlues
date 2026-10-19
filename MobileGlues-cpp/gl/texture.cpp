@@ -27,6 +27,7 @@
 
 #include "../gles/gles.h"
 #include "../gles/loader.h"
+#include "drawing.h"
 #include "framebuffer.h"
 #include "log.h"
 #include "transfer.h"
@@ -975,6 +976,22 @@ void glTexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
     GLenum want_if = static_cast<GLenum>(internalFormat), want_fmt = format, want_type = type;
     internal_convert(&want_if, &want_type, &want_fmt, mg_upload_has_data(pixels));
     internalFormat = static_cast<GLint>(want_if);
+
+    // Iris custom images are allocated with glTexImage3D(level 0, no pixels).
+    // On ANGLE's Vulkan backend that allocation leaves the 3D integer image
+    // unusable for image load/store: glBindImageTexture returns
+    // GL_INVALID_OPERATION, and the subsequent descriptor setup can fault.
+    // Immutable glTexStorage3D storage is the same allocation contract for
+    // these one-level image textures and is known-good on the same backend.
+    const bool image_storage_format =
+        internalFormat == GL_R8UI || internalFormat == GL_R16UI || internalFormat == GL_R32UI ||
+        internalFormat == GL_R8I || internalFormat == GL_R16I || internalFormat == GL_R32I ||
+        internalFormat == GL_R32F || internalFormat == GL_RGBA16F || internalFormat == GL_RGBA32F;
+    if (pixels == nullptr && level == 0 && target == GL_TEXTURE_3D && image_storage_format) {
+        glTexStorage3D(target, 1, internalFormat, width, height, depth);
+        CHECK_GL_ERROR
+        return;
+    }
 
     mg_upload_fix_t fix(width, height, depth, format, type, pixels, want_fmt);
     // A conversion this layer refused -- a source it could not map, or dimensions
@@ -1928,12 +1945,61 @@ void glClearTexImage(GLuint texture, GLint level, GLenum format, GLenum type, co
         mask = GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
     }
 
+    TextureObject* tex = mgGetTexObjectByID(texture);
+    const TextureTarget textureTarget = tex ? tex->target : TextureTarget::TEXTURE_2D;
+
+    // Clearing through a temporary framebuffer attachment crashes inside
+    // ANGLE's GL_Clear for layered/3D textures (observed on
+    // wsr_img/wsr_lod_img at beginLevelRendering). The image-bound tracking
+    // above cannot be relied on because LWJGL can enter the backend image
+    // functions directly. Skip the FBO clear for these targets; the ACT/WSR
+    // compute passes rewrite the visible volume before sampling. A future
+    // image-store clear path can restore exact per-frame clearing.
+    if (textureTarget == TextureTarget::TEXTURE_3D || textureTarget == TextureTarget::TEXTURE_2D_ARRAY ||
+        textureTarget == TextureTarget::TEXTURE_1D_ARRAY || textureTarget == TextureTarget::TEXTURE_CUBE_MAP_ARRAY ||
+        textureTarget == TextureTarget::TEXTURE_CUBE_MAP) {
+        TX_WARN_ONCE("glClearTexImage: layered/3D texture %u clear skipped (ANGLE FBO-clear crash)", texture);
+        return;
+    }
+
     GLuint fbo, prevDrawFBO, prevReadFBO;
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (int*)&prevDrawFBO);
     glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, (int*)&prevReadFBO);
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     CHECK_GL_ERROR_NO_INIT
+
+    // ANGLE crashes inside GL_Clear when the texture being cleared is still
+    // bound to an image unit. Iris clears custom images from
+    // beginLevelRendering while WSR leaves wsr_img/wsr_lod_img bound, which hit
+    // exactly that path on the X1E. Temporarily detach the cleared texture from
+    // every image unit it is bound to, then restore the exact binding.
+    struct image_binding_save_t {
+        GLint unit;
+        GLint level;
+        GLint layered;
+        GLint layer;
+        GLint access;
+        GLint format;
+    };
+    std::vector<image_binding_save_t> saved_image_bindings;
+    if (GLES.glGetIntegeri_v && GLES.glBindImageTexture) {
+        GLint image_units = 0;
+        GLES.glGetIntegerv(GL_MAX_IMAGE_UNITS, &image_units);
+        for (GLint unit = 0; unit < image_units; ++unit) {
+            GLint bound_texture = 0;
+            GLES.glGetIntegeri_v(GL_IMAGE_BINDING_NAME, (GLuint)unit, &bound_texture);
+            if (bound_texture != (GLint)texture) continue;
+            image_binding_save_t saved{unit, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8};
+            GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LEVEL, (GLuint)unit, &saved.level);
+            GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LAYERED, (GLuint)unit, &saved.layered);
+            GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LAYER, (GLuint)unit, &saved.layer);
+            GLES.glGetIntegeri_v(GL_IMAGE_BINDING_ACCESS, (GLuint)unit, &saved.access);
+            GLES.glGetIntegeri_v(GL_IMAGE_BINDING_FORMAT, (GLuint)unit, &saved.format);
+            saved_image_bindings.push_back(saved);
+            GLES.glBindImageTexture((GLuint)unit, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);
+        }
+    }
 
     clear_state_guard_t clear_guard;
     GLES.glClearColor(rgba[0], rgba[1], rgba[2], rgba[3]);
@@ -1945,9 +2011,6 @@ void glClearTexImage(GLuint texture, GLint level, GLenum format, GLenum type, co
     // GL_TEXTURE_2D. A cube map is six of those and a 3D or array texture is one
     // attachment per layer; handing either to the 2D form attached nothing, so
     // the framebuffer was never complete and nothing was cleared.
-    TextureObject* tex = mgGetTexObjectByID(texture);
-    const TextureTarget textureTarget = tex ? tex->target : TextureTarget::TEXTURE_2D;
-
     auto attach_and_clear = [&](GLenum face, GLint layer) -> bool {
         if (layer < 0) {
             glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, face, texture, level);
@@ -2007,6 +2070,11 @@ void glClearTexImage(GLuint texture, GLint level, GLenum format, GLenum type, co
                      "nothing was cleared",
                      texture, glEnumToString(ConvertTextureTargetToGLEnum(textureTarget)), level,
                      glEnumToString(format));
+    }
+
+    for (const image_binding_save_t& saved : saved_image_bindings) {
+        GLES.glBindImageTexture((GLuint)saved.unit, texture, saved.level, (GLboolean)saved.layered, saved.layer,
+                                (GLenum)saved.access, (GLenum)saved.format);
     }
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, prevReadFBO);

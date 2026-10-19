@@ -87,6 +87,15 @@ void glShaderSource(GLuint shader, GLsizei count, const GLchar* const* string, c
 
         if (essl_src.empty()) {
             LOG_E("Failed to convert shader %d.", shader)
+            std::string preview = glsl_src.substr(0, 8000);
+            __android_log_print(ANDROID_LOG_ERROR, "MobileGlues",
+                                "[MG-GLSL-ERROR] translation returned empty for shader %u type %d:\n%s", shader,
+                                shaderType, preview.c_str());
+            fprintf(stderr, "[MG-GLSL-ERROR] translation returned empty for shader %u type %d:\n%s\n", shader,
+                    shaderType, preview.c_str());
+            fflush(stderr);
+            write_log("[MG-GLSL-ERROR] translation returned empty for shader %u type %d:\n%s\n", shader, shaderType,
+                      preview.c_str());
             return;
         }
         LOG_D("\n[INFO] [Shader] Converted Shader source: \n%s", essl_src.c_str())
