@@ -142,6 +142,11 @@ Still open in these stages:
 - The installed test plugin APK (core `0557189`, debug signing) is the renderer
   named in the game log's `SDL_OPENGL_LIBRARY` and `LD_LIBRARY_PATH`. The original
   installed 2.0.0 APK is preserved for rollback.
+- WSR 128 core/plugin commits: core `1deeef6`, plugin submodule `e5e0131`,
+  plugin parent `6e4b230` (`googlebook/test-renderer`). Final debug APK
+  SHA-256 `771f2fd3aa51eb3b7982faaff8cc70b1633ed1c5fac28d8c93921fe47fe89593`;
+  bridge 1.0.5 SHA-256
+  `e7cedffca73153fc70799b8cc483506deeec33d9f9bd33ffc15c658684f0511b`.
 - Latest commits on `googlebook/x1e-stage1-3`: `d9789fa` shader source/per-object
   state, `9a91ede` compiler limits/SSBO binding, `0557189` RGB8_SNORM backing,
   `468c4bb` game evidence, `e3b2661` artifact hashes, `d22b187` wrapper version

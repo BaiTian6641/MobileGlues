@@ -261,7 +261,10 @@
       "plugin_apk_sha256": "771f2fd3aa51eb3b7982faaff8cc70b1633ed1c5fac28d8c93921fe47fe89593",
       "installed": "com.fcl.plugin.mobileglues debug 2.0.0",
       "iris_bridge": "mgirisbridge-1.0.5.jar",
-      "iris_bridge_sha256": "e7cedffca73153fc70799b8cc483506deeec33d9f9bd33ffc15c658684f0511b"
+      "iris_bridge_sha256": "e7cedffca73153fc70799b8cc483506deeec33d9f9bd33ffc15c658684f0511b",
+      "core_commit": "1deeef6",
+      "plugin_submodule_commit": "e5e0131",
+      "plugin_commit": "6e4b230"
     }
   }
 }
