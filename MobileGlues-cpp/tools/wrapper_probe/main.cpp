@@ -2408,6 +2408,97 @@ void main() { color = vec4(1.0, 0.0, 0.0, 1.0); }
     return r;
 }
 
+Result test_translation_failure_not_stale() {
+    Result r;
+    // Re-sourcing a shader object is legal. If translation fails, the backend
+    // source must be replaced, not left as the previously compiled source.
+    const char* good = "#version 300 es\nprecision mediump float;\nout vec4 color;\nvoid main() { color = vec4(1.0); }\n";
+    const char* bad = "#version 400 core\nout vec4 color;\nvoid main() { color = not_a_value; }\n";
+    GLuint shader = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(shader, 1, &good, nullptr);
+    api.glCompileShader(shader);
+    GLint good_status = GL_FALSE;
+    api.glGetShaderiv(shader, GL_COMPILE_STATUS, &good_status);
+    api.glShaderSource(shader, 1, &bad, nullptr);
+    api.glCompileShader(shader);
+    GLint bad_status = GL_TRUE;
+    api.glGetShaderiv(shader, GL_COMPILE_STATUS, &bad_status);
+    const std::string translated = shader_source_text(shader);
+    r.ok = good_status == GL_TRUE && bad_status == GL_FALSE && translated.empty();
+    r.detail = "good_status=" + std::to_string(good_status) + " bad_status=" + std::to_string(bad_status) +
+               " backend_source_length=" + std::to_string(translated.size());
+    api.glDeleteShader(shader);
+    return r;
+}
+
+Result test_initialized_uniform_array() {
+    Result r;
+    // Desktop permits uniform initializers; ESSL does not. Dropping the
+    // initializer must preserve the array declarator.
+    const char* fs = R"(#version 420 core
+uniform float weights[4] = float[4](0.25, 0.5, 0.75, 1.0);
+out vec4 color;
+void main() { color = vec4(weights[0], weights[1], weights[2], weights[3]); }
+)";
+    GLuint shader = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(shader, 1, &fs, nullptr);
+    api.glCompileShader(shader);
+    GLint status = GL_FALSE;
+    api.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+    const std::string log = shader_log(shader);
+    const std::string translated = shader_source_text(shader);
+    const bool has_array = translated.find("weights[4]") != std::string::npos;
+    const bool no_initializer = translated.find("= float[4]") == std::string::npos;
+    r.ok = status == GL_TRUE && has_array && no_initializer;
+    r.detail = "status=" + std::to_string(status) + " array=" + (has_array ? "yes" : "no") +
+               " initializer_removed=" + (no_initializer ? "yes" : "no") +
+               (log.empty() ? "" : " log=" + log) +
+               " translated=" + translated.substr(0, std::min<size_t>(translated.size(), 800));
+    api.glDeleteShader(shader);
+    return r;
+}
+
+Result test_frag_data_shared_shader() {
+    Result r;
+    // One shader object can be attached to two programs. Program A patches its
+    // output location; program B has no location override and must link the
+    // original source, not A's patched backend text.
+    const char* vs = "#version 300 es\nvoid main() { gl_Position = vec4(0.0); }\n";
+    const char* fs = "#version 300 es\nprecision mediump float;\nout vec4 sharedOut;\nvoid main() { sharedOut = vec4(1.0); }\n";
+    GLuint vshader = api.glCreateShader(GL_VERTEX_SHADER);
+    api.glShaderSource(vshader, 1, &vs, nullptr);
+    api.glCompileShader(vshader);
+    GLuint fshader = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(fshader, 1, &fs, nullptr);
+    api.glCompileShader(fshader);
+    GLuint program_a = api.glCreateProgram();
+    api.glAttachShader(program_a, vshader);
+    api.glAttachShader(program_a, fshader);
+    api.glBindFragDataLocation(program_a, 5, "sharedOut");
+    api.glLinkProgram(program_a);
+    GLint link_a = GL_FALSE;
+    api.glGetProgramiv(program_a, GL_LINK_STATUS, &link_a);
+    const std::string patched = shader_source_text(fshader);
+    GLuint program_b = api.glCreateProgram();
+    api.glAttachShader(program_b, vshader);
+    api.glAttachShader(program_b, fshader);
+    api.glLinkProgram(program_b);
+    GLint link_b = GL_FALSE;
+    api.glGetProgramiv(program_b, GL_LINK_STATUS, &link_b);
+    const std::string restored = shader_source_text(fshader);
+    const bool a_patched = patched.find("location = 5") != std::string::npos;
+    const bool b_restored = restored.find("location = 5") == std::string::npos;
+    r.ok = link_a == GL_TRUE && link_b == GL_TRUE && a_patched && b_restored;
+    r.detail = "link_a=" + std::to_string(link_a) + " link_b=" + std::to_string(link_b) +
+               " a_patched=" + (a_patched ? "yes" : "no") + " b_restored=" + (b_restored ? "yes" : "no") +
+               " restored_prefix=" + restored.substr(0, std::min<size_t>(restored.size(), 200));
+    api.glDeleteProgram(program_a);
+    api.glDeleteProgram(program_b);
+    api.glDeleteShader(vshader);
+    api.glDeleteShader(fshader);
+    return r;
+}
+
 Result test_patch_default_levels() {
     Result r;
     // ES has no default tessellation-level entry point. The frontend must say
@@ -3163,6 +3254,9 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "metadata_image_format")) run("metadata_image_format", test_metadata_image_format);
     if (!strcmp(mode, "all") || !strcmp(mode, "vertex_ssbo_atomics")) run("vertex_ssbo_atomics", test_vertex_ssbo_atomics);
     if (!strcmp(mode, "all") || !strcmp(mode, "vertex_image2d")) run("vertex_image2d_store", test_vertex_image2d_store);
+    if (!strcmp(mode, "all") || !strcmp(mode, "translation_failure")) run("translation_failure_not_stale", test_translation_failure_not_stale);
+    if (!strcmp(mode, "all") || !strcmp(mode, "uniform_initializer")) run("initialized_uniform_array", test_initialized_uniform_array);
+    if (!strcmp(mode, "all") || !strcmp(mode, "frag_data_shared")) run("frag_data_shared_shader", test_frag_data_shared_shader);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
     if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);

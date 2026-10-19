@@ -109,13 +109,33 @@ void glLinkProgram(GLuint program) {
 
     LOG_D("glLinkProgram(%d)", program)
     MgProgramObject* program_state = mg_find_program(program);
-    if (program_state && !program_state->frag_data_locations.empty()) {
+    if (program_state) {
+        const bool has_locations = !program_state->frag_data_locations.empty();
         for (GLuint shader_name : program_state->attached_shaders) {
             MgShaderObject* shader_state = mg_find_shader(shader_name);
             if (!shader_state || shader_state->type != GL_FRAGMENT_SHADER ||
                 shader_state->converted_source.empty()) {
                 continue;
             }
+            const bool restore = shader_state->patched_for_program != 0 &&
+                                 (shader_state->patched_for_program != program || !has_locations);
+            if (restore) {
+                const GLchar* source = shader_state->converted_source.data();
+                GLint source_length = static_cast<GLint>(shader_state->converted_source.size());
+                GLES.glShaderSource(shader_name, 1, &source, &source_length);
+                GLES.glCompileShader(shader_name);
+                shader_state->patched_for_program = 0;
+                GLint status = GL_FALSE;
+                GLES.glGetShaderiv(shader_name, GL_COMPILE_STATUS, &status);
+                if (status != GL_TRUE) {
+                    GLchar info_log[512] = {0};
+                    GLES.glGetShaderInfoLog(shader_name, sizeof(info_log), nullptr, info_log);
+                    LOG_E("Failed to restore fragment shader %u before linking program %u, log:\n%s", shader_name,
+                          program, info_log)
+                }
+            }
+            if (!has_locations) continue;
+
             std::string patched = shader_state->converted_source;
             for (const auto& [name, color] : program_state->frag_data_locations) {
                 patched = updateLayoutLocation(patched, color, name.c_str());
@@ -126,6 +146,7 @@ void glLinkProgram(GLuint program) {
             GLint source_length = static_cast<GLint>(patched.size());
             GLES.glShaderSource(shader_name, 1, &source, &source_length);
             GLES.glCompileShader(shader_name);
+            shader_state->patched_for_program = program;
             GLint status = GL_FALSE;
             GLES.glGetShaderiv(shader_name, GL_COMPILE_STATUS, &status);
             if (status != GL_TRUE) {

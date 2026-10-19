@@ -56,6 +56,7 @@ void glShaderSource(GLuint shader, GLsizei count, const GLchar* const* string, c
     LOG()
     MgShaderObject& state = g_mg_shaders[mg_object_key(shader)];
     state.converted_source.clear();
+    state.patched_for_program = 0;
 
     std::string glsl_src, essl_src;
     GLenum source_error = GL_NO_ERROR;
@@ -97,6 +98,13 @@ void glShaderSource(GLuint shader, GLsizei count, const GLchar* const* string, c
             fflush(stderr);
             write_log("[MG-GLSL-ERROR] translation returned empty for shader %u type %d:\n%s\n", shader, shaderType,
                       preview.c_str());
+            // Replace the backend source unconditionally. Returning here used to
+            // leave a previous valid source installed, so re-sourcing a shader
+            // with a source the translator rejected could still compile.
+            const GLchar* empty_source = "";
+            GLint empty_length = 0;
+            GLES.glShaderSource(shader, 1, &empty_source, &empty_length);
+            CHECK_GL_ERROR
             return;
         }
         LOG_D("\n[INFO] [Shader] Converted Shader source: \n%s", essl_src.c_str())

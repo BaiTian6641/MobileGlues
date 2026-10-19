@@ -34,6 +34,10 @@ struct MgObjectKeyHash {
 struct MgShaderObject {
     GLenum type = 0;
     std::string converted_source; // translated ESSL, before any frag-data patch
+    // Non-zero when the backend currently holds a frag-data-location patch for
+    // this program. A shader object can be attached to several programs; the
+    // original source must be restored before another program links it.
+    GLuint patched_for_program = 0;
     std::unordered_map<std::string, GLuint> image_binding_units;
     bool sampler_buffer_emulated = false;
     bool deleted = false;

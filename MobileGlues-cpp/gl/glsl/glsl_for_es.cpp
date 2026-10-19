@@ -449,10 +449,15 @@ std::string process_uniform_declarations(const std::string& glslCode) {
                 decl_end = length;
             else
                 ++decl_end;
-            const bool has_initializer = (glslCode.find('=', scan_pos) < decl_end);
+            const size_t equals_pos = glslCode.find('=', scan_pos);
+            const bool has_initializer = (equals_pos < decl_end);
             if (has_initializer) {
+                // Preserve the declarator suffix (array bounds, and anything else
+                // before '='), and drop only the initializer ESSL cannot express.
+                std::string declarator = glslCode.substr(scan_pos, equals_pos - scan_pos);
+                trim(declarator);
                 result.append("uniform").append(precision).append(" ").append(type).append(" ").append(name).append(
-                    ";");
+                    declarator).append(";");
             } else {
                 result.append(glslCode, decl_start, decl_end - decl_start);
             }
