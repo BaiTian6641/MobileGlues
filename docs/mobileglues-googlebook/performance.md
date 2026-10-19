@@ -1,7 +1,7 @@
 # Performance track
 
-Status: started 2026-10-19. **No X1E benchmark numbers yet** — the target device disconnected
-before the first post-change run. Nothing below is a measured speedup claim.
+Status: first measured X1E microbenchmark pass, 2026-10-19. These are CPU-submission
+microbenchmarks, not in-game FPS/power results.
 
 ## Target interpretation
 
@@ -14,10 +14,10 @@ future X2E work. Player reflections now render but are performance/power-unquali
 
 | Change | Why | Expected effect | Measurement |
 |---|---|---|---|
-| Skip the depth-guard scan when no sampler object is bound; skip units with no sampler before texture lookup; remove the per-draw 1.5 KB `Moved` zero-fill | The guard runs on every draw/dispatch; Iris binds samplers on many passes, but compute and sampler-free phases paid a 128-unit scan and memset for no work | Lower CPU per draw/dispatch; exact, no visual change | `wrapper_probe guard_bench`: `plain_ns`, `guard_ns`, `delta_ns`. **PENDING on X1E** |
-| Per-physical-unit image-binding shadow; skip identical `glBindImageTexture` calls from `glBindImageTexture`, `mg_materialize_image_bindings` and program switches | Each program switch and image-uniform write replayed every image; reflection scenes have several live images and frequent switches | Removes redundant ANGLE/Vulkan descriptor binds; no deferral, so ordering is unchanged | `wrapper_probe image_rebind_bench`: `ns_per_same_bind`. **PENDING on X1E** |
-| Probe backend `glGetError` only when a format was lowered or is unknown | The common R32UI/RGBA image bind paid a backend error round trip per call | Removes one round trip from the common image-bind path | Compare `image_rebind_bench` before/after; **PENDING** |
-| Fast path for `glUniform1i`/`glUniform1iv` when the current program has no image uniforms; per-program `has_image_uniforms` flag | Sampler/scalar writes were doing share-group and location hash lookups for a feature the program does not use | Removes two hash probes from the common uniform path | `perfetto`/`simpleperf` uniform-write samples; **PENDING** |
+| Skip the depth-guard scan when no sampler object is bound; skip units with no sampler before texture lookup; remove the per-draw 1.5 KB `Moved` zero-fill | The guard runs on every draw/dispatch; Iris binds samplers on many passes, but compute and sampler-free phases paid a 128-unit scan and memset for no work | Lower CPU per draw/dispatch; exact, no visual change | X1E, 20k dispatches, best of 3 after warmup: plain **780.4 → 588.6 ns** (−24.6%); sampler+depth guard **862.6 → 713.0 ns** (−17.3%). `validation/2026-10-19-x1e-perf-guard-{before,after}.json` |
+| Per-physical-unit image-binding shadow; skip identical `glBindImageTexture` calls from `glBindImageTexture`, `mg_materialize_image_bindings` and program switches | Each program switch and image-uniform write replayed every image; reflection scenes have several live images and frequent switches | Removes redundant ANGLE/Vulkan descriptor binds; no deferral, so ordering is unchanged | X1E, 100k identical binds: **54.74 → 23.80 ns/bind** (−56.5%). `validation/2026-10-19-x1e-perf-image-rebind-{before,after}.json` |
+| Probe backend `glGetError` only when a format was lowered or is unknown | The common R32UI/RGBA image bind paid a backend error round trip per call | Removes one round trip from the common image-bind path | Included in the image-rebind measurement; not separately isolated |
+| Fast path for `glUniform1i`/`glUniform1iv` when the current program has no image uniforms; per-program `has_image_uniforms` flag | Sampler/scalar writes were doing share-group and location hash lookups for a feature the program does not use | Removes two hash probes from the common uniform path | Not separately measured yet; `perfetto`/`simpleperf` pending |
 
 Source review: `PerformanceAudit` agent, 2026-10-19. The audit ranked image replay first, the
 unconditional image-bind error probe second, and the uniform hash path third. It explicitly marked
@@ -50,4 +50,6 @@ adb -s C1L63708PZ shell 'cd /data/local/tmp && MG_DIR_PATH=/data/local/tmp/mgcon
 ```
 
 In-game A/B: same world, camera route, resolution, pack profile and warmup; capture F3 frame time
-and logcat. `performance/power` remains a separate gate from correctness.
+and logcat. Correctness suite on this build is **55/55**
+(`validation/2026-10-19-x1e-perf-all-55.json`). In-game FPS, power and thermal results remain
+pending; these microbenchmarks do not establish a playable profile.

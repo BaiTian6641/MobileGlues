@@ -2575,8 +2575,11 @@ Result test_guard_scan_bench() {
     api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
     api.glUseProgram(program);
 
+    constexpr int kWarmup = 4000;
     constexpr int kIterations = 20000;
-    auto run = [&]() {
+    auto run_once = [&]() {
+        for (int i = 0; i < kWarmup; ++i) api.glDispatchCompute(1, 1, 1);
+        api.glFinish();
         auto start = std::chrono::steady_clock::now();
         for (int i = 0; i < kIterations; ++i) api.glDispatchCompute(1, 1, 1);
         api.glFinish();
@@ -2584,29 +2587,22 @@ Result test_guard_scan_bench() {
         return std::chrono::duration<double, std::nano>(end - start).count() / kIterations;
     };
 
-    // Plain dispatch: no sampler object, so the guard has nothing to move.
     api.glBindSampler(0, 0);
     api.glActiveTexture(GL_TEXTURE0);
     api.glBindTexture(GL_TEXTURE_2D, 0);
-    const double plain_ns = run();
+    double plain_ns = 1e30;
+    for (int i = 0; i < 3; ++i) plain_ns = std::min(plain_ns, run_once());
 
     GLuint tex = 0, sampler = 0;
     api.glGenTextures(1, &tex);
     api.glBindTexture(GL_TEXTURE_2D, tex);
-    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 1, 1);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, 1, 1);
     api.glGenSamplers(1, &sampler);
     api.glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     api.glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     api.glBindSampler(0, sampler);
-
-    // Depth texture with LINEAR sampler: guard must unbind and restore the
-    // sampler on every dispatch, exercising the full unit scan.
-    api.glDeleteTextures(1, &tex);
-    api.glGenTextures(1, &tex);
-    api.glBindTexture(GL_TEXTURE_2D, tex);
-    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, 1, 1);
-    api.glBindSampler(0, sampler);
-    const double guard_ns = run();
+    double guard_ns = 1e30;
+    for (int i = 0; i < 3; ++i) guard_ns = std::min(guard_ns, run_once());
 
     r.ok = linked == GL_TRUE;
     r.detail = "linked=" + std::to_string(linked) + " iterations=" + std::to_string(kIterations) +
@@ -2619,6 +2615,7 @@ Result test_guard_scan_bench() {
     api.glDeleteShader(shader);
     return r;
 }
+
 
 Result test_image_rebind_bench() {
     Result r;

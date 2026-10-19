@@ -374,9 +374,9 @@
       "status": "REPRODUCED"
     },
     "artifacts": {
-      "standalone_so_sha256": "7c4c7ad2954b76ea095d58391f689a43ae63557607939e578d87085ed08ee052",
-      "test_apk_sha256": "7767091dd8c753f9477bc80e6030b4c7365d232026fb670a418cdcd4c10a33d3",
-      "test_packaged_library_sha256": "e7795ad54fb379a489ac21ab2ef5db45f633f78979522f716b4bf2536716c54b",
+      "standalone_so_sha256": "cbebfc77670fe9bb2c0b2a3f660eaf2df4761d8e5e8d90e9792145c0d8817105",
+      "test_apk_sha256": "dd7f260d81f49c986aaf81d6c91bc96efc193ba5004ffd99f07aebaf8837aab4",
+      "test_packaged_library_sha256": "77e61e3729c0cda6da10feaf17e6f3a4afed3f932ddef6c3e981bbb1c7948392",
       "installed_release_apk_sha256": "a7e1eb29731fdece7ab3af7fb00692b856f1808a7544436e7b3eb6c08355581a",
       "note": "These build hashes are evidence for the historical tuple, not a release lock for either runtime lane."
     },

@@ -169,14 +169,14 @@ fidelity reference.
 | SSBO/image binding round-trip | **partial** | r16ui refusal visible; r32ui accepted; no r8ui/r16ui lowering yet |
 | Cache identity invalidation | pass | Host `cache_key_test`: distinct keys for source, stage, ESSL, backend, texture-buffer emulation, texture-query-LOD, compute, DSA, hide level and PATCH; device suite 38/38 |
 
-## Performance track (implemented, measurement pending)
+## Performance track (implemented, measured on X1E)
 
 | Change | Status | Evidence |
 | --- | --- | --- |
-| Depth-guard scan skip when no sampler / no sampler on unit; no per-draw Moved zero-fill | implemented, unmeasured | `performance.md`; `wrapper_probe guard_bench` |
-| Per-physical-unit image-binding dedupe | implemented, unmeasured | `performance.md`; `wrapper_probe image_rebind_bench` |
-| Image-bind backend error probe gated to lowered/unknown formats | implemented, unmeasured | source |
-| Uniform fast path for programs without image uniforms | implemented, unmeasured | source |
+| Depth-guard scan skip when no sampler / no sampler on unit; no per-draw Moved zero-fill | measured on X1E | plain dispatch **780.4 → 588.6 ns**; guard path **862.6 → 713.0 ns** (`performance.md`) |
+| Per-physical-unit image-binding dedupe | measured on X1E | identical image bind **54.74 → 23.80 ns** (`performance.md`) |
+| Image-bind backend error probe gated to lowered/unknown formats | implemented, included in bind measurement | source; not separately isolated |
+| Uniform fast path for programs without image uniforms | implemented, unmeasured | source; perfetto pending |
 
 ## Game-process smoke (X1E, installed renderer 2.0.0)
 

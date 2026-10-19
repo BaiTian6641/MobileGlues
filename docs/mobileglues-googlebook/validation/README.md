@@ -48,6 +48,11 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-ssbo-qualifier.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 ssbo_qualifier` | PASS: `readonly buffer` preserved on rebinding to 2 |
 | `2026-10-19-x1e-wrapper-all-translation55.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `7c4c7ad2…e052` | 55/55 PASS including linked-location and SSBO-qualifier probes |
 | `2026-10-19-x1e-playerref-user-report.md` | 2026-10-19 | target device, game process, **user-reported** | FCL run, WSR 128 + `WORLD_SPACE_PLAYER_REF=1` | Functional pass: renders without the prior crash; performance/power FAIL. No archived FPS/power capture |
+| `2026-10-19-x1e-perf-guard-before.json` | 2026-10-19 | target device, wrapper microbenchmark | `./wrapper_probe_arm64 guard_bench` on core `e7795ad5…54b` | plain `780.4 ns`, guard `862.6 ns` per dispatch |
+| `2026-10-19-x1e-perf-guard-after.json` | 2026-10-19 | target device, wrapper microbenchmark | same probe on performance core `cbebfc77…7105` | plain `588.6 ns`, guard `713.0 ns` per dispatch |
+| `2026-10-19-x1e-perf-image-rebind-before.json` | 2026-10-19 | target device, wrapper microbenchmark | `image_rebind_bench` on core `e7795ad5…54b` | `54.74 ns` per identical image bind |
+| `2026-10-19-x1e-perf-image-rebind-after.json` | 2026-10-19 | target device, wrapper microbenchmark | same probe on performance core `cbebfc77…7105` | `23.80 ns` per identical image bind |
+| `2026-10-19-x1e-perf-all-55.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` on performance core `cbebfc77…7105` | 55/55 PASS |
 
 ## Game-process captures and logs
 
