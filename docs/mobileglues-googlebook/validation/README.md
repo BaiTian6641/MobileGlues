@@ -8,6 +8,21 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-18-x1e-provider-probe.json` | 2026-10-18 | target device, below wrapper | see below | provider limits/format/behavioral probe on `C1L63708PZ` |
 | `2026-10-18-x1e-device-identity.txt` | 2026-10-18 | target device | `adb -s C1L63708PZ shell 'getprop …'` | HP Googlebook 14, X1E80100, Android 17/API 37, 4096-byte pages |
 | `2026-10-19-x1e-wrapper-stage1-stage2.json` | 2026-10-19 | target device, wrapper level | see below | shader-source, status, limit, frag-data and image-binding contract results |
+| `2026-10-19-x1e-wrapper-stage2.json` | 2026-10-19 | target device, wrapper level | same harness | full suite including SSBO binding, 512 compute, and vertex image store |
+
+## Game-process captures and logs
+
+Large captures and game logs are kept in `/home/polar/MobileGlues-fixtures/captures/`
+and are not committed. Reproduction is through FCL's Upload Log and the shader
+pack screen; the saved copies are evidence snapshots.
+
+| File | SHA-256 | Meaning |
+| --- | --- | --- |
+| `2026-10-19-game-prefix-rgb8snorm-fallback.log` | `9e31f16978b6088b2187101fd98dd644dc0f414567fb691e26c245235a8c183b` | Iris disabled shaders at `createColorFramebuffer` status 36054 |
+| `2026-10-19-game-postfix-rgb8snorm-active.log` | `8750088973994aa93536bef14d7a33407d70473574c7c4174a00118acf74f0c0` | pipeline initializes; shaderpack active at High |
+| `2026-10-19-complementary-r5.9.3-high-active.png` | `44e9ab2f5b7a822f2b49cf974a4fd5a603772914d7c9da28790059b2089a98b2` | active pack, water/fog/atmosphere |
+| `2026-10-19-complementary-r5.9.3-high-f3.png` | `6e479abea7a07b507140b0ebde51909289b83c00a676810dd3b42d54d9a249e4` | F3: pack name without fallback, High, 22 FPS, provider |
+| `2026-10-18-game-main-menu-old-plugin.png` | `0258b18ccaecd64433880e1463c0a1d329feda7fa17f45201f51d3224571c85e` | installed 2.0.0 renderer smoke before test plugin |
 
 ## Wrapper harness reproduction
 

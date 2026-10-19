@@ -23,7 +23,7 @@ Evidence: `validation/2026-10-18-x1e-provider-probe.json` (SHA-256
 | Gate | Result | Evidence |
 | --- | --- | --- |
 | 512-invocation compute (local 8×8×8) | pass | `compute_512_invocations` wrote the expected value; `MAX_COMPUTE_WORK_GROUP_INVOCATIONS=1024` |
-| Vertex-stage image store | pass with `rgba16f` | `vertex_image_store`; `MAX_VERTEX_IMAGE_UNIFORMS=192` |
+| Vertex-stage image store | pass with `rgba16f` | provider `vertex_image_store`; wrapper `vertex_image_store` (image value 42, read back through compute) |
 | R8UI / R16UI images | **fail** | ESSL rejects `r8ui`/`r16ui` qualifiers; `glBindImageTexture` returns `GL_INVALID_VALUE`. Textures and FBOs themselves are valid |
 | R32UI 3D image substitution | pass | `r32ui_image_substitution` wrote/read `0x12345678`; legal backing candidate at 4 bytes/texel |
 | WSR 128 SSBO (50,855,936 B) | pass | allocation, binding, compute write near end, mapped readback |
@@ -32,7 +32,31 @@ Evidence: `validation/2026-10-18-x1e-provider-probe.json` (SHA-256
 | Raw + comparison depth sampling with LINEAR | pass at probe level | `depth_raw_and_compare_linear`, 32F depth; raw and compare results non-zero |
 | `RGB8_SNORM` color attachment | **fail** | FBO incomplete (`36054`); Complementary colortex1 requests it |
 | `RGBA8_SNORM` / `R11F_G11F_B10F` / `RGB16F` / `RGBA16F` attachments | pass | per-format FBO completeness |
-| Frontend `GL_MAX_TEXTURE_IMAGE_UNITS` | **gap** | provider reports 32; `gl/getter.cpp` doubles it to 64 |
+| Frontend `GL_MAX_TEXTURE_IMAGE_UNITS` | fixed | provider reports 32; wrapper reports 32 after `gl/getter.cpp` repair |
+
+## Game-process results (X1E, test plugin)
+
+The test plugin APK packaged core `0557189` (NDK 27.3 debug build) and was installed
+on `C1L63708PZ`. FCL launched `neoforge-21.1.262`; the log's env map points
+`SDL_OPENGL_LIBRARY` / `LD_LIBRARY_PATH` at the newly installed plugin APK, so the
+running renderer is this workspace's build. Iris 1.8.14-beta.1 + Sodium 0.8.13 are
+present.
+
+| Pack | Preset | Result | Evidence |
+| --- | --- | --- | --- |
+| Complementary Reimagined r5.9.3 | High | pipeline initializes; no `(fallback)`; 22 FPS at 2880×1585; fog/atmosphere/water reflection visible | F3 capture, post-fix log |
+| Complementary Reimagined r5.9.3 | High | effect-by-effect fidelity (SSR, PBR, shadows, TAA, bloom, clouds) | **not tested** |
+| Complementary Reimagined r5.9.2 (plan fixture) | High | **not tested**; not installed on the device |
+| Complementary Unbound r5.9.2 | High | **not tested** |
+| BSL v10.1.8 | default | **not tested** |
+
+The first attempt (core `9a91ede`) failed at Iris `createColorFramebuffer` with
+`Draw buffers [0, 1] Status: 36054` (incomplete attachment) and disabled shaders.
+The RGB8_SNORM backing fix (core `0557189`) removed that failure. The post-fix log
+still contains Iris custom-uniform warnings (`BIOME_PALE_GARDEN`,
+`BIOME_SULFUR_CAVES`, `endFlashIntensity`) caused by the pack/Iris version pair;
+these are not renderer errors but they can suppress those effects and must be
+resolved by a compatible Iris/pack tuple.
 
 ## Shaderpack / effect rows
 
@@ -59,11 +83,30 @@ Evidence: `validation/2026-10-18-x1e-provider-probe.json` (SHA-256
 | Existing pixel-size tests | pass | `tests/run.sh` |
 | Existing framebuffer-shuffle tests | pass | `tests/run.sh` |
 | `glShaderSource` multi-string / explicit-length regression | pass | host `tests/run.sh`; X1E `wrapper_probe source_multi`, `source_multi_implicit` |
+| RGB8_SNORM render-target backing | pass | X1E `wrapper_probe rgb8_snorm_attachment`: both TexImage2D and TexStorage2D FBOs complete |
 | Failed compile/link status remains observable | pass | X1E `wrapper_probe compile_failure`, `link_failure` at `enableNoError=0/1/2` |
 | Per-program frag-data bindings / interleaving | pass | X1E `wrapper_probe frag_data_*`; `glGetFragDataLocation` round-trip |
 | Shader/program state keyed by share group | implemented, not multi-context tested | source + X1E single-context tests |
-| SSBO/image binding round-trip | **partial** | r16ui refusal visible; r32ui accepted; `glShaderStorageBlockBinding` still stub |
+| SSBO block binding (compute and vertex) | pass | X1E `wrapper_probe ssbo_block_binding`, `ssbo_graphics_binding`: declared 0 rebound to 3, value read back |
+| 512-invocation compute through wrapper | pass | X1E `wrapper_probe compute_512`, value 0x512 |
+| Vertex image store through wrapper | pass | X1E `wrapper_probe vertex_image_store`, `rgba16f` image value 42 |
+| glslang limits derived from backend | pass for tested limits | vertex image shaders compile; `maxVertexImageUniforms` no longer 0 |
+| SSBO/image binding round-trip | **partial** | r16ui refusal visible; r32ui accepted; no r8ui/r16ui lowering yet |
 | Cache identity invalidation | pending implementation | cache-key audit identifies stage/profile inputs as omitted |
+
+## Game-process smoke (X1E, installed renderer 2.0.0)
+
+FCL 1.3.4.0 launched its existing NeoForge 1.21.1 instance
+(`neoforge-21.1.262`, 9 mods) under the installed MobileGlues 2.0.0 renderer.
+The Minecraft main menu rendered and the process stayed alive. Logcat from that
+launch showed the installed build rejecting `#version 400` shaders, reporting
+unsupported `GL_ARB_shader_image_load_store` / `GL_ARB_gpu_shader5` /
+`GL_ARB_shading_language_packing` / `GL_ARB_shader_storage_buffer_object`
+warnings, and failing generated `iris_Normal` syntax. Those logs are from the
+**installed 2.0.0 library**, not this workspace's build. No shaderpack was loaded
+and the instance is not one of the plan's Fabric lanes. The game-process smoke
+therefore proves only that the launcher/provider path starts; it closes no
+fidelity, Iris, or pack gate.
 
 ## Device gates (all pending)
 

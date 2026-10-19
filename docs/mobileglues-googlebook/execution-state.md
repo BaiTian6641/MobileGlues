@@ -61,8 +61,13 @@ game process.
 - The compile/link failure masking paths remain in `gl/shader.cpp` and `gl/program.cpp`
   (`ignore_error` rewrites `GL_COMPILE_STATUS`/`GL_LINK_STATUS`); `glGetError` still always reports
   `GL_NO_ERROR`.
-- `glShaderStorageBlockBinding` remains a no-op stub in `gl/gl_stub.cpp`.
+- `glShaderStorageBlockBinding` was a no-op stub in `gl/gl_stub.cpp`; it is now implemented in
+  `gl/program.cpp` (source rewrite + frontend relink) and tested on the X1E device.
 - The translator/limit/image/SSBO observations in the plan are being re-audited against this exact checkout.
+- A real FCL game process was launched on `C1L63708PZ` (Minecraft 1.21.1 / NeoForge 21.1.262,
+  9 mods) with the installed MobileGlues 2.0.0 renderer. The main menu rendered, but the installed
+  build's logcat rejected `#version 400` shaders and generated `iris_Normal` syntax errors. This is
+  smoke evidence for the launcher/provider path, not pack qualification.
 - Host semantic tests pass unchanged: `sh MobileGlues-cpp/tests/run.sh` → 0 failures.
 - Reproducible ARM64 build succeeds with NDK r28c; artifact is 16 KB-aligned and ThinLTO is active.
 
@@ -96,18 +101,35 @@ Fixed and verified:
 - Backend refusal of an `r16ui` image binding is now visible to the application
   (`GL_INVALID_VALUE`); an `r32ui` image binding is accepted. The actual
   r8ui/r16ui lowering is not implemented yet.
+- glslang resource limits are queried from the backend. Vertex-image shaders now
+  compile and execute through the wrapper; a 512-invocation compute shader runs.
+- `glShaderStorageBlockBinding` is implemented by resolving the block name,
+  rewriting the attached shader source, and relinking through the frontend.
+  Compute and vertex-stage SSBOs rebound from 0 to 3 are read back correctly.
+- The translated-source cache key includes a schema revision, stage, backend ES
+  version, compute/DSA settings, and environment hiding level. Failed translation
+  now returns empty instead of raw desktop GLSL.
 
 Still open in these stages:
 
 - Extension admission is still not derived from a single capability contract;
   several desktop extensions remain unconditional.
-- `glShaderStorageBlockBinding` is still a stub, and SSBO/image reflection is not
-  retained after link.
-- The translated-source cache key still omits stage, backend profile, and
-  transformation inputs.
+- Post-link reflection is queried live from the backend for SSBO block binding,
+  but is not retained as a frontend table for cache identity or relinking.
 - The wrapper still reports a desktop GL 4.0 profile while `enableExtComputeShader`
   defaults to false; this is a loader-capability decision, not a proven feature
   level.
+- R8UI/R16UI image lowering is not implemented. WSR 256 remains blocked by the
+  provider's 128 MiB `GL_MAX_SHADER_STORAGE_BLOCK_SIZE`.
+- An original-looking Complementary Reimagined **r5.9.3** archive is now active in
+  the game process at High (not the plan's r5.9.2; r5.9.3 joins a new fixture row).
+  Iris no longer reports `(fallback)` after the RGB8_SNORM backing fix, and the
+  F3 overlay shows the pack name and High profile. The measured menu/world frame
+  rate was 22 FPS at 2880×1585, below the plan's 60 FPS target and not yet a
+  controlled performance run.
+- The installed test plugin APK (core `0557189`, debug signing) is the renderer
+  named in the game log's `SDL_OPENGL_LIBRARY` and `LD_LIBRARY_PATH`. The original
+  installed 2.0.0 APK is preserved for rollback.
 
 ## Blockers
 
@@ -131,10 +153,11 @@ Still open in these stages:
 
 ## Exact next action
 
-Implement the Stage 2 resource contract that the target probe showed is needed: derive glslang resource
-limits from the provider (not the hardcoded `maxVertexImageUniforms = 0` / `maxImageUnits = 8` table),
-retain post-link SSBO/image reflection, implement `glShaderStorageBlockBinding` and the corresponding
-binding queries, and correct the translated-source cache key (stage + compiler/transformation/profile
-inputs). Test each on the wrapper harness before attempting a Minecraft launch. The R8UI/R16UI image
-lowering remains a separate, explicitly tracked gap; WSR 256 is blocked by the provider's 128 MiB SSBO
-block limit and must stay a documented preset boundary until an alternate backend is qualified.
+Run a controlled visual session on `C1L63708PZ` with the test plugin and the
+active Complementary r5.9.3 High pack: set a fixed time/weather, capture a still
+and a short pan, then toggle shaders off for a paired reference. Check water SSR,
+rough/specular PBR, shadow edges, clouds/fog, bloom, and TAA/history behavior;
+record each as pass/fail with the exact pack/settings. Then acquire/install the
+original r5.9.2 archive and repeat. Address the Iris custom-uniform warnings by
+selecting a compatible Iris/pack tuple. R8UI/R16UI lowering and WSR 256 remain
+separate gates; the latter is blocked by the provider's 128 MiB SSBO limit.
