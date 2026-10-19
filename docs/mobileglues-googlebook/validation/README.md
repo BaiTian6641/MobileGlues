@@ -38,6 +38,10 @@ pack screen; the saved copies are evidence snapshots.
 | `2026-10-19-r592-act192-bridge-f3.png` | `0c2c95d3596fe67aa6e869034eaaeacfbe4454a3464aad15f520b29a99cda648` | ACT 192 stable scene with bridge |
 | `2026-10-19-r592-act192-bridge-motion.mp4` | `291d3e217f10a14e42b768230d60c9f9508e0ed57d87444815a5f5bdc8b68465` | 8 s ACT stability sample |
 | `2026-10-19-game-r592-act192-bridge.log` | `3c924b33f27c44618d1af8f078f930540ae69c96cb4fd776601210e54656b4fa` | bridge log (`mclo.gs/Dz8wXmm`) |
+| `2026-10-19-r592-wsr128-water.png` | `4becdcd1cf4f459797391264d062cc8cd0f7a137570018c16a5d562acb857a44` | WSR 128 water scene |
+| `2026-10-19-r592-wsr128-water.mp4` | `c6367b4800683fca74e5a0ac2a62e151c9521fd4ca9c2f805787c8dac8ae8aab` | WSR 128 motion sample |
+| `2026-10-19-r592-wsr128-room.png` | `73386a36d9c1c29bfc592188a72649ee6258f8aa1b2eb9b77d9f649ed43b7389` | WSR 128 room scene |
+| `2026-10-19-game-r592-wsr128-final.log` | `0001298247d25cadd53218dc5a4f82a728feecc0734a970d45a46ec054d52e7c` | WSR 128 final log (`mclo.gs/adG0NiA`) |
 | `2026-10-18-game-main-menu-old-plugin.png` | `0258b18ccaecd64433880e1463c0a1d329feda7fa17f45201f51d3224571c85e` | installed 2.0.0 renderer smoke before test plugin |
 
 ## Wrapper harness reproduction

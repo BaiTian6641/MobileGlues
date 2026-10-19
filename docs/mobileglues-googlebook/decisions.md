@@ -82,3 +82,38 @@
   r5.9.2 archive. The bridge is a distribution component, not a shaderpack
   edit; the archive remains byte-identical. Graphics-stage multi-image
   programs and formatless vertex images remain open.
+
+## D8. WSR 128 needs immutable 3D image storage and a safe clear fallback
+
+- Evidence: after the core parsed `composite.fsh` (420pack) and the bridge
+  zero-filled the WSR SSBO, the pipeline still crashed in ANGLE at the first
+  `glBindImageTexture` of `wsr_img` (128×64×128, R32UI). A standalone probe
+  showed the same bind succeeds for `glTexStorage3D` storage and fails with
+  `GL_INVALID_OPERATION` for Iris's `glTexImage3D(level 0, null)` allocation.
+- Decision: MobileGlues converts null-pixel 3D image-format `glTexImage3D`
+  calls to one-level immutable `glTexStorage3D` storage. That is the same
+  contract for Iris custom images and is valid on ANGLE.
+- Evidence: `glClearTexImage` of layered/3D textures also crashes inside
+  ANGLE's `GL_Clear` (FBO layer attachment). The wrapper now skips FBO clears
+  for 3D/array/cube targets. The ACT/WSR compute passes rewrite the visible
+  volume before sampling; stale entries are a known tradeoff, not silent.
+- Result: original Reimagined r5.9.2 with ACT 128 + WSR 128 loads and renders
+  water/room reflections; log `mclo.gs/adG0NiA`.
+
+## D9. Reconstructed-pack workarounds map to concrete core gaps
+
+The prior `snapdragon-shader` tree was compared with the original r5.9.3
+archive, normalized for CRLF. Its changes are workarounds, not shader logic:
+
+| Reconstructed change | MobileGlues gap | Current handling |
+| --- | --- | --- |
+| content files for `bufferObject.0/3`; no `glClearBufferSubData` call | Iris zero-fills static SSBOs with GL 4.3 clear | bridge 1.0.5 zero-fills through `glBufferSubData`; native core implementation still TODO |
+| `image.*` clear flag `true` → `false` | ANGLE FBO `GL_Clear` crashes on layered/3D images | core skips layered/3D FBO clears |
+| explicit `layout(rgba16f/r16ui/r8ui)` | formatless image declarations | core 420pack + format lowering; compute binding bridge |
+| `precision highp float/int` + no `noperspective` | desktop→ESSL precision/link and ANGLE reserved word | core strips `noperspective` and marks `iris_*` highp |
+| RGBA16F/RGBA8 render targets | RGB16F/RGB8_SNORM/R11F not renderable under ANGLE | not yet generalized in core; original WSR 128 path completed without it |
+| WSR gated by `IRIS_FEATURE_SSBO` | original pack requests SSBO without checking | ANGLE supplies buffer storage; no crash observed |
+| faceData sparse files | `glClearBufferSubData` absent | bridge zero-fill; WSR 128 passed |
+
+Consequence: prefer core/bridge fixes over archive edits. The reconstructed
+archive remains a research fixture, not the release input.

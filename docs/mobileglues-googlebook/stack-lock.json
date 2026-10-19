@@ -233,6 +233,15 @@
         "bridge": "mgirisbridge-1.0.0",
         "log_url": "https://mclo.gs/Dz8wXmm",
         "status": "staged pass; one emissive scene, not full effect matrix"
+      },
+      "wsr128": {
+        "pack": "ComplementaryReimagined_r5.9.2.zip, custom ACT 128 + WSR 1",
+        "effective_profile": "Custom (+3 options changed by user)",
+        "ssbo_bytes": 50855936,
+        "images": "wsr_img 128x64x128 R32UI; wsr_lod_img 32x16x32 R32UI",
+        "result": "loads; water/room reflections visible; no crash",
+        "log_url": "https://mclo.gs/adG0NiA",
+        "status": "staged pass; one water/room scene, not release-qualified"
       }
     },
     "available_emulators": [
@@ -247,6 +256,12 @@
       "target": "iris-neoforge-1.8.14-beta.1+mc1.21.1.jar",
       "scope": "Iris compute shaders with declared custom images; explicit binding + pack format",
       "evidence": "log mclo.gs/Dz8wXmm shows floodfill_img=0, floodfill_img_copy=1 and stable ACT"
+    },
+    "test_build": {
+      "plugin_apk_sha256": "771f2fd3aa51eb3b7982faaff8cc70b1633ed1c5fac28d8c93921fe47fe89593",
+      "installed": "com.fcl.plugin.mobileglues debug 2.0.0",
+      "iris_bridge": "mgirisbridge-1.0.5.jar",
+      "iris_bridge_sha256": "e7cedffca73153fc70799b8cc483506deeec33d9f9bd33ffc15c658684f0511b"
     }
   }
 }

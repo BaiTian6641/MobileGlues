@@ -28,6 +28,10 @@ Evidence: `validation/2026-10-18-x1e-provider-probe.json` (SHA-256
 | R8UI/R16UI metadata bridge | pass | wrapper registers the real format before `glShaderSource`; formatless `uimage3D` is rewritten to `layout(r32ui) highp`, R16UI texture/binding is backed by R32UI, and a compute write/read returns 12345 |
 | Iris compute image binding bridge | pass | `act_volume` fills and samples a 192×96×192 RGBA16F volume (24×12×24 groups of 8³); `act_pingpong` shows dynamic image units alias (`values=22,22`) while explicit `layout(binding=0/1)` separates them (`values=11,22`); mixin logs `floodfill_img=0, floodfill_img_copy=1` |
 | ACT 192 dynamic colored lighting (original r5.9.2) | pass (staged) | Very High, bridge installed: sea lantern cyan and glowstone warm pools, stable over an 8 s sample (mean blue-left 24.1±0.1, warm-right 77.8±0.1); log `mclo.gs/Dz8wXmm` |
+| GLSL 330 `binding` layout | pass | core enables `GL_ARB_shading_language_420pack` before glslang for pre-420 sources; original `composite.fsh` parses |
+| `noperspective` / Iris precision | pass | core strips `noperspective` before glslang and marks `iris_*` float uniforms highp in ESSL |
+| 3D image allocation/clear | pass | core uses immutable `glTexStorage3D` for null-pixel 3D image formats, and skips FBO clears of layered/3D textures that crash ANGLE; WSR 128 binds 128×64×128 R32UI |
+| Iris SSBO zero-fill | pass | bridge 1.0.5 zero-fills the 50,855,936 B WSR buffer through core `glBufferSubData` when `glClearBufferSubData` is unavailable |
 | R32UI 3D image substitution | pass | `r32ui_image_substitution` wrote/read `0x12345678`; legal backing at 4 bytes/texel |
 | WSR 128 SSBO (50,855,936 B) | pass | allocation, binding, compute write near end, mapped readback |
 | WSR 192 SSBO (114,229,248 B) | pass | same test |
@@ -78,9 +82,9 @@ fidelity reference.
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | High | water/surface SSR | ARM64 / X1E / unknown | not tested | fixture not yet acquired |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | High | rough/specular PBR | ARM64 / X1E / unknown | not tested | — |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | High | shadows / AO / fog / clouds / bloom / TAA | ARM64 / X1E / unknown | not tested | — |
-| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 128, WSR 1) | WSR 128 + ACT 128 | ARM64 / X1E / ANGLE | not tested | next gate |
+| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 128, WSR 1) | WSR 128 + ACT 128 | ARM64 / X1E / ANGLE | pass (staged) | original pack, bridge 1.0.5; log `mclo.gs/adG0NiA`; water/room captures |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Very High | ACT 192 colored lighting | ARM64 / X1E / ANGLE | pass (staged, one emissive scene) | F3 `2026-10-19-r592-act192-bridge-f3.png`, 8 s clip, log `mclo.gs/Dz8wXmm` |
-| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 128, WSR 1) | WSR 128 | ARM64 / X1E / ANGLE | not tested | next gate |
+| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 128, WSR 1) | WSR 128 | ARM64 / X1E / ANGLE | pass (staged) | original pack; WSR images 128×64×128; SSBO 50,855,936 B; log `mclo.gs/adG0NiA` |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | WSR 256 | ARM64 / X1E / ANGLE | blocked | provider `MAX_SHADER_STORAGE_BLOCK_SIZE=134,217,728`; request 202,899,456 B |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | player reflections (binding 3) | ARM64 / X1E / unknown | not tested | — |
 | Complementary Unbound r5.9.2 | `2b4e9c71…21d2` | High | standard fidelity suite | ARM64 / X1E / unknown | not tested | — |

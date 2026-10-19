@@ -167,6 +167,18 @@ Still open in these stages:
   stable colored lighting: sea lantern cyan, glowstone warm, visible diffusion
   process, no flashing over an 8 s sample. Log `mclo.gs/Dz8wXmm`, F3 and clip
   archived. This closes the staged ACT 192 scene, not the full Stage 4 matrix.
+- **WSR 128 passes on the original pack** with custom `COLORED_LIGHTING=128`,
+  `WORLD_SPACE_REFLECTIONS=1`. WSR images are 128×64×128; the SSBO is
+  50,855,936 B. Log `mclo.gs/adG0NiA`, water and room captures archived.
+- Core fixes required for that pass:
+  - pre-420 GLSL gets `GL_ARB_shading_language_420pack` for `layout(binding=)`;
+  - `noperspective` is stripped and Iris scalar uniforms get highp in ESSL;
+  - null-pixel 3D image formats allocate immutable storage (`glTexStorage3D`)
+    instead of `glTexImage3D`, which left ANGLE images invalid;
+  - FBO clears of layered/3D textures are skipped because ANGLE's `GL_Clear`
+    crashes on wsr imagery;
+  - bridge 1.0.5 zero-fills SSBOs and gives compute image pairs explicit
+    bindings.
 
 ## Blockers
 
@@ -200,11 +212,11 @@ performed.
 
 ## Exact next action
 
-Test **WSR 128** on the original Reimagined r5.9.2 pack by setting the two
-profile values to `COLORED_LIGHTING=128` and `WORLD_SPACE_REFLECTIONS=1`
-(WSR image 128×64×128, main SSBO 50,855,936 B). Verify the water/terrain
-reflection computes initialize, the bridge logs distinct `wsr_img`/`wsr_lod_img`
-bindings, and a controlled reflection scene is stable. Do not use the default
-Ultra profile for this gate: it requests WSR 256 (202,899,456 B), which remains
-blocked by the provider's 128 MiB SSBO limit. Keep effect-by-effect Stage 3
-fidelity and the vertex-image formatless warnings as separate open items.
+Test **WSR 192** on the original Reimagined r5.9.2 pack with
+`COLORED_LIGHTING=192` and `WORLD_SPACE_REFLECTIONS=1`: WSR image
+192×64×192, WSR LOD 48×16×48, main SSBO 114,229,248 B (still below the
+provider's 134,217,728 B limit). Then test the default **Ultra WSR 256**
+(202,899,456 B) only as a negative gate. Keep the named-effect Stage 3 matrix
+and graphics-stage image-format warnings as separate open items. The clean
+core should also get a native `glClearBufferSubData` implementation so the Iris
+zero-fill bridge is no longer required.
