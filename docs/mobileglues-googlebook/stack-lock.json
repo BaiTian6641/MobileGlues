@@ -216,7 +216,16 @@
         "endFlashIntensity unresolved"
       ],
       "log_url": "https://mclo.gs/z3qIi68",
-      "qualification": "pipeline active; not effect-by-effect qualified"
+      "qualification": "pipeline active; not effect-by-effect qualified",
+      "unbound": {
+        "pack": "ComplementaryUnbound_r5.9.2.zip, High, active (no fallback)",
+        "pack_archive_sha256_host_fixture": "2b4e9c717758fd1ba1d6306f2e847096704196f0823c4d6941b3de6f423121d2",
+        "frame_rate_shaders_on": "20 FPS at 2880x1585 (F3; p50 20 fps, p95 19 fps)",
+        "frame_rate_shaders_off": "574 FPS at 2880x1585 (paired reference)",
+        "reload": "shader reload works",
+        "log_url": "https://mclo.gs/hH2OIs5",
+        "qualification": "pipeline active; not effect-by-effect qualified"
+      }
     },
     "available_emulators": [
       "emulator-5580 x86_64 sdk_gphone64_x86_64 API 36 page_size 4096",

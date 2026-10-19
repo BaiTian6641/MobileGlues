@@ -29,6 +29,9 @@ pack screen; the saved copies are evidence snapshots.
 | `2026-10-19-r592-high-motion.mp4` | `23fcabab75b7714cf3fff62eeff8fb275a69748af50cf3db261ede2650e8c223` | 12 s motion sample at 21 FPS |
 | `2026-10-19-r592-high-motion-frame.png` | `9b5bcdcf5c59497d08e3240cc5e7cb7750e3e586ec8aa54eb66688e3147f4feb` | representative motion frame |
 | `2026-10-19-game-r592-high-active.log` | `4c4051b7d4260a01ca2ffe0756d9e39d7531a8b907520fa308a7f5e138e6ba1f` | r5.9.2 High game log (`mclo.gs/z3qIi68`) |
+| `2026-10-19-unbound-r592-high-f3.png` | `0c5c17b9dd30fbe7e33b338936417224b6aca2518174a7958435361b1f3c6980` | Unbound r5.9.2 High, no fallback, 20 FPS |
+| `2026-10-19-unbound-r592-high-shaders-off.png` | `0a3e47ffc6805d707f47e012a67cf5eff254f93766ec6392f8b30f9bd4ae2891` | Unbound paired reference, 574 FPS |
+| `2026-10-19-game-unbound-r592-high-active.log` | `a25ee3661516d86b5c3d1ea7cb8482ab3c03f392eb7ba12cf4c18233f7fab34c` | Unbound High game log (`mclo.gs/hH2OIs5`) |
 | `2026-10-18-game-main-menu-old-plugin.png` | `0258b18ccaecd64433880e1463c0a1d329feda7fa17f45201f51d3224571c85e` | installed 2.0.0 renderer smoke before test plugin |
 
 ## Wrapper harness reproduction

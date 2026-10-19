@@ -131,6 +131,10 @@ Still open in these stages:
   effect-by-effect fidelity gate.
 - The earlier r5.9.3 High run also initialized without fallback (22 FPS). It
   remains a separate fixture row.
+- **Complementary Unbound r5.9.2** is also active at High without fallback:
+  20 FPS at 2880×1585, paired shaders-off reference 574 FPS, water
+  reflections/fog/clouds visible, and shader reload works. F3 and log
+  `mclo.gs/hH2OIs5` identify the pack/profile/provider.
 - The mobile-optimized `Reimagined_MobileGL_r5.9.3_ACT_WSR.zip` reported
   `(fallback)` on Iris 1.8.14; the log shows custom-uniform failures and
   `The shaderpack failed to load!`. That is a pack/Iris version mismatch, not a
@@ -186,11 +190,10 @@ performed.
 
 ## Exact next action
 
-Install the original **Complementary Unbound r5.9.2** archive (host fixture
-`2b4e9c71…21d2`) into the same Forge 21.1.262 instance and run the same High
-paired reference: F3 provenance, shaders-off frame, short motion, and log
-upload. Then isolate the remaining named effects on Reimagined r5.9.2 (PBR,
-shadow edges, bloom, TAA/history) with fixed time/weather and controlled
-materials. The custom-uniform warnings are a pack/Iris tuple limitation and
-must be recorded, not masked. R8UI/R16UI lowering and WSR 256 remain separate
-gates; the latter is blocked by the provider's 128 MiB SSBO limit.
+Run the independent Stage 4 feasibility check on Reimagined r5.9.2 **Very High**
+(ACT 192, WSR disabled) in the same Forge 21.1.262 instance. Record whether
+the pack initializes or falls back, and if it fails, upload the log to identify
+the formatless-image/Iris metadata blocker. Keep the effect-by-effect Stage 3
+matrix (PBR, shadow edges, bloom, TAA/history) as a separate open gate. The
+custom-uniform warnings are a pack/Iris tuple limitation and must be recorded,
+not masked. WSR 256 remains blocked by the provider's 128 MiB SSBO limit.
