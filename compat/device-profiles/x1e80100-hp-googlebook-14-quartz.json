@@ -123,24 +123,25 @@
   },
   "pins": {
     "runtime_lock": "compat/runtime-lock.json",
-    "runtime_lock_sha256": "034ef649c8d0a6440ebe71bf733ecde91d70e66408d9e5e232d2d25f0d38c1ca",
+    "runtime_lock_sha256": "51bdc6e3a02c8e66402c62c4a8c005f8e5a7ce36542140b8bfde932ccae0a982",
     "shaderpack_lock": "compat/shaderpacks.json",
     "shaderpack_lock_sha256": "81ad5c395baa94c8880900dcba26c3323550184d0e2942ff18f2e71f978caa24",
     "launcher_lock": "compat/launcher-lock.json",
-    "launcher_lock_sha256": "c579fcd9d7071b9969559b40abbc245613c5340e39d74a79a43c90ba7f1d05ec",
+    "launcher_lock_sha256": "a757f0e496aaf5c68984b1c81f52eb5168709880f4115de99549c2b11e6ec09f",
     "capability_report_sha256": "d7a3ba31520ff393dd2ec43cf663a4e479ec38955b65836bd3887a9c8618185d",
     "wrapper_suite_sha256": "51b9ef67e5108114b5c7d693b1c94b281aa6d1d24499a839d107d8c5d5fb0ab5",
     "device_identity_sha256": "0d2bd59a4d19f67dad9d0c51fc8f95d4b2cfea4f38573486f6ba68757a6ab2bd",
-    "renderer_test_apk_sha256": "60edfbc0821709cf4a081761e6bbb4934d63058cd216748090c6d708968c1f1e",
-    "renderer_test_library_sha256": "b0e2d0ac478cafcd51fd23ab00d3c56c4eda18b3c90724b7fbb93cc1a1fd2f88",
-    "standalone_so_sha256": "59a9b230a34c4dfd2f4c4aac596a3ecad85e063f0f3754767b6d28fffae3f699",
+    "renderer_test_apk_sha256": "1e84585548341767b605cefe5308e923b8d5b00c3db1d5d91af24c9f53eae0bc",
+    "renderer_test_library_sha256": "ca869795b867fca34b50a4c0f981cf18ba8b7dabe856e5295d2cbd291b3cf893",
+    "standalone_so_sha256": "b554ce81b0e08221f170cb4f232c6604549e44272cfa6657e8c1e6f32f0f4b87",
     "note": "Runtime and shaderpack lock hashes match the current lock files. The remaining hashes identify the evidence tuple; they are not a release lock.",
-    "wrapper_suite_final_sha256": "8afe8ccce0d1baee67ac342879e469cb2c4fde429f3db8d0722979a0c2d987ad",
+    "wrapper_suite_final_sha256": "fe4ef0b2897b36ac5f4916e909ec63b1cacbbf949f915c3dd34039bea193dbdf",
     "wrapper_duplicate_sha256": "a77681fbf4c3a4484e90df591ca209dfa0c976225c7731529e2d85c915ed3304",
     "wrapper_depth_sha256": "136870c81ca87b7e36b777855747a26f72939640597d21678ddc317efe43aafe",
     "wrapper_timer_sha256": "f2ebbdbdfb12f936c25e8666460c1f8fe38e917a45581b859ad5a4621272c000",
     "wrapper_copy_sha256": "8b3af6ae21b115ec60f06741c9ec6cacc353bcae9f868d706c4fbde1c11f510b",
-    "wrapper_final_build_sha256": "59a9b230a34c4dfd2f4c4aac596a3ecad85e063f0f3754767b6d28fffae3f699"
+    "wrapper_group_parity_sha256": "fe4ef0b2897b36ac5f4916e909ec63b1cacbbf949f915c3dd34039bea193dbdf",
+    "wrapper_final_build_sha256": "b554ce81b0e08221f170cb4f232c6604549e44272cfa6657e8c1e6f32f0f4b87"
   },
   "evidence": [
     {

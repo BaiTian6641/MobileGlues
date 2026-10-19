@@ -162,10 +162,12 @@ game process.
   - 64-bit timer queries are wired to `GL_EXT_disjoint_timer_query`; extension advertising is gated
     on loaded entry points. X1E `timer_query64` returns increasing timestamps.
   - Same-format D32F `glCopyImageSubData` passes on X1E. Full wrapper suite: **37/37**; evidence
-    `validation/2026-10-19-x1e-wrapper-all-final2.json`, build `59a9b230…f699`.
+    `validation/2026-10-19-x1e-wrapper-all-invalidate.json`.
+  - `glInvalidateFramebuffer`/`SubFramebuffer` now map logical colour attachments through the
+    draw-buffer shuffle. Host `framebuffer_shuffle_test` scenario 5b proves logical COLOR1 reaches
+    physical COLOR0 after a shuffle.
   - Named deviations remain: `glTextureBarrier`/NV and `glTextureView` have no legal/available ES
-    implementation; `glInvalidateFramebuffer` attachment mapping and copy format substitutions
-    remain backlog.
+    implementation; backing-format copy substitutions remain backlog.
 
 ### Stage 1/2 implementation evidence (X1E, wrapper level)
 

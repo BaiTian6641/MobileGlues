@@ -28,12 +28,12 @@
       "depth-texture filter completeness with truthful application-visible filter state",
       "64-bit timestamp queries through GL_EXT_disjoint_timer_query, advertised only with loaded entry points",
       "same-format D32F glCopyImageSubData",
-      "program and array image-uniform routing through per-program logical->physical maps"
+      "program and array image-uniform routing through per-program logical->physical maps",
+      "logical attachment invalidation through the draw-buffer shuffle"
     ],
     "named_deviations": {
       "glTextureBarrier": "No legal GLES equivalent; not advertised. Pinned Iris uses BufferFlipper alternate textures.",
       "glTextureView": "No ES texture views and no GL_EXT_texture_view on X1E; not advertised.",
-      "glInvalidateFramebuffer_attachment_mapping": "Native forward does not map logical draw-buffer attachments after a shuffle; backlog.",
       "copy_image_format_substitution": "Same-format D32F tested; backing-format change copies untested.",
       "depth_filter_scan": "Draw-time sampler override handling covers 2D; array/cube/3D sampler overrides and stencil-index mode remain."
     },
@@ -352,9 +352,9 @@
       "status": "REPRODUCED"
     },
     "artifacts": {
-      "standalone_so_sha256": "59a9b230a34c4dfd2f4c4aac596a3ecad85e063f0f3754767b6d28fffae3f699",
-      "test_apk_sha256": "60edfbc0821709cf4a081761e6bbb4934d63058cd216748090c6d708968c1f1e",
-      "test_packaged_library_sha256": "b0e2d0ac478cafcd51fd23ab00d3c56c4eda18b3c90724b7fbb93cc1a1fd2f88",
+      "standalone_so_sha256": "b554ce81b0e08221f170cb4f232c6604549e44272cfa6657e8c1e6f32f0f4b87",
+      "test_apk_sha256": "1e84585548341767b605cefe5308e923b8d5b00c3db1d5d91af24c9f53eae0bc",
+      "test_packaged_library_sha256": "ca869795b867fca34b50a4c0f981cf18ba8b7dabe856e5295d2cbd291b3cf893",
       "installed_release_apk_sha256": "a7e1eb29731fdece7ab3af7fb00692b856f1808a7544436e7b3eb6c08355581a",
       "note": "These build hashes are evidence for the historical tuple, not a release lock for either runtime lane."
     },

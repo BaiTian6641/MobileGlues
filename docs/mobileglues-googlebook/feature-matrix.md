@@ -133,7 +133,8 @@ fidelity reference.
 | `glShaderSource` multi-string / explicit-length regression | pass | host `tests/run.sh`; X1E `wrapper_probe source_multi`, `source_multi_implicit` |
 | RGB8_SNORM render-target backing | pass | X1E `wrapper_probe rgb8_snorm_attachment`: both TexImage2D and TexStorage2D FBOs complete |
 | Desktop GLSL version normalization | pass for simple shaders | X1E `wrapper_probe desktop_glsl_120/150/330/400/460` |
-| Full wrapper contract suite | pass (25/25 historical; 37/37 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-final2.json` |
+| Full wrapper contract suite | pass (25/25 historical; 37/37 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-invalidate.json` |
+| Logical attachment invalidation after draw-buffer shuffle | pass | Host `framebuffer_shuffle_test` scenario 5b: invalidating logical COLOR1 reaches physical COLOR0; `glInvalidateFramebuffer`/`SubFramebuffer` wrappers |
 | Depth texture filter completeness | pass | X1E `wrapper_probe depth_filter_complete`: D32F app filters read back 9986/9729, sampled `0.5`; host `depth_filter_test` 31 checks |
 | 64-bit timestamp queries | pass | X1E `wrapper_probe timer_query64`: two increasing 64-bit timestamps; EXT entry points loaded and timer extension advertised only when they exist |
 | Same-format depth image copy | pass | X1E `wrapper_probe copy_image_subdata_depth`: D32F `glCopyImageSubData`, sampled `0.5`; format-substitution copies remain untested |
@@ -205,9 +206,6 @@ compatibility work.
 - **`glTextureView`:** ES has no texture views and the X1E provider lists no
   `GL_EXT_texture_view`; whole-level EGL image aliasing cannot express mip/layer ranges or format
   reinterpretation. Not advertised; no pinned call site.
-- **`glInvalidateFramebuffer` logical attachment routing:** native forward does not map logical
-  draw-buffer attachments through the shuffle map. No pinned call site; scheduled with the
-  framebuffer parity backlog.
 - **Depth-filter scan boundary:** draw-time sampler override handling covers 2D depth textures;
   arrays/cubes/3D get depth-legal texture filters at set/allocation but a sampler override on those
   targets is not rewritten. Stencil-index mode is not modelled. One-level textures with a

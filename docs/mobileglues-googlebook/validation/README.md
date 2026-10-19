@@ -20,6 +20,7 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-timer-query.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 timer_query` | PASS: 64-bit timestamp query returns increasing values |
 | `2026-10-19-x1e-wrapper-copy-image-depth.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 copy_image_depth` | PASS: same-format D32F `glCopyImageSubData`, sampled `0.5` |
 | `2026-10-19-x1e-wrapper-all-final2.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `59a9b230…f699` | 37/37 PASS including depth filtering, timer queries and depth image copy |
+| `2026-10-19-x1e-wrapper-all-invalidate.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `b554ce81…4b87` | 37/37 PASS after logical attachment invalidation mapping; host shuffle scenario 5b passes |
 
 ## Game-process captures and logs
 
