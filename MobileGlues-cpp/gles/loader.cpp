@@ -272,7 +272,8 @@ void InitGLESCapabilities() {
         AppendExtension("GL_ARB_buffer_storage");
     }
 
-    if (g_gles_caps.GL_EXT_disjoint_timer_query && global_settings.ext_timer_query) {
+    if (g_gles_caps.GL_EXT_disjoint_timer_query && global_settings.ext_timer_query && GLES.glQueryCounterEXT &&
+        GLES.glGetQueryObjectui64vEXT && GLES.glGetQueryObjecti64vEXT) {
         AppendExtension("GL_ARB_timer_query");
         AppendExtension("GL_EXT_timer_query");
     }
@@ -669,6 +670,8 @@ void init_target_gles() {
     INIT_GLES_FUNC(glBufferStorageEXT)
     INIT_GLES_FUNC(glGetQueryObjectivEXT)
     INIT_GLES_FUNC(glGetQueryObjecti64vEXT)
+    INIT_GLES_FUNC(glGetQueryObjectui64vEXT)
+    INIT_GLES_FUNC(glQueryCounterEXT)
     INIT_GLES_FUNC(glBindFragDataLocationEXT)
     INIT_GLES_FUNC(glMapBufferOES)
 

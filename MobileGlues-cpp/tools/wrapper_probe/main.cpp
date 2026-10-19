@@ -109,6 +109,13 @@ struct Api {
     PFNGLGENTEXTURESPROC glGenTextures;
     PFNGLBINDTEXTUREPROC glBindTexture;
     PFNGLTEXPARAMETERIPROC glTexParameteri;
+    void (*glGetTexParameteriv)(GLenum, GLenum, GLint*);
+    void (*glGenQueries)(GLsizei, GLuint*);
+    void (*glDeleteQueries)(GLsizei, const GLuint*);
+    void (*glQueryCounter)(GLuint, GLenum);
+    void (*glGetQueryObjectui64v)(GLuint, GLenum, GLuint64*);
+    void (*glCopyImageSubData)(GLuint, GLenum, GLint, GLint, GLint, GLint, GLuint, GLenum, GLint, GLint, GLint,
+                               GLint, GLsizei, GLsizei, GLsizei);
     PFNGLDELETETEXTURESPROC glDeleteTextures;
     PFNGLDRAWARRAYSPROC glDrawArrays;
     PFNGLGENVERTEXARRAYSPROC glGenVertexArrays;
@@ -1462,6 +1469,179 @@ void main() {
     return r;
 }
 
+Result test_depth_filter_complete() {
+    Result r;
+    // Desktop GL permits MIPMAP_LINEAR/LINEAR on a depth texture. Strict ES
+    // makes a sized depth texture filter-incomplete under those filters and
+    // samples (0,0,0,1). The wrapper must keep the application-visible filter
+    // state while pushing depth-legal filters to the driver, so a sample sees
+    // the stored depth value.
+    const char* cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+uniform highp sampler2D depthTex;
+layout(std430, binding = 1) buffer Out { uint value; } outb;
+void main() { outb.value = floatBitsToUint(texture(depthTex, vec2(0.5)).x); }
+)";
+    const float depth_value = 0.5f;
+    GLuint tex = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &depth_value);
+    const GLenum image_error = api.glGetError();
+    api.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+    api.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    GLint read_min = 0, read_mag = 0;
+    api.glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, &read_min);
+    api.glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, &read_mag);
+    api.glActiveTexture(GL_TEXTURE0);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+
+    GLuint shader = api.glCreateShader(GL_COMPUTE_SHADER);
+    api.glShaderSource(shader, 1, &cs, nullptr);
+    api.glCompileShader(shader);
+    GLint status = GL_FALSE;
+    api.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+    GLint len = 0;
+    api.glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+    std::string log(static_cast<size_t>(len), '\0');
+    if (len > 0) api.glGetShaderInfoLog(shader, len, nullptr, log.data());
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, shader);
+    api.glLinkProgram(program);
+    GLint linked = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    api.glDeleteShader(shader);
+
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 16, nullptr, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+
+    GLuint bits = 0;
+    if (status == GL_TRUE && linked == GL_TRUE) {
+        api.glUseProgram(program);
+        api.glUniform1i(api.glGetUniformLocation(program, "depthTex"), 0);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+        api.glFinish();
+        void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(bits), GL_MAP_READ_BIT);
+        if (ptr) {
+            memcpy(&bits, ptr, sizeof(bits));
+            api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        }
+    }
+    float sampled = 0.0f;
+    memcpy(&sampled, &bits, sizeof(sampled));
+    const bool truthful_filters = read_min == GL_NEAREST_MIPMAP_LINEAR && read_mag == GL_LINEAR;
+    r.ok = image_error == GL_NO_ERROR && status == GL_TRUE && linked == GL_TRUE &&
+           truthful_filters && sampled > 0.49f && sampled < 0.51f;
+    r.detail = "image_error=" + std::to_string(image_error) + " compile=" + std::to_string(status) +
+               " link=" + std::to_string(linked) + " read_min=" + std::to_string(read_min) +
+               " read_mag=" + std::to_string(read_mag) + " sampled=" + std::to_string(sampled) +
+               (log.empty() ? "" : " log=" + log);
+    api.glDeleteProgram(program);
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteTextures(1, &tex);
+    return r;
+}
+
+Result test_timer_query64() {
+    Result r;
+    constexpr GLenum kTimestamp = 0x8E28; // GL_TIMESTAMP, absent from the ES headers
+    GLuint query = 0;
+    api.glGenQueries(1, &query);
+    GLuint64 first = 0, second = 0;
+    GLenum first_error = GL_NO_ERROR, second_error = GL_NO_ERROR;
+    if (query != 0) {
+        api.glQueryCounter(query, kTimestamp);
+        first_error = api.glGetError();
+        api.glGetQueryObjectui64v(query, GL_QUERY_RESULT, &first);
+        second_error = api.glGetError();
+        api.glQueryCounter(query, kTimestamp);
+        api.glGetQueryObjectui64v(query, GL_QUERY_RESULT, &second);
+    }
+    r.ok = query != 0 && first_error == GL_NO_ERROR && second_error == GL_NO_ERROR && first != 0 && second >= first;
+    r.detail = "query=" + std::to_string(query) + " first=" + std::to_string(first) +
+               " second=" + std::to_string(second) + " first_error=" + std::to_string(first_error) +
+               " second_error=" + std::to_string(second_error);
+    if (query) api.glDeleteQueries(1, &query);
+    return r;
+}
+
+Result test_copy_image_subdata_depth() {
+    Result r;
+    // Iris uses glCopyImageSubData for depth-target copies. Same-format D32F
+    // is the live path; the destination must contain the source depth, not
+    // zero or a converted value.
+    const char* cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+uniform highp sampler2D depthTex;
+layout(std430, binding = 1) buffer Out { uint value; } outb;
+void main() { outb.value = floatBitsToUint(texture(depthTex, vec2(0.5)).x); }
+)";
+    const float depth_value = 0.5f;
+    GLuint src = 0, dst = 0;
+    api.glGenTextures(1, &src);
+    api.glGenTextures(1, &dst);
+    api.glBindTexture(GL_TEXTURE_2D, src);
+    api.glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &depth_value);
+    api.glBindTexture(GL_TEXTURE_2D, dst);
+    api.glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    const GLenum image_error = api.glGetError();
+    api.glCopyImageSubData(src, GL_TEXTURE_2D, 0, 0, 0, 0, dst, GL_TEXTURE_2D, 0, 0, 0, 0, 1, 1, 1);
+    const GLenum copy_error = api.glGetError();
+    api.glActiveTexture(GL_TEXTURE0);
+    api.glBindTexture(GL_TEXTURE_2D, dst);
+
+    GLuint shader = api.glCreateShader(GL_COMPUTE_SHADER);
+    api.glShaderSource(shader, 1, &cs, nullptr);
+    api.glCompileShader(shader);
+    GLint status = GL_FALSE;
+    api.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+    GLint len = 0;
+    api.glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+    std::string log(static_cast<size_t>(len), '\0');
+    if (len > 0) api.glGetShaderInfoLog(shader, len, nullptr, log.data());
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, shader);
+    api.glLinkProgram(program);
+    GLint linked = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    api.glDeleteShader(shader);
+
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 16, nullptr, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+    GLuint bits = 0;
+    if (status == GL_TRUE && linked == GL_TRUE) {
+        api.glUseProgram(program);
+        api.glUniform1i(api.glGetUniformLocation(program, "depthTex"), 0);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+        api.glFinish();
+        void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(bits), GL_MAP_READ_BIT);
+        if (ptr) {
+            memcpy(&bits, ptr, sizeof(bits));
+            api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        }
+    }
+    float sampled = 0.0f;
+    memcpy(&sampled, &bits, sizeof(sampled));
+    r.ok = image_error == GL_NO_ERROR && copy_error == GL_NO_ERROR && status == GL_TRUE && linked == GL_TRUE &&
+           sampled > 0.49f && sampled < 0.51f;
+    r.detail = "image_error=" + std::to_string(image_error) + " copy_error=" + std::to_string(copy_error) +
+               " compile=" + std::to_string(status) + " link=" + std::to_string(linked) +
+               " sampled=" + std::to_string(sampled) + (log.empty() ? "" : " log=" + log);
+    api.glDeleteProgram(program);
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteTextures(1, &src);
+    api.glDeleteTextures(1, &dst);
+    return r;
+}
+
 Result test_act_volume() {
     Result r;
     const int W = 192, H = 96, D = 192;
@@ -2102,6 +2282,13 @@ int main(int argc, char** argv) {
     api.glGenTextures = sym<PFNGLGENTEXTURESPROC>("glGenTextures");
     api.glBindTexture = sym<PFNGLBINDTEXTUREPROC>("glBindTexture");
     api.glTexParameteri = sym<PFNGLTEXPARAMETERIPROC>("glTexParameteri");
+    api.glGetTexParameteriv = sym<void (*)(GLenum, GLenum, GLint*)>("glGetTexParameteriv");
+    api.glGenQueries = sym<void (*)(GLsizei, GLuint*)>("glGenQueries");
+    api.glDeleteQueries = sym<void (*)(GLsizei, const GLuint*)>("glDeleteQueries");
+    api.glQueryCounter = sym<void (*)(GLuint, GLenum)>("glQueryCounter");
+    api.glGetQueryObjectui64v = sym<void (*)(GLuint, GLenum, GLuint64*)>("glGetQueryObjectui64v");
+    api.glCopyImageSubData = sym<void (*)(GLuint, GLenum, GLint, GLint, GLint, GLint, GLuint, GLenum, GLint, GLint,
+                                          GLint, GLint, GLsizei, GLsizei, GLsizei)>("glCopyImageSubData");
     api.glDeleteTextures = sym<PFNGLDELETETEXTURESPROC>("glDeleteTextures");
     api.glDrawArrays = sym<PFNGLDRAWARRAYSPROC>("glDrawArrays");
     api.glGenVertexArrays = sym<PFNGLGENVERTEXARRAYSPROC>("glGenVertexArrays");
@@ -2155,6 +2342,9 @@ int main(int argc, char** argv) {
         run("desktop_glsl_460", [] { return test_desktop_glsl_version("460"); });
     }
     if (!strcmp(mode, "all") || !strcmp(mode, "rgb8_snorm")) run("rgb8_snorm_attachment", test_rgb8_snorm_attachment);
+    if (!strcmp(mode, "all") || !strcmp(mode, "depth_filter")) run("depth_filter_complete", test_depth_filter_complete);
+    if (!strcmp(mode, "all") || !strcmp(mode, "timer_query")) run("timer_query64", test_timer_query64);
+    if (!strcmp(mode, "all") || !strcmp(mode, "copy_image_depth")) run("copy_image_subdata_depth", test_copy_image_subdata_depth);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
     if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);

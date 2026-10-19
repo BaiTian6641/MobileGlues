@@ -612,6 +612,8 @@ void glGetQueryObjectiv(GLuint id, GLenum pname, GLint* params) {
     if (GLES.glGetQueryObjectivEXT) {
         GLES.glGetQueryObjectivEXT(id, pname, params);
         CHECK_GL_ERROR
+    } else {
+        mg_set_gl_error(GL_INVALID_OPERATION);
     }
 }
 
@@ -620,5 +622,39 @@ void glGetQueryObjecti64v(GLuint id, GLenum pname, GLint64* params) {
     if (GLES.glGetQueryObjecti64vEXT) {
         GLES.glGetQueryObjecti64vEXT(id, pname, params);
         CHECK_GL_ERROR
+    } else {
+        mg_set_gl_error(GL_INVALID_OPERATION);
     }
+}
+
+void glGetQueryObjectui64v(GLuint id, GLenum pname, GLuint64* params) {
+    LOG()
+    if (GLES.glGetQueryObjectui64vEXT) {
+        GLES.glGetQueryObjectui64vEXT(id, pname, params);
+        CHECK_GL_ERROR
+    } else {
+        mg_set_gl_error(GL_INVALID_OPERATION);
+    }
+}
+
+void glQueryCounter(GLuint id, GLenum target) {
+    LOG()
+    if (target != GL_TIMESTAMP) {
+        mg_set_gl_error(GL_INVALID_ENUM);
+        return;
+    }
+    if (GLES.glQueryCounterEXT) {
+        GLES.glQueryCounterEXT(id, target);
+        CHECK_GL_ERROR
+    } else {
+        mg_set_gl_error(GL_INVALID_OPERATION);
+    }
+}
+
+void glGetQueryObjecti64vEXT(GLuint id, GLenum pname, GLint64* params) {
+    glGetQueryObjecti64v(id, pname, params);
+}
+
+void glGetQueryObjectui64vEXT(GLuint id, GLenum pname, GLuint64* params) {
+    glGetQueryObjectui64v(id, pname, params);
 }

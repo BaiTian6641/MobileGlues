@@ -509,9 +509,8 @@ STUB_FUNCTION_HEAD(void, glTexImage2DMultisample, GLenum target, GLsizei samples
 STUB_FUNCTION_HEAD(void, glTexImage3DMultisample, GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLboolean fixedsamplelocations); STUB_FUNCTION_END_NO_RETURN(void, glTexImage3DMultisample,target,samples,internalformat,width,height,depth,fixedsamplelocations)
 STUB_FUNCTION_HEAD(void, glBindFragDataLocationIndexed, GLuint program, GLuint colorNumber, GLuint index, const GLchar* name); STUB_FUNCTION_END_NO_RETURN(void, glBindFragDataLocationIndexed,program,colorNumber,index,name)
 STUB_FUNCTION_HEAD(GLint, glGetFragDataIndex, GLuint program, const GLchar* name); STUB_FUNCTION_END_NO_RETURN(GLint, glGetFragDataIndex,program,name)
-STUB_FUNCTION_HEAD(void, glQueryCounter, GLuint id, GLenum target); STUB_FUNCTION_END_NO_RETURN(void, glQueryCounter,id,target)
+// glQueryCounter/glGetQueryObjectui64v implemented in gl/getter.cpp.
 //STUB_FUNCTION_HEAD(void, glGetQueryObjecti64v, GLuint id, GLenum pname, GLint64* params); STUB_FUNCTION_END_NO_RETURN(void, glGetQueryObjecti64v,id,pname,params)
-STUB_FUNCTION_HEAD(void, glGetQueryObjectui64v, GLuint id, GLenum pname, GLuint64* params); STUB_FUNCTION_END_NO_RETURN(void, glGetQueryObjectui64v,id,pname,params)
 STUB_FUNCTION_HEAD(void, glVertexAttribP1ui, GLuint index, GLenum type, GLboolean normalized, GLuint value); STUB_FUNCTION_END_NO_RETURN(void, glVertexAttribP1ui,index,type,normalized,value)
 STUB_FUNCTION_HEAD(void, glVertexAttribP1uiv, GLuint index, GLenum type, GLboolean normalized, const GLuint* value); STUB_FUNCTION_END_NO_RETURN(void, glVertexAttribP1uiv,index,type,normalized,value)
 STUB_FUNCTION_HEAD(void, glVertexAttribP2ui, GLuint index, GLenum type, GLboolean normalized, GLuint value); STUB_FUNCTION_END_NO_RETURN(void, glVertexAttribP2ui,index,type,normalized,value)
@@ -1758,8 +1757,7 @@ STUB_FUNCTION_HEAD(GLboolean, glAreTexturesResidentEXT, GLsizei n, const GLuint*
 STUB_FUNCTION_HEAD(void, glPrioritizeTexturesEXT, GLsizei n, const GLuint* textures, const GLclampf* priorities); STUB_FUNCTION_END_NO_RETURN(void, glPrioritizeTexturesEXT,n,textures,priorities)
 STUB_FUNCTION_HEAD(void, glTextureNormalEXT, GLenum mode); STUB_FUNCTION_END_NO_RETURN(void, glTextureNormalEXT,mode)
 STUB_FUNCTION_HEAD(void, glTexStorage1DEXT, GLenum target, GLsizei levels, GLenum internalformat, GLsizei width); STUB_FUNCTION_END_NO_RETURN(void, glTexStorage1DEXT,target,levels,internalformat,width)
-STUB_FUNCTION_HEAD(void, glGetQueryObjecti64vEXT, GLuint id, GLenum pname, GLint64* params); STUB_FUNCTION_END_NO_RETURN(void, glGetQueryObjecti64vEXT,id,pname,params)
-STUB_FUNCTION_HEAD(void, glGetQueryObjectui64vEXT, GLuint id, GLenum pname, GLuint64* params); STUB_FUNCTION_END_NO_RETURN(void, glGetQueryObjectui64vEXT,id,pname,params)
+// glGetQueryObjecti64vEXT/glGetQueryObjectui64vEXT implemented in gl/getter.cpp.
 STUB_FUNCTION_HEAD(void, glBindBufferOffsetEXT, GLenum target, GLuint index, GLuint buffer, GLintptr offset); STUB_FUNCTION_END_NO_RETURN(void, glBindBufferOffsetEXT,target,index,buffer,offset)
 STUB_FUNCTION_HEAD(void, glArrayElementEXT, GLint i); STUB_FUNCTION_END_NO_RETURN(void, glArrayElementEXT,i)
 STUB_FUNCTION_HEAD(void, glColorPointerEXT, GLint size, GLenum type, GLsizei stride, GLsizei count, const void* pointer); STUB_FUNCTION_END_NO_RETURN(void, glColorPointerEXT,size,type,stride,count,pointer)
