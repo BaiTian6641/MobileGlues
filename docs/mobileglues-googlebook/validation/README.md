@@ -47,6 +47,7 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-frag-data-linked.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 frag_data_linked` | PASS: `layout(location = 3)` queried as 3 |
 | `2026-10-19-x1e-wrapper-ssbo-qualifier.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 ssbo_qualifier` | PASS: `readonly buffer` preserved on rebinding to 2 |
 | `2026-10-19-x1e-wrapper-all-translation55.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `7c4c7ad2…e052` | 55/55 PASS including linked-location and SSBO-qualifier probes |
+| `2026-10-19-x1e-iterationrp-caps.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 iteration_caps` | BLOCKED: subgroup extensions and rgba16/rg16 image qualifiers unsupported; rg16f qualifier unsupported |
 | `2026-10-19-x1e-playerref-user-report.md` | 2026-10-19 | target device, game process, **user-reported** | FCL run, WSR 128 + `WORLD_SPACE_PLAYER_REF=1` | Functional pass: renders without the prior crash; performance/power FAIL. No archived FPS/power capture |
 | `2026-10-19-x1e-perf-guard-before.json` | 2026-10-19 | target device, wrapper microbenchmark | `./wrapper_probe_arm64 guard_bench` on core `e7795ad5…54b` | plain `780.4 ns`, guard `862.6 ns` per dispatch |
 | `2026-10-19-x1e-perf-guard-after.json` | 2026-10-19 | target device, wrapper microbenchmark | same probe on performance core `cbebfc77…7105` | plain `588.6 ns`, guard `713.0 ns` per dispatch |

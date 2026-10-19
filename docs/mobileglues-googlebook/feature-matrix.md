@@ -178,6 +178,20 @@ fidelity reference.
 | Image-bind backend error probe gated to lowered/unknown formats | implemented, included in bind measurement | source; not separately isolated |
 | Uniform fast path for programs without image uniforms | implemented, unmeasured | source; perfetto pending |
 
+## iterationRP Alpha 0.8.31 adoption
+
+| Gate | Status | Evidence |
+| --- | --- | --- |
+| Static adoption audit | **BLOCKED** | `validation/2026-10-19-x1e-iterationrp-caps.json`; archive SHA-256 `334d0b0d…46e8` |
+| Subgroup extensions | FAIL | X1E ESSL rejects `GL_KHR_shader_subgroup_quad/arithmetic/ballot`; SPD is included by default `composite10.csh` and `composite3_b.csh` |
+| `rgba16` / `rg16` storage images | FAIL | qualifiers rejected; `glBindImageTexture` returns `GL_INVALID_VALUE` (1281) |
+| `rg16f` storage image | FAIL for shader | qualifier rejected; binding itself returns no error |
+| 3D image path | FAIL | `voxelData3D` is RGBA16, outside the immutable 3D allowlist; default 192³ allocation would use the ANGLE-unsafe mutable path |
+| Version pair | UNVERIFIED | pack text requires Iris 1.7+ and names 1.21.6/1.21.10/26.x; no stated 1.21.1 support |
+| Compute/SSBO/MRT/geometry limits | pass/within limits | 1024 invocations, 32 KiB shared memory, 4 KiB SSBO, ≤5 MRT, R32UI 3D images pass existing probes |
+
+Adoption requires either a derived compatibility port (subgroup/format rewrites) or a different pack; the original ZIP is not modified.
+
 ## Game-process smoke (X1E, installed renderer 2.0.0)
 
 Staged evidence for the supported delivery-lane tuple.

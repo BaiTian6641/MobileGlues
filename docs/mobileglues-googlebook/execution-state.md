@@ -388,6 +388,14 @@ local core repository and in the plugin's local submodule clone; upstream does
 not contain it, so the patches are the portable handoff. No push or PR was
 performed.
 
+## iterationRP Alpha 0.8.31 (blocked as-is)
+
+The original archive is not adoptable on X1E without a pack port. Direct ESSL probes reject
+`GL_KHR_shader_subgroup_*`, `layout(rgba16)`, `layout(rg16)` and `layout(rg16f)`; the pack's default
+SPD includes hard-require the subgroup-quad extension. Storage-image binding for rgba16/rg16 is
+`GL_INVALID_VALUE`. See `validation/2026-10-19-x1e-iterationrp-caps.json` and the feature-matrix
+adoption table. The ZIP remains unmodified.
+
 ## Exact next action
 
 Reconnect the X1E and run the two CPU microbenchmarks in `performance.md`:
