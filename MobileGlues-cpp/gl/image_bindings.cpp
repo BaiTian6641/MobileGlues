@@ -40,19 +40,21 @@ namespace {
         return *slot;
     }
 
-    GLuint fallback_unit(unsigned long long share_group, const std::string& name) {
+    GLuint fallback_unit(unsigned long long share_group, const std::string& name,
+                         const std::unordered_set<GLuint>& used) {
         fallback_units_t& state = fallback_units(share_group);
         std::lock_guard<std::mutex> lock(state.mutex);
-        auto it = state.units.find(name);
-        if (it != state.units.end()) return it->second;
         constexpr GLuint kFallbackImageUnitLimit = 32;
+        auto it = state.units.find(name);
+        if (it != state.units.end() && !used.count(it->second)) return it->second;
+        while (state.next_unit < kFallbackImageUnitLimit && used.count(state.next_unit)) ++state.next_unit;
         if (state.next_unit >= kFallbackImageUnitLimit) {
             LOG_E("Image fallback: more than %u image names in one share group; '%s' reuses unit 0",
                   kFallbackImageUnitLimit, name.c_str())
             return 0;
         }
         const GLuint unit = state.next_unit++;
-        state.units.emplace(name, unit);
+        state.units[name] = unit;
         return unit;
     }
 
@@ -61,7 +63,6 @@ namespace {
         size_t length = 0;
         std::string layout;
         std::string qualifiers_before;
-        std::string precision;
         std::string qualifiers_after;
         std::string type;
         std::string name;
@@ -75,7 +76,7 @@ namespace {
     // sits on a previous line.
     const std::regex& image_decl_regex() {
         static const std::regex re(
-            R"((layout\s*\([^)]*\)\s*)?((?:(?:coherent|volatile|restrict|readonly|writeonly)\s+)*)uniform\s+((?:(?:highp|mediump|lowp)\s+)?)((?:(?:coherent|volatile|restrict|readonly|writeonly)\s+)*)(u?image(?:1D|2D|3D|Cube|CubeArray|2DArray|Buffer))\s+([A-Za-z_][A-Za-z0-9_]*))");
+            R"((layout\s*\([^)]*\)\s*)?((?:(?:coherent|volatile|restrict|readonly|writeonly)\s+)*)uniform\s+((?:(?:coherent|volatile|restrict|readonly|writeonly|highp|mediump|lowp)\s+)*)(u?image(?:1D|2D|3D|Cube|CubeArray|2DArray|Buffer))\s+([A-Za-z_][A-Za-z0-9_]*))");
         return re;
     }
 
@@ -122,10 +123,9 @@ namespace {
             decl.length = static_cast<size_t>(it->length(0));
             decl.layout = (*it)[1].str();
             decl.qualifiers_before = (*it)[2].str();
-            decl.precision = (*it)[3].str();
-            decl.qualifiers_after = (*it)[4].str();
-            decl.type = (*it)[5].str();
-            decl.name = (*it)[6].str();
+            decl.qualifiers_after = (*it)[3].str();
+            decl.type = (*it)[4].str();
+            decl.name = (*it)[5].str();
             std::smatch binding_match;
             if (!decl.layout.empty() && std::regex_search(decl.layout, binding_match, binding_regex())) {
                 decl.has_binding = true;
@@ -154,8 +154,8 @@ namespace {
             std::string layout = "layout(binding = " + std::to_string(unit_it->second);
             if (!formats.empty()) layout += ", " + formats;
             layout += ") ";
-            result += layout + decl.qualifiers_before + "uniform " + decl.precision + decl.qualifiers_after + decl.type +
-                      " " + decl.name;
+            result += layout + decl.qualifiers_before + "uniform " + decl.qualifiers_after + decl.type + " " +
+                      decl.name;
             if (observed) (*observed)[decl.name] = unit_it->second;
             last = decl.position + decl.length;
             changed = true;
@@ -189,12 +189,21 @@ void mg_bind_image_uniforms(std::string& source, unsigned long long share_group,
         if (entry.second > 1) ambiguous_bindings.insert(entry.first);
     }
 
+    // Explicit units are reserved before any fallback is chosen. Otherwise a
+    // bare declaration could receive unit 0 while another declaration in the
+    // same program explicitly binds unit 0, aliasing the two images.
+    std::unordered_set<GLuint> used_units;
+    for (const image_decl_t& decl : decls) {
+        if (decl.has_binding) used_units.insert(decl.binding);
+    }
     std::unordered_map<std::string, GLuint> units;
     for (const image_decl_t& decl : decls) {
         if (decl.has_binding && ambiguous_bindings.find(decl.binding) == ambiguous_bindings.end()) {
             units[decl.name] = decl.binding;
         } else {
-            units[decl.name] = fallback_unit(share_group, decl.name);
+            const GLuint unit = fallback_unit(share_group, decl.name, used_units);
+            units[decl.name] = unit;
+            used_units.insert(unit);
         }
     }
     rewrite_image_decls(source, decls, units, observed_units);

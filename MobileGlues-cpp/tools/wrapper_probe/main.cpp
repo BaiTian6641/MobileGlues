@@ -2119,6 +2119,122 @@ Result test_copy_image_depth_mismatch() {
     return r;
 }
 
+Result test_translated_image_decl() {
+    Result r;
+    // The pack's shadow vertex stage is desktop GLSL. SPIRV-Cross emits the
+    // memory qualifier before precision (`uniform writeonly highp image2D`),
+    // and the player atlas is the one declaration that looks like that. The
+    // wrapper must still see it, give it a unit distinct from the explicitly
+    // bound voxel image, and preserve the qualifier run.
+    const char* vs = R"(#version 420 core
+layout(binding = 0, r32ui) writeonly uniform uimage3D voxel_img;
+layout(binding = 1, rgba8) uniform writeonly image2D playerAtlas_img;
+void main() {
+    imageStore(voxel_img, ivec3(0), uvec4(11u));
+    imageStore(playerAtlas_img, ivec2(0), vec4(0.5, 0.25, 0.75, 1.0));
+    gl_Position = vec4(0.0);
+}
+)";
+    const char* fs = R"(#version 400 core
+out vec4 color;
+void main() { color = vec4(1.0, 0.0, 0.0, 1.0); }
+)";
+    GLuint vs_obj = api.glCreateShader(GL_VERTEX_SHADER);
+    api.glShaderSource(vs_obj, 1, &vs, nullptr);
+    api.glCompileShader(vs_obj);
+    GLint vstatus = GL_FALSE;
+    api.glGetShaderiv(vs_obj, GL_COMPILE_STATUS, &vstatus);
+    const std::string vlog = shader_log(vs_obj);
+    GLuint fs_obj = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(fs_obj, 1, &fs, nullptr);
+    api.glCompileShader(fs_obj);
+    GLint fstatus = GL_FALSE;
+    api.glGetShaderiv(fs_obj, GL_COMPILE_STATUS, &fstatus);
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, vs_obj);
+    api.glAttachShader(program, fs_obj);
+    api.glLinkProgram(program);
+    GLint linked = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    const std::string translated = shader_source_text(vs_obj);
+    const bool voxel_bound = translated.find("layout(binding = 0") != std::string::npos &&
+                             translated.find("r32ui") != std::string::npos &&
+                             translated.find("voxel_img") != std::string::npos;
+    const size_t atlas_pos = translated.find("playerAtlas_img");
+    const size_t atlas_layout = atlas_pos == std::string::npos ? std::string::npos
+                                                              : translated.rfind("layout(binding = ", atlas_pos);
+    bool atlas_bound = atlas_layout != std::string::npos;
+    GLint atlas_unit = -1;
+    if (atlas_bound) {
+        const size_t number = atlas_layout + strlen("layout(binding = ");
+        atlas_unit = std::atoi(translated.c_str() + number);
+        atlas_bound = atlas_unit != 0;
+        const size_t line_end = translated.find('\n', atlas_layout);
+        const std::string decl = translated.substr(atlas_layout, line_end - atlas_layout);
+        atlas_bound = atlas_bound && decl.find("writeonly") != std::string::npos &&
+                      decl.find("highp") != std::string::npos &&
+                      decl.find("image2D") != std::string::npos;
+    }
+    r.ok = vstatus == GL_TRUE && fstatus == GL_TRUE && linked == GL_TRUE && voxel_bound && atlas_bound;
+    r.detail = "vstatus=" + std::to_string(vstatus) + " fstatus=" + std::to_string(fstatus) +
+               " link=" + std::to_string(linked) + " voxel_bound=" + (voxel_bound ? "yes" : "no") +
+               " atlas_bound=" + (atlas_bound ? "yes" : "no") + " atlas_unit=" + std::to_string(atlas_unit) +
+               (vlog.empty() ? "" : " vlog=" + vlog) +
+               " translated=" + translated.substr(0, std::min<size_t>(translated.size(), 800));
+    api.glDeleteProgram(program);
+    api.glDeleteShader(vs_obj);
+    api.glDeleteShader(fs_obj);
+    return r;
+}
+
+Result test_metadata_image_format() {
+    Result r;
+    // Bare desktop declaration with the qualifier after `uniform`, exactly the
+    // pack's playerAtlas_img shape. The loader contract supplies GL_RGBA8.
+    const char* vs = R"(#version 420 core
+uniform writeonly image2D playerAtlas_img;
+void main() {
+    imageStore(playerAtlas_img, ivec2(0), vec4(0.5, 0.25, 0.75, 1.0));
+    gl_Position = vec4(0.0);
+}
+)";
+    const char* fs = R"(#version 420 core
+out vec4 color;
+void main() { color = vec4(1.0, 0.0, 0.0, 1.0); }
+)";
+    api.mg_image_metadata_begin();
+    api.mg_image_metadata_add("playerAtlas_img", GL_RGBA8);
+    api.mg_image_metadata_end();
+    GLuint vs_obj = api.glCreateShader(GL_VERTEX_SHADER);
+    api.glShaderSource(vs_obj, 1, &vs, nullptr);
+    api.glCompileShader(vs_obj);
+    GLint vstatus = GL_FALSE;
+    api.glGetShaderiv(vs_obj, GL_COMPILE_STATUS, &vstatus);
+    const std::string vlog = shader_log(vs_obj);
+    GLuint fs_obj = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(fs_obj, 1, &fs, nullptr);
+    api.glCompileShader(fs_obj);
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, vs_obj);
+    api.glAttachShader(program, fs_obj);
+    api.glLinkProgram(program);
+    GLint linked = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    const std::string translated = shader_source_text(vs_obj);
+    const size_t atlas = translated.find("playerAtlas_img");
+    const bool has_rgba8 = atlas != std::string::npos && translated.rfind("rgba8", atlas) != std::string::npos;
+    const bool has_binding = atlas != std::string::npos && translated.rfind("binding =", atlas) != std::string::npos;
+    r.ok = vstatus == GL_TRUE && linked == GL_TRUE && has_rgba8 && has_binding;
+    r.detail = "vstatus=" + std::to_string(vstatus) + " link=" + std::to_string(linked) +
+               " rgba8=" + (has_rgba8 ? "yes" : "no") + " binding=" + (has_binding ? "yes" : "no") +
+               (vlog.empty() ? "" : " vlog=" + vlog) +
+               " translated=" + translated.substr(0, std::min<size_t>(translated.size(), 800));
+    api.glDeleteProgram(program);
+    api.glDeleteShader(vs_obj);
+    api.glDeleteShader(fs_obj);
+    return r;
+}
+
 Result test_patch_default_levels() {
     Result r;
     // ES has no default tessellation-level entry point. The frontend must say
@@ -2870,6 +2986,8 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "tessellation_stage")) run("tessellation_stage", test_tessellation_stage);
     if (!strcmp(mode, "all") || !strcmp(mode, "patch_defaults")) run("patch_default_levels", test_patch_default_levels);
     if (!strcmp(mode, "all") || !strcmp(mode, "clear_tex_level")) run("clear_tex_level", test_clear_tex_level);
+    if (!strcmp(mode, "all") || !strcmp(mode, "translated_image_decl")) run("translated_image_decl", test_translated_image_decl);
+    if (!strcmp(mode, "all") || !strcmp(mode, "metadata_image_format")) run("metadata_image_format", test_metadata_image_format);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
     if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);

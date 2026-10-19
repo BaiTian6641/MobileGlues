@@ -102,7 +102,7 @@ void mg_normalize_image_qualifiers(std::string& source, const std::unordered_map
     // uniform declaration, capture the variable name, and rewrite only that
     // declaration's layout qualifier.
     static const std::regex image_decl(
-        R"((.*\buniform\s+)(?:(?:highp|mediump|lowp)\s+)?(u?image(?:1D|2D|3D|Cube|CubeArray|2DArray|Buffer))\s+([A-Za-z_][A-Za-z0-9_]*)\s*;.*)");
+        R"((.*\buniform\s+)((?:(?:highp|mediump|lowp|coherent|volatile|restrict|readonly|writeonly)\s+)*)(u?image(?:1D|2D|3D|Cube|CubeArray|2DArray|Buffer))\s+([A-Za-z_][A-Za-z0-9_]*)\s*;.*)");
     std::string result;
     result.reserve(source.size() + 64);
     size_t start = 0;
@@ -112,7 +112,7 @@ void mg_normalize_image_qualifiers(std::string& source, const std::unordered_map
         std::string line = source.substr(start, length);
         std::smatch match;
         if (std::regex_match(line, match, image_decl)) {
-            const std::string name = match[3].str();
+            const std::string name = match[4].str();
             auto it = formats.find(name);
             if (it != formats.end()) {
                 const char* qualifier = mg_image_qualifier(it->second);
@@ -154,10 +154,13 @@ void mg_normalize_image_qualifiers(std::string& source, const std::unordered_map
                     if (uniform_after_layout != std::string::npos) {
                         size_t after = uniform_after_layout + strlen("uniform");
                         while (after < line.size() && (line[after] == ' ' || line[after] == '\t')) ++after;
-                        const bool has_precision =
-                            line.compare(after, 6, "highp ") == 0 || line.compare(after, 8, "mediump ") == 0 ||
-                            line.compare(after, 5, "lowp ") == 0;
-                        if (!has_precision) line.insert(after, "highp ");
+                        const size_t type_pos = line.find(match[3].str(), after);
+                        const std::string qualifier_run =
+                            type_pos == std::string::npos ? std::string() : line.substr(after, type_pos - after);
+                        const bool has_precision = qualifier_run.find("highp") != std::string::npos ||
+                                                   qualifier_run.find("mediump") != std::string::npos ||
+                                                   qualifier_run.find("lowp") != std::string::npos;
+                        if (!has_precision && type_pos != std::string::npos) line.insert(type_pos, "highp ");
                     }
                 }
             }
