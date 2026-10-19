@@ -171,7 +171,16 @@ game process.
   - GLSL cache identity now includes source, stage, ESSL and backend levels, provider texture-buffer
     emulation and texture-query-LOD branches, wrapper version including PATCH, and the settings that
     change generated GLSL. Host `cache_key_test` proves every input changes the key; device suite
-    remains **38/38** (`validation/2026-10-19-x1e-wrapper-all-cachekey.json`).
+    remains **43/43** (`validation/2026-10-19-x1e-wrapper-all-stages.json`).
+  - Geometry and tessellation stages now translate and execute on X1E. `geometry_stage` and
+    `tessellation_stage` each compiled, linked and drew `pixel=255,0,0` (`#version 400 core`).
+    `GL_ARB_tessellation_shader` is advertised only when the provider exposes the stage and
+    `glPatchParameteri`. `glPatchParameterfv` remains a named deviation: ES has no default
+    tessellation-level entry point, so valid calls report `GL_INVALID_OPERATION`; a TCS must write
+    `gl_TessLevel*`.
+  - Depth/stencil format mismatches are rejected before ANGLE: `glBlitFramebuffer` reports
+    `GL_INVALID_OPERATION` and `glCopyTexSubImage2D` skips the undefined copy. Both probes keep a
+    valid fence afterward, proving the Vulkan device was not lost.
   - Named deviations remain: `glTextureBarrier`/NV and `glTextureView` have no legal/available ES
     implementation; backing-format copy substitutions remain backlog.
 

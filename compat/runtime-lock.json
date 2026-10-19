@@ -31,13 +31,17 @@
       "program and array image-uniform routing through per-program logical->physical maps",
       "logical attachment invalidation through the draw-buffer shuffle",
       "multisample framebuffer resolve through glBlitFramebuffer",
-      "GLSL translation cache identity bound to source, stage, backend, provider preprocessing, version and settings"
+      "GLSL translation cache identity bound to source, stage, backend, provider preprocessing, version and settings",
+      "geometry shader stage translation and execution",
+      "tessellation control/evaluation stage translation and execution with TCS-written levels",
+      "depth/stencil format preflight before glBlitFramebuffer and glCopyTexSubImage2D"
     ],
     "named_deviations": {
       "glTextureBarrier": "No legal GLES equivalent; not advertised. Pinned Iris uses BufferFlipper alternate textures.",
       "glTextureView": "No ES texture views and no GL_EXT_texture_view on X1E; not advertised.",
       "copy_image_format_substitution": "Same-format D32F tested; backing-format change copies untested.",
-      "depth_filter_scan": "Draw-time sampler override handling covers 2D; array/cube/3D sampler overrides and stencil-index mode remain."
+      "depth_filter_scan": "Draw-time sampler override handling covers 2D; array/cube/3D sampler overrides and stencil-index mode remain.",
+      "glPatchParameterfv": "ES 3.2 exposes glPatchParameteri for GL_PATCH_VERTICES only; default tessellation levels have no provider entry point and valid desktop calls report GL_INVALID_OPERATION. Tessellation requires a TCS that writes gl_TessLevel*."
     },
     "non_claim": "This does not promise full OpenGL 4.6 conformance."
   },
@@ -354,9 +358,9 @@
       "status": "REPRODUCED"
     },
     "artifacts": {
-      "standalone_so_sha256": "5a357904339999cd14627be424bcfd59bd11a9a83962feee6e35ccb2abb7158f",
-      "test_apk_sha256": "3229dd3077ac9625a7a30022df3a54793784868dbc3814ba055c09a696106d96",
-      "test_packaged_library_sha256": "4dee7049c4528d246de235c08e6746099cfea2af42e92c765f43337b3f9fa8cd",
+      "standalone_so_sha256": "7f0a052dc5bf1f3e5e5d2e5841f584e2e87ce0df715aaea48a9da44ce9152284",
+      "test_apk_sha256": "5cb7e7ba43a20573357b1f46522a7ef7e9665ba9f00086acc73a87e459c5481e",
+      "test_packaged_library_sha256": "eae8f2f62ac3d07e3a5e5fca45939b8e643d1d07fb794a55e7ecb60a12c7670e",
       "installed_release_apk_sha256": "a7e1eb29731fdece7ab3af7fb00692b856f1808a7544436e7b3eb6c08355581a",
       "note": "These build hashes are evidence for the historical tuple, not a release lock for either runtime lane."
     },

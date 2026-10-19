@@ -133,7 +133,10 @@ fidelity reference.
 | `glShaderSource` multi-string / explicit-length regression | pass | host `tests/run.sh`; X1E `wrapper_probe source_multi`, `source_multi_implicit` |
 | RGB8_SNORM render-target backing | pass | X1E `wrapper_probe rgb8_snorm_attachment`: both TexImage2D and TexStorage2D FBOs complete |
 | Desktop GLSL version normalization | pass for simple shaders | X1E `wrapper_probe desktop_glsl_120/150/330/400/460` |
-| Full wrapper contract suite | pass (25/25 historical; 38/38 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-resolve.json` |
+| Full wrapper contract suite | pass (25/25 historical; 43/43 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-stages.json` |
+| Geometry shader stage | pass | X1E `wrapper_probe geometry_stage`: desktop `#version 400 core` vertex/geometry/fragment compiled, linked, drew `pixel=255,0,0` through ANGLE ES 3.2 |
+| Tessellation control/evaluation stages | pass with TCS-written levels | X1E `wrapper_probe tessellation_stage`: `#version 400 core` VS/TCS/TES/FS, `GL_PATCHES`, `pixel=255,0,0`; `GL_ARB_tessellation_shader` advertised. Default tessellation levels are a named deviation |
+| Depth-copy format mismatch | pass (no device loss) | X1E `depth_copy_mismatch`: D24S8 source to D24 destination skipped, `copy_error=0`, fence valid; `blit_depth_mismatch`: `GL_INVALID_OPERATION` (1282), fence valid |
 | Multisample framebuffer resolve | pass | X1E `wrapper_probe blit_multisample_resolve`: 4x MSAA RGBA8 cleared RGB `0.25/0.5/0.75`, blitted to single-sample texture, sampled `0.251/0.502/0.749` |
 | Logical attachment invalidation after draw-buffer shuffle | pass | Host `framebuffer_shuffle_test` scenario 5b: invalidating logical COLOR1 reaches physical COLOR0; `glInvalidateFramebuffer`/`SubFramebuffer` wrappers |
 | Depth texture filter completeness | pass | X1E `wrapper_probe depth_filter_complete`: D32F app filters read back 9986/9729, sampled `0.5`; host `depth_filter_test` 31 checks |
@@ -198,8 +201,8 @@ NeoForge 21.1.264 is an optional future patch and is not a gate.
 ## Named deviations and untested boundaries
 
 These are not advertised as capabilities and are not release passes. The pinned Iris 1.8.14/Sodium
-0.8.13 builds do not call the first two paths; this prevents accidental support claims, not future
-compatibility work.
+0.8.13 builds do not call the texture-barrier/texture-view paths; this prevents accidental support
+claims, not future compatibility work.
 
 - **`glTextureBarrier` / `glTextureBarrierNV`:** no legal GLES equivalent for render-to-texture
   feedback; `glMemoryBarrier`/`glFlush`/`glFinish` cannot remove the ES feedback undefinedness.
@@ -207,6 +210,11 @@ compatibility work.
 - **`glTextureView`:** ES has no texture views and the X1E provider lists no
   `GL_EXT_texture_view`; whole-level EGL image aliasing cannot express mip/layer ranges or format
   reinterpretation. Not advertised; no pinned call site.
+- **`glPatchParameterfv` default tessellation levels:** ES 3.2 exposes
+  `glPatchParameteri` for `GL_PATCH_VERTICES` only. ANGLE exports no
+  `glPatchParameterfv`/`EXT` entry point, so valid desktop default-inner/outer-level calls report
+  `GL_INVALID_OPERATION`; they are never silently accepted. Tessellation works when the TCS writes
+  `gl_TessLevel*`.
 - **Depth-filter scan boundary:** draw-time sampler override handling covers 2D depth textures;
   arrays/cubes/3D get depth-legal texture filters at set/allocation but a sampler override on those
   targets is not rewritten. Stencil-index mode is not modelled. One-level textures with a

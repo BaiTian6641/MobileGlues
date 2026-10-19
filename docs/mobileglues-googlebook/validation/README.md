@@ -24,6 +24,11 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-blit-resolve.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 blit_resolve` | PASS: 4x MSAA renderbuffer resolved to RGB `0.251,0.502,0.749` |
 | `2026-10-19-x1e-wrapper-all-resolve.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `b554ce81…4b87` | 38/38 PASS including multisample resolve |
 | `2026-10-19-x1e-wrapper-all-cachekey.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `5a357904…158f` | 38/38 PASS after cache identity fix; host `cache_key_test` all identities distinct |
+| `2026-10-19-x1e-wrapper-depth-copy-mismatch.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 depth_copy_mismatch` against ARM64 build `7f0a052d…2284` | PASS: D24S8 source / D24 destination skipped, `copy_error=0`, fence valid |
+| `2026-10-19-x1e-wrapper-blit-depth-mismatch.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 blit_depth_mismatch` | PASS: `GL_INVALID_OPERATION` (1282), fence valid, no device loss |
+| `2026-10-19-x1e-wrapper-geometry-stage.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 geometry_stage` | PASS: desktop `#version 400 core` geometry program compiled/linked/drew `pixel=255,0,0` |
+| `2026-10-19-x1e-wrapper-tessellation-stage.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 tessellation_stage` | PASS: VS/TCS/TES/FS compiled/linked/drew `pixel=255,0,0`; `GL_ARB_tessellation_shader` advertised; default-level calls report `GL_INVALID_OPERATION` |
+| `2026-10-19-x1e-wrapper-all-stages.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `7f0a052d…2284` | 43/43 PASS including geometry, tessellation, depth-copy and blit-mismatch guards |
 
 ## Game-process captures and logs
 
