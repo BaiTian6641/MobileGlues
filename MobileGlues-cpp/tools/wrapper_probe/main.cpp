@@ -123,14 +123,21 @@ struct Api {
     PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
     PFNGLFINISHPROC glFinish;
     PFNGLVIEWPORTPROC glViewport;
+    PFNGLCOPYTEXSUBIMAGE2DPROC glCopyTexSubImage2D;
+    PFNGLREADPIXELSPROC glReadPixels;
+    void (*glPatchParameteri)(GLenum, GLint);
+    void (*glPatchParameterfv)(GLenum, const GLfloat*);
     void (*glGenRenderbuffers)(GLsizei, GLuint*);
     void (*glDeleteRenderbuffers)(GLsizei, const GLuint*);
     void (*glBindRenderbuffer)(GLenum, GLuint);
+    void (*glRenderbufferStorage)(GLenum, GLenum, GLsizei, GLsizei);
     void (*glRenderbufferStorageMultisample)(GLenum, GLsizei, GLenum, GLsizei, GLsizei);
     void (*glFramebufferRenderbuffer)(GLenum, GLenum, GLenum, GLuint);
     void (*glClearColor)(GLfloat, GLfloat, GLfloat, GLfloat);
     void (*glClear)(GLbitfield);
     void (*glBlitFramebuffer)(GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLbitfield, GLenum);
+    GLsync (*glFenceSync)(GLenum, GLbitfield);
+    void (*glDeleteSync)(GLsync);
     PFNGLENABLEPROC glEnable;
     PFNGLDISABLEPROC glDisable;
     PFNGLBLENDFUNCPROC glBlendFunc;
@@ -307,6 +314,8 @@ Result test_limits() {
     api.glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &frontend);
     const GLubyte* exts = api.glGetString(GL_EXTENSIONS);
     const bool backend_access = exts && strstr(reinterpret_cast<const char*>(exts), "GL_MG_backend_string_getter_access");
+    const bool tessellation_ext =
+        exts && strstr(reinterpret_cast<const char*>(exts), "GL_ARB_tessellation_shader");
     // The backend limit is in the below-wrapper probe; this harness records what
     // the application is actually told. MG_EXPECT_MAX_TEXTURE_IMAGE_UNITS lets a
     // runner pin the provider's value without hardcoding one device in the test.
@@ -315,6 +324,7 @@ Result test_limits() {
     r.ok = (expected < 0) ? true : (frontend == expected);
     r.detail = "frontend_max_texture_image_units=" + std::to_string(frontend) +
                " backend_access=" + (backend_access ? "yes" : "no") +
+               " tessellation_ext=" + (tessellation_ext ? "yes" : "no") +
                (expected >= 0 ? " expected=" + std::to_string(expected) : "");
     return r;
 }
@@ -1746,6 +1756,230 @@ void main() {
     return r;
 }
 
+Result test_depth_copy_mismatch() {
+    Result r;
+    // A D24 destination copied from a D24S8 source has equal depth width but a
+    // different complete format. ANGLE's Vulkan backend loses the device if the
+    // blit is submitted; the wrapper must skip it and the context must remain
+    // usable (the next fence is the game's first post-render operation).
+    GLuint rb = 0, src_fbo = 0, tex = 0;
+    api.glGenRenderbuffers(1, &rb);
+    api.glBindRenderbuffer(GL_RENDERBUFFER, rb);
+    api.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1, 1);
+    api.glGenFramebuffers(1, &src_fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, src_fbo);
+    api.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rb);
+    const GLenum src_status = api.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, 1, 1, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
+    api.glBindFramebuffer(GL_READ_FRAMEBUFFER, src_fbo);
+    while (api.glGetError() != GL_NO_ERROR) {}
+    api.glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, 1, 1);
+    const GLenum copy_error = api.glGetError();
+    GLsync fence = api.glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    const GLenum fence_error = api.glGetError();
+    r.ok = src_status == GL_FRAMEBUFFER_COMPLETE && copy_error == GL_NO_ERROR && fence != nullptr &&
+           fence_error == GL_NO_ERROR;
+    r.detail = "src_status=" + std::to_string(src_status) + " copy_error=" + std::to_string(copy_error) +
+               " fence=" + (fence ? "ok" : "null") + " fence_error=" + std::to_string(fence_error);
+    if (fence && api.glDeleteSync) api.glDeleteSync(fence);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    api.glDeleteFramebuffers(1, &src_fbo);
+    api.glDeleteRenderbuffers(1, &rb);
+    api.glDeleteTextures(1, &tex);
+    return r;
+}
+
+Result test_blit_depth_mismatch() {
+    Result r;
+    // Desktop GL and GLES both require identical depth/stencil formats for a
+    // depth blit. A D24 draw target and a D24S8 read target are exactly the
+    // mismatch that must be rejected with GL_INVALID_OPERATION, not submitted
+    // to ANGLE where it can lose the device.
+    GLuint rb = 0, src_fbo = 0, dst_fbo = 0, tex = 0;
+    api.glGenRenderbuffers(1, &rb);
+    api.glBindRenderbuffer(GL_RENDERBUFFER, rb);
+    api.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1, 1);
+    api.glGenFramebuffers(1, &src_fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, src_fbo);
+    api.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rb);
+    const GLenum src_status = api.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, 1, 1, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
+    api.glGenFramebuffers(1, &dst_fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, dst_fbo);
+    api.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, tex, 0);
+    const GLenum dst_status = api.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    api.glBindFramebuffer(GL_READ_FRAMEBUFFER, src_fbo);
+    api.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_fbo);
+    while (api.glGetError() != GL_NO_ERROR) {}
+    api.glBlitFramebuffer(0, 0, 1, 1, 0, 0, 1, 1, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    const GLenum blit_error = api.glGetError();
+    GLsync fence = api.glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    const GLenum fence_error = api.glGetError();
+    r.ok = src_status == GL_FRAMEBUFFER_COMPLETE && dst_status == GL_FRAMEBUFFER_COMPLETE &&
+           blit_error == GL_INVALID_OPERATION && fence != nullptr && fence_error == GL_NO_ERROR;
+    r.detail = "src_status=" + std::to_string(src_status) + " dst_status=" + std::to_string(dst_status) +
+               " blit_error=" + std::to_string(blit_error) + " fence=" + (fence ? "ok" : "null") +
+               " fence_error=" + std::to_string(fence_error);
+    if (fence && api.glDeleteSync) api.glDeleteSync(fence);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    api.glDeleteFramebuffers(1, &src_fbo);
+    api.glDeleteFramebuffers(1, &dst_fbo);
+    api.glDeleteRenderbuffers(1, &rb);
+    api.glDeleteTextures(1, &tex);
+    return r;
+}
+
+static Result run_stage_draw(GLenum draw_mode, GLuint* shaders, int shader_count, const char* label,
+                             bool need_patch_vertices, const char* tcs_log, const char* tes_log) {
+    Result r;
+    GLint statuses[3] = {GL_FALSE, GL_FALSE, GL_FALSE};
+    std::string logs;
+    for (int i = 0; i < shader_count; ++i) {
+        api.glGetShaderiv(shaders[i], GL_COMPILE_STATUS, &statuses[i]);
+        std::string log = shader_log(shaders[i]);
+        if (!log.empty()) logs += " stage" + std::to_string(i) + "=" + log;
+    }
+    GLuint program = api.glCreateProgram();
+    for (int i = 0; i < shader_count; ++i) api.glAttachShader(program, shaders[i]);
+    api.glLinkProgram(program);
+    GLint linked = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    GLint plen = 0;
+    api.glGetProgramiv(program, GL_INFO_LOG_LENGTH, &plen);
+    std::string plog(static_cast<size_t>(plen), '\0');
+    if (plen > 0) api.glGetProgramInfoLog(program, plen, nullptr, plog.data());
+    if (!plog.empty()) logs += " link=" + plog;
+
+    GLuint tex = 0, fbo = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 1, 1);
+    api.glGenFramebuffers(1, &fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    api.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+    const GLenum fb_status = api.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    api.glViewport(0, 0, 1, 1);
+    api.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    api.glClear(GL_COLOR_BUFFER_BIT);
+    api.glUseProgram(program);
+    if (need_patch_vertices && api.glPatchParameteri) api.glPatchParameteri(GL_PATCH_VERTICES, 3);
+    api.glDrawArrays(draw_mode, 0, 3);
+    const GLenum draw_error = api.glGetError();
+    unsigned char pixel[4] = {};
+    api.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    api.glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+    const GLenum read_error = api.glGetError();
+
+    bool stages_ok = true;
+    for (int i = 0; i < shader_count; ++i) stages_ok &= statuses[i] == GL_TRUE;
+    r.ok = stages_ok && linked == GL_TRUE && fb_status == GL_FRAMEBUFFER_COMPLETE && draw_error == GL_NO_ERROR &&
+           read_error == GL_NO_ERROR && pixel[0] > 200 && pixel[1] < 50 && pixel[2] < 50;
+    r.detail = std::string(label) + " stages=" + (stages_ok ? "compiled" : "failed") +
+               " link=" + (linked ? "true" : "false") + " fb=" + std::to_string(fb_status) +
+               " draw_error=" + std::to_string(draw_error) + " read_error=" + std::to_string(read_error) +
+               " pixel=" + std::to_string(pixel[0]) + "," + std::to_string(pixel[1]) + "," +
+               std::to_string(pixel[2]) + (tcs_log ? tcs_log : "") + (tes_log ? tes_log : "") +
+               (logs.empty() ? "" : " logs=" + logs);
+    api.glDeleteProgram(program);
+    for (int i = 0; i < shader_count; ++i) api.glDeleteShader(shaders[i]);
+    api.glDeleteFramebuffers(1, &fbo);
+    api.glDeleteTextures(1, &tex);
+    return r;
+}
+
+Result test_geometry_stage() {
+    const char* vs = R"(#version 400 core
+void main() {
+    vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+    gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}
+)";
+    const char* gs = R"(#version 400 core
+layout(triangles) in;
+layout(triangle_strip, max_vertices = 3) out;
+void main() {
+    for (int i = 0; i < 3; ++i) {
+        gl_Position = gl_in[i].gl_Position;
+        EmitVertex();
+    }
+    EndPrimitive();
+}
+)";
+    const char* fs = R"(#version 400 core
+out vec4 color;
+void main() { color = vec4(1.0, 0.0, 0.0, 1.0); }
+)";
+    GLuint shaders[3] = {api.glCreateShader(GL_VERTEX_SHADER), api.glCreateShader(GL_GEOMETRY_SHADER),
+                         api.glCreateShader(GL_FRAGMENT_SHADER)};
+    const char* sources[3] = {vs, gs, fs};
+    for (int i = 0; i < 3; ++i) {
+        api.glShaderSource(shaders[i], 1, &sources[i], nullptr);
+        api.glCompileShader(shaders[i]);
+    }
+    return run_stage_draw(GL_TRIANGLES, shaders, 3, "geometry_stage", false, nullptr, nullptr);
+}
+
+Result test_tessellation_stage() {
+    const char* vs = R"(#version 400 core
+void main() {
+    vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+    gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}
+)";
+    const char* tcs = R"(#version 400 core
+layout(vertices = 3) out;
+void main() {
+    gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+    if (gl_InvocationID == 0) {
+        gl_TessLevelInner[0] = 1.0;
+        gl_TessLevelOuter[0] = 1.0;
+        gl_TessLevelOuter[1] = 1.0;
+        gl_TessLevelOuter[2] = 1.0;
+    }
+}
+)";
+    const char* tes = R"(#version 400 core
+layout(triangles, equal_spacing, ccw) in;
+void main() {
+    vec3 p = gl_TessCoord.x * gl_in[0].gl_Position.xyz +
+             gl_TessCoord.y * gl_in[1].gl_Position.xyz +
+             gl_TessCoord.z * gl_in[2].gl_Position.xyz;
+    gl_Position = vec4(p, 1.0);
+}
+)";
+    const char* fs = R"(#version 400 core
+out vec4 color;
+void main() { color = vec4(1.0, 0.0, 0.0, 1.0); }
+)";
+    GLuint shaders[4] = {api.glCreateShader(GL_VERTEX_SHADER), api.glCreateShader(GL_TESS_CONTROL_SHADER),
+                         api.glCreateShader(GL_TESS_EVALUATION_SHADER), api.glCreateShader(GL_FRAGMENT_SHADER)};
+    const char* sources[4] = {vs, tcs, tes, fs};
+    for (int i = 0; i < 4; ++i) {
+        api.glShaderSource(shaders[i], 1, &sources[i], nullptr);
+        api.glCompileShader(shaders[i]);
+    }
+    return run_stage_draw(GL_PATCHES, shaders, 4, "tessellation_stage", true, nullptr, nullptr);
+}
+
+Result test_patch_default_levels() {
+    Result r;
+    // ES has no default tessellation-level entry point. The frontend must say
+    // so rather than accepting values it cannot apply or calling a null slot.
+    constexpr GLenum kPatchDefaultInner = 0x8E73;
+    const GLfloat inner[2] = {1.0f, 1.0f};
+    while (api.glGetError() != GL_NO_ERROR) {}
+    api.glPatchParameterfv(kPatchDefaultInner, inner);
+    const GLenum error = api.glGetError();
+    r.ok = error == GL_INVALID_OPERATION;
+    r.detail = "glPatchParameterfv=" + std::to_string(error) +
+               (error == GL_NO_ERROR ? " (SILENT PLACEHOLDER)" : " (truthful unsupported)");
+    return r;
+}
+
 Result test_act_volume() {
     Result r;
     const int W = 192, H = 96, D = 192;
@@ -2400,11 +2634,18 @@ int main(int argc, char** argv) {
     api.glDeleteVertexArrays = sym<PFNGLDELETEVERTEXARRAYSPROC>("glDeleteVertexArrays");
     api.glFinish = sym<PFNGLFINISHPROC>("glFinish");
     api.glViewport = sym<PFNGLVIEWPORTPROC>("glViewport");
+    api.glCopyTexSubImage2D = sym<PFNGLCOPYTEXSUBIMAGE2DPROC>("glCopyTexSubImage2D");
+    api.glReadPixels = sym<PFNGLREADPIXELSPROC>("glReadPixels");
+    api.glPatchParameteri = sym<void (*)(GLenum, GLint)>("glPatchParameteri");
+    api.glPatchParameterfv = sym<void (*)(GLenum, const GLfloat*)>("glPatchParameterfv");
     api.glGenRenderbuffers = sym<void (*)(GLsizei, GLuint*)>("glGenRenderbuffers");
     api.glDeleteRenderbuffers = sym<void (*)(GLsizei, const GLuint*)>("glDeleteRenderbuffers");
     api.glBindRenderbuffer = sym<void (*)(GLenum, GLuint)>("glBindRenderbuffer");
+    api.glRenderbufferStorage = sym<void (*)(GLenum, GLenum, GLsizei, GLsizei)>("glRenderbufferStorage");
     api.glRenderbufferStorageMultisample = sym<void (*)(GLenum, GLsizei, GLenum, GLsizei, GLsizei)>(
         "glRenderbufferStorageMultisample");
+    api.glFenceSync = sym<GLsync (*)(GLenum, GLbitfield)>("glFenceSync");
+    api.glDeleteSync = sym<void (*)(GLsync)>("glDeleteSync");
     api.glFramebufferRenderbuffer = sym<void (*)(GLenum, GLenum, GLenum, GLuint)>("glFramebufferRenderbuffer");
     api.glClearColor = sym<void (*)(GLfloat, GLfloat, GLfloat, GLfloat)>("glClearColor");
     api.glClear = sym<void (*)(GLbitfield)>("glClear");
@@ -2460,6 +2701,11 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "timer_query")) run("timer_query64", test_timer_query64);
     if (!strcmp(mode, "all") || !strcmp(mode, "copy_image_depth")) run("copy_image_subdata_depth", test_copy_image_subdata_depth);
     if (!strcmp(mode, "all") || !strcmp(mode, "blit_resolve")) run("blit_multisample_resolve", test_blit_resolve);
+    if (!strcmp(mode, "all") || !strcmp(mode, "depth_copy_mismatch")) run("depth_copy_mismatch", test_depth_copy_mismatch);
+    if (!strcmp(mode, "all") || !strcmp(mode, "blit_depth_mismatch")) run("blit_depth_mismatch", test_blit_depth_mismatch);
+    if (!strcmp(mode, "all") || !strcmp(mode, "geometry_stage")) run("geometry_stage", test_geometry_stage);
+    if (!strcmp(mode, "all") || !strcmp(mode, "tessellation_stage")) run("tessellation_stage", test_tessellation_stage);
+    if (!strcmp(mode, "all") || !strcmp(mode, "patch_defaults")) run("patch_default_levels", test_patch_default_levels);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
     if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);

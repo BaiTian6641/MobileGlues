@@ -575,7 +575,7 @@ STUB_FUNCTION_HEAD(void, glGetActiveSubroutineName, GLuint program, GLenum shade
 STUB_FUNCTION_HEAD(void, glUniformSubroutinesuiv, GLenum shadertype, GLsizei count, const GLuint* indices); STUB_FUNCTION_END_NO_RETURN(void, glUniformSubroutinesuiv,shadertype,count,indices)
 STUB_FUNCTION_HEAD(void, glGetUniformSubroutineuiv, GLenum shadertype, GLint location, GLuint* params); STUB_FUNCTION_END_NO_RETURN(void, glGetUniformSubroutineuiv,shadertype,location,params)
 STUB_FUNCTION_HEAD(void, glGetProgramStageiv, GLuint program, GLenum shadertype, GLenum pname, GLint* values); STUB_FUNCTION_END_NO_RETURN(void, glGetProgramStageiv,program,shadertype,pname,values)
-STUB_FUNCTION_HEAD(void, glPatchParameterfv, GLenum pname, const GLfloat* values); STUB_FUNCTION_END_NO_RETURN(void, glPatchParameterfv,pname,values)
+// glPatchParameterfv is implemented in gl/gl.cpp as a truthful unsupported error.
 //STUB_FUNCTION_HEAD(void, glPauseTransformFeedback,void); STUB_FUNCTION_END_NO_RETURN(void, glPauseTransformFeedback,)
 //STUB_FUNCTION_HEAD(void, glResumeTransformFeedback,void); STUB_FUNCTION_END_NO_RETURN(void, glResumeTransformFeedback,)
 STUB_FUNCTION_HEAD(void, glDrawTransformFeedback, GLenum mode, GLuint id); STUB_FUNCTION_END_NO_RETURN(void, glDrawTransformFeedback,mode,id)

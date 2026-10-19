@@ -168,6 +168,43 @@ static TBuiltInResource InitResources() {
         Resources.maxFragmentImageUniforms =
             q(GL_MAX_FRAGMENT_IMAGE_UNIFORMS, Resources.maxFragmentImageUniforms);
         Resources.maxComputeImageUniforms = q(GL_MAX_COMPUTE_IMAGE_UNIFORMS, Resources.maxComputeImageUniforms);
+        if (g_gles_caps.GL_EXT_geometry_shader) {
+            Resources.maxGeometryImageUniforms =
+                q(GL_MAX_GEOMETRY_IMAGE_UNIFORMS, Resources.maxGeometryImageUniforms);
+            Resources.maxGeometryTextureImageUnits =
+                q(GL_MAX_GEOMETRY_TEXTURE_IMAGE_UNITS, Resources.maxGeometryTextureImageUnits);
+            Resources.maxGeometryOutputVertices =
+                q(GL_MAX_GEOMETRY_OUTPUT_VERTICES, Resources.maxGeometryOutputVertices);
+            Resources.maxGeometryTotalOutputComponents =
+                q(GL_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS, Resources.maxGeometryTotalOutputComponents);
+            Resources.maxGeometryUniformComponents =
+                q(GL_MAX_GEOMETRY_UNIFORM_COMPONENTS, Resources.maxGeometryUniformComponents);
+            Resources.maxGeometryInputComponents =
+                q(GL_MAX_GEOMETRY_INPUT_COMPONENTS, Resources.maxGeometryInputComponents);
+            Resources.maxGeometryOutputComponents =
+                q(GL_MAX_GEOMETRY_OUTPUT_COMPONENTS, Resources.maxGeometryOutputComponents);
+        }
+        if (g_gles_caps.GL_EXT_tessellation_shader) {
+            Resources.maxTessControlImageUniforms =
+                q(GL_MAX_TESS_CONTROL_IMAGE_UNIFORMS, Resources.maxTessControlImageUniforms);
+            Resources.maxTessEvaluationImageUniforms =
+                q(GL_MAX_TESS_EVALUATION_IMAGE_UNIFORMS, Resources.maxTessEvaluationImageUniforms);
+            Resources.maxTessControlTextureImageUnits =
+                q(GL_MAX_TESS_CONTROL_TEXTURE_IMAGE_UNITS, Resources.maxTessControlTextureImageUnits);
+            Resources.maxTessEvaluationTextureImageUnits =
+                q(GL_MAX_TESS_EVALUATION_TEXTURE_IMAGE_UNITS, Resources.maxTessEvaluationTextureImageUnits);
+            Resources.maxTessControlInputComponents =
+                q(GL_MAX_TESS_CONTROL_INPUT_COMPONENTS, Resources.maxTessControlInputComponents);
+            Resources.maxTessControlOutputComponents =
+                q(GL_MAX_TESS_CONTROL_OUTPUT_COMPONENTS, Resources.maxTessControlOutputComponents);
+            Resources.maxTessEvaluationInputComponents =
+                q(GL_MAX_TESS_EVALUATION_INPUT_COMPONENTS, Resources.maxTessEvaluationInputComponents);
+            Resources.maxTessEvaluationOutputComponents =
+                q(GL_MAX_TESS_EVALUATION_OUTPUT_COMPONENTS, Resources.maxTessEvaluationOutputComponents);
+            Resources.maxTessPatchComponents =
+                q(GL_MAX_TESS_PATCH_COMPONENTS, Resources.maxTessPatchComponents);
+            Resources.maxTessGenLevel = q(GL_MAX_TESS_GEN_LEVEL, Resources.maxTessGenLevel);
+        }
         Resources.maxCombinedImageUniforms = q(GL_MAX_COMBINED_IMAGE_UNIFORMS, Resources.maxCombinedImageUniforms);
         Resources.maxCombinedImageUnitsAndFragmentOutputs = q(GL_MAX_COMBINED_SHADER_OUTPUT_RESOURCES,
                                                                Resources.maxCombinedImageUnitsAndFragmentOutputs);

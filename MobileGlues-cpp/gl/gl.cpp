@@ -184,6 +184,21 @@ void glClear(GLbitfield mask) {
     CHECK_GL_ERROR_NO_INIT;
 }
 
+extern "C" GLAPI void GLAPIENTRY glPatchParameterfv(GLenum pname, const GLfloat* values) {
+    LOG()
+    // ES has glPatchParameteriEXT for GL_PATCH_VERTICES and no API for the
+    // desktop default tessellation levels: a TCS must write gl_TessLevel*.
+    // Returning an error is the truthful contract; silently accepting values
+    // the backend cannot apply would be a placeholder.
+    if (pname != GL_PATCH_DEFAULT_INNER_LEVEL && pname != GL_PATCH_DEFAULT_OUTER_LEVEL) {
+        mg_set_gl_error(GL_INVALID_ENUM);
+        return;
+    }
+    LOG_W_FORCE("glPatchParameterfv: default tessellation levels have no ES 3.2 equivalent; "
+                "the TCS must write gl_TessLevel*")
+    mg_set_gl_error(GL_INVALID_OPERATION);
+}
+
 void glHint(GLenum target, GLenum mode) {
     LOG()
     LOG_D("glHint, target = %s, mode = %s", glEnumToString(target), glEnumToString(mode))

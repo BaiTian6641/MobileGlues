@@ -251,6 +251,12 @@ void InitGLESCapabilities() {
                 g_gles_caps.GL_EXT_depth_clamp = 1;
             } else if (strcmp(extension, "GL_EXT_sRGB_write_control") == 0) {
                 g_gles_caps.GL_EXT_sRGB_write_control = 1;
+            } else if (strcmp(extension, "GL_EXT_geometry_shader") == 0 ||
+                       strcmp(extension, "GL_OES_geometry_shader") == 0) {
+                g_gles_caps.GL_EXT_geometry_shader = 1;
+            } else if (strcmp(extension, "GL_EXT_tessellation_shader") == 0 ||
+                       strcmp(extension, "GL_OES_tessellation_shader") == 0) {
+                g_gles_caps.GL_EXT_tessellation_shader = 1;
             } else if (strcmp(extension, "GL_NV_polygon_mode") == 0) {
                 g_gles_caps.GL_NV_polygon_mode = 1;
             } else if (strcmp(extension, "GL_OES_sample_shading") == 0) {
@@ -282,6 +288,15 @@ void InitGLESCapabilities() {
         (g_gles_caps.major > 3 || (g_gles_caps.major == 3 && g_gles_caps.minor >= 1)) &&
         GLES.glDispatchCompute != nullptr) {
         AppendExtension("GL_ARB_compute_shader");
+    }
+
+    // Core geometry shaders are part of the reported GL 3.2/4.0 subset when the
+    // backend advertises the stage. Tessellation still needs its desktop
+    // extension name for applications that gate on it; the patch-vertex entry
+    // point must exist before the name is a promise. glPatchParameterfv has no
+    // ES equivalent and remains a named deviation.
+    if (g_gles_caps.GL_EXT_tessellation_shader && GLES.glPatchParameteri) {
+        AppendExtension("GL_ARB_tessellation_shader");
     }
 
     if (global_settings.ext_direct_state_access) {

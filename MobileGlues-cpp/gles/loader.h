@@ -212,6 +212,8 @@ extern "C"
         int GL_EXT_clip_cull_distance;       // GL_CLIP_DISTANCE0..7
         int GL_EXT_depth_clamp;              // GL_DEPTH_CLAMP
         int GL_EXT_sRGB_write_control;       // GL_FRAMEBUFFER_SRGB
+        int GL_EXT_geometry_shader;           // geometry shader stage
+        int GL_EXT_tessellation_shader;       // tessellation control/evaluation stages
         int GL_NV_polygon_mode;              // GL_POLYGON_OFFSET_LINE / _POINT
         int GL_OES_sample_shading;           // GL_SAMPLE_SHADING before ES 3.2
         // GL_EXT_multi_draw_arrays deliberately absent: glext.h defines a macro of
