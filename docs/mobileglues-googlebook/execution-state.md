@@ -210,7 +210,11 @@ Still open in these stages:
 Recoverable patches are in `/home/polar/MobileGlues-fixtures/handoff/`:
 `core-patches/0001..0011` from base `97558a6` to `a524755`, and
 `plugin-patches/0001..0002` from `f5105e4` to `59de4b5`. Hashes are in
-`handoff/hashes.txt`. The core submodule commit `0557189` is present in the
+`handoff/hashes.txt`. The WSR/ACT bridge work is additionally exported as
+`handoff/wsr128/{core,core-submodule,plugin}/*.patch` with
+`handoff/wsr128/hashes.txt`; the reconstructed research tree is at
+`/home/polar/snapdragon-shader-upload/extracted/snapdragon-shader` (host
+fixture, not a release input). The core submodule commit `0557189` is present in the
 local core repository and in the plugin's local submodule clone; upstream does
 not contain it, so the patches are the portable handoff. No push or PR was
 performed.
