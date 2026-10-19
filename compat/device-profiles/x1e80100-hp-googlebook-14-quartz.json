@@ -69,7 +69,7 @@
     }
   },
   "runtime": {
-    "lane": "historical game-process smoke (NeoForge 21.1.262), not the delivery tuple",
+    "lane": "supported X1E delivery tuple (NeoForge 21.1.262), staged/working game-process reference",
     "launcher": "FCL 1.3.4.0 (com.tungsten.fcl)",
     "minecraft": "1.21.1",
     "loader": "NeoForge 21.1.262",
@@ -78,21 +78,26 @@
     "sodium": "0.8.13+mc1.21.1",
     "renderer": "test plugin core a524755, debug signing",
     "pack": "ComplementaryReimagined_r5.9.2.zip, High, active without fallback",
-    "pinned_lane_requirement": "The 1.21.1/NeoForge 21.1.264 target tuple, the 1.20.1/Fabric legacy lane and the 26.3/Fabric future lane in compat/runtime-lock.json remain NOT RUN on this device record."
+    "pinned_lane_requirement": "The supported 1.21.1/NeoForge 21.1.262 tuple is staged/working on this device. NeoForge 21.1.264 is an optional future patch, not a blocker. The 1.20.1/Fabric legacy lane and the 26.3/Fabric future lane remain NOT RUN."
   },
   "target_runtime": {
     "lane": "S1-current-1.21.1-neoforge",
     "reference": "compat/runtime-lock.json#lanes.current",
-    "role": "delivery tuple; exact build not yet executed on this device",
-    "status": "NOT RUN",
+    "role": "delivery tuple; supported and staged/working on this device",
+    "status": "STAGED / WORKING",
     "support_claim": "none",
     "minecraft": "1.21.1",
     "minecraft_manifest": "https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json",
     "client_sha1": "30c73b1c5da787909b2f73340419fdf13b9def88",
     "java_component": "java-runtime-delta",
     "java_major": 21,
-    "loader": "NeoForge 21.1.264",
-    "loader_installer_sha256": "d7c035dd5436a7c524dfbad6df191b0ef34179fd3edfee9dc99262af3b80239b",
+    "loader": "NeoForge 21.1.262",
+    "loader_pin_status": "OBSERVED INSTANCE (installer hashes not recorded)",
+    "optional_future_patch": {
+      "version": "NeoForge 21.1.264",
+      "installer_sha256": "d7c035dd5436a7c524dfbad6df191b0ef34179fd3edfee9dc99262af3b80239b",
+      "status": "NOT RUN; not a delivery target or release blocker"
+    },
     "iris": {
       "version": "1.8.14-beta.1+1.21.1-neoforge",
       "modrinth_version_id": "KduFYu4t",
@@ -114,25 +119,28 @@
       },
       "pairing_rule": "Iris 1.8.12 declares Sodium 0.6.13 as its required dependency; Sodium 0.8.13 is not its declared pairing."
     },
-    "evidence_scope": "The runtime block above is the only game-process evidence and used NeoForge 21.1.262. Do not attribute it to the 21.1.264 tuple."
+    "evidence_scope": "The runtime block above is the game-process reference for the supported NeoForge 21.1.262 tuple. NeoForge 21.1.264 is an optional future patch."
   },
   "pins": {
     "runtime_lock": "compat/runtime-lock.json",
-    "runtime_lock_sha256": "dfae5fc1a7ac1997139c13eaa82ed5b7a47fe6db77384868fc5f60c3471c1894",
+    "runtime_lock_sha256": "034ef649c8d0a6440ebe71bf733ecde91d70e66408d9e5e232d2d25f0d38c1ca",
     "shaderpack_lock": "compat/shaderpacks.json",
-    "shaderpack_lock_sha256": "8ee9cd9f68b28953752223cf17989deb180a994ff233d43adb42af711ed124cb",
+    "shaderpack_lock_sha256": "81ad5c395baa94c8880900dcba26c3323550184d0e2942ff18f2e71f978caa24",
     "launcher_lock": "compat/launcher-lock.json",
-    "launcher_lock_sha256": "a9da38434018e10444bcede48daf7e9d66da4b1c911f790f77142b42a60bb3d2",
+    "launcher_lock_sha256": "c579fcd9d7071b9969559b40abbc245613c5340e39d74a79a43c90ba7f1d05ec",
     "capability_report_sha256": "d7a3ba31520ff393dd2ec43cf663a4e479ec38955b65836bd3887a9c8618185d",
     "wrapper_suite_sha256": "51b9ef67e5108114b5c7d693b1c94b281aa6d1d24499a839d107d8c5d5fb0ab5",
     "device_identity_sha256": "0d2bd59a4d19f67dad9d0c51fc8f95d4b2cfea4f38573486f6ba68757a6ab2bd",
-    "renderer_test_apk_sha256": "debe26226e6bdf7ff5a70935f23f2731ae27538ea7cc98283378a23e6720ea3e",
-    "renderer_test_library_sha256": "a86c30a9b2732085684e90b053185ed356600d5b386a808a95feb3f36f415cd7",
-    "standalone_so_sha256": "a3f5d9d91a73c44560a3165f72ed803fe9a3101d2911093e44766ecbe4ce0f0c",
-    "note": "Hashes identify the historical evidence tuple. They are not a release lock for either pinned runtime lane.",
-    "wrapper_suite_final_sha256": "20916f541db77a122c1cec8525cef76ff4c23998b5638256cb640e07f946198c",
+    "renderer_test_apk_sha256": "60edfbc0821709cf4a081761e6bbb4934d63058cd216748090c6d708968c1f1e",
+    "renderer_test_library_sha256": "b0e2d0ac478cafcd51fd23ab00d3c56c4eda18b3c90724b7fbb93cc1a1fd2f88",
+    "standalone_so_sha256": "59a9b230a34c4dfd2f4c4aac596a3ecad85e063f0f3754767b6d28fffae3f699",
+    "note": "Runtime and shaderpack lock hashes match the current lock files. The remaining hashes identify the evidence tuple; they are not a release lock.",
+    "wrapper_suite_final_sha256": "8afe8ccce0d1baee67ac342879e469cb2c4fde429f3db8d0722979a0c2d987ad",
     "wrapper_duplicate_sha256": "a77681fbf4c3a4484e90df591ca209dfa0c976225c7731529e2d85c915ed3304",
-    "wrapper_final_build_sha256": "a3f5d9d91a73c44560a3165f72ed803fe9a3101d2911093e44766ecbe4ce0f0c"
+    "wrapper_depth_sha256": "136870c81ca87b7e36b777855747a26f72939640597d21678ddc317efe43aafe",
+    "wrapper_timer_sha256": "f2ebbdbdfb12f936c25e8666460c1f8fe38e917a45581b859ad5a4621272c000",
+    "wrapper_copy_sha256": "8b3af6ae21b115ec60f06741c9ec6cacc353bcae9f868d706c4fbde1c11f510b",
+    "wrapper_final_build_sha256": "59a9b230a34c4dfd2f4c4aac596a3ecad85e063f0f3754767b6d28fffae3f699"
   },
   "evidence": [
     {
@@ -199,7 +207,7 @@
       "status": "BLOCKED",
       "level": "target device provider",
       "evidence": "MAX_SHADER_STORAGE_BLOCK_SIZE is 134,217,728 bytes; allocation/map succeed but the shader cannot write the last element",
-      "note": "Extra system RAM does not repair a smaller accessible storage-block range. This blocks the required Ultra WSR 256 profile."
+      "note": "Extra system RAM does not repair a smaller accessible storage-block range. This blocks Ultra WSR 256 on X1E, but that profile is optional/future X2E only and is not required for the X1E release."
     },
     {
       "id": "rgb8_snorm_render_target",
@@ -218,10 +226,10 @@
     },
     {
       "id": "target_lane_startup",
-      "requirement": "Minecraft 1.21.1 / Java 21 (java-runtime-delta) / NeoForge 21.1.264 / Iris 1.8.14-beta.1 / Sodium 0.8.13 startup",
-      "status": "NOT RUN",
+      "requirement": "Minecraft 1.21.1 / Java 21 (java-runtime-delta) / NeoForge 21.1.262 / Iris 1.8.14-beta.1 / Sodium 0.8.13 startup",
+      "status": "PASS (STAGED / WORKING)",
       "level": "target device",
-      "note": "The only game-process evidence used NeoForge 21.1.262. The exact delivery tuple has not been executed."
+      "note": "This is the supported X1E tuple. The 1.21.1 world loaded and rendered the original pack and saved/quit to title. NeoForge 21.1.264 is an optional future patch, not a release blocker."
     },
     {
       "id": "future_lane_startup",
@@ -274,7 +282,22 @@
     {
       "name": "wrapper_contract_suite",
       "status": "PASS",
-      "detail": "25 of 25 cases in the historical image-bridge suite; current workspace build passes 32 of 32 including explicit, dynamic and duplicate image bindings"
+      "detail": "25 of 25 historical image-bridge cases; current workspace build passes 37 of 37 including explicit/dynamic/duplicate/program/array image bindings, depth-filter completeness, 64-bit timestamps and same-format depth image copy"
+    },
+    {
+      "name": "depth_filter_completeness",
+      "status": "PASS",
+      "detail": "X1E wrapper_probe depth_filter_complete: D32F min/mag read back as requested (9986/9729), sampled depth 0.5 instead of zero; host depth_filter_test 31 checks"
+    },
+    {
+      "name": "timer_query64",
+      "status": "PASS",
+      "detail": "X1E wrapper_probe timer_query64: two increasing 64-bit timestamps; entry points gated in extension admission"
+    },
+    {
+      "name": "copy_image_subdata_depth",
+      "status": "PASS",
+      "detail": "X1E wrapper_probe copy_image_subdata_depth: same-format D32F copy sampled back as 0.5"
     },
     {
       "name": "game_process_smoke",
@@ -289,12 +312,12 @@
     {
       "name": "game_process_2026-10-19_1320",
       "status": "PARTIAL",
-      "detail": "Rebuilt workspace renderer reached the Minecraft main menu on NeoForge 21.1.262 without a new crash; world load was still compiling pipelines during the check. Exact 21.1.264 tuple remains NOT RUN"
+      "detail": "Rebuilt workspace renderer reached the Minecraft main menu on the supported NeoForge 21.1.262 tuple without a new crash; world load was still compiling pipelines during the check."
     },
     {
       "name": "game_process_2026-10-19_1345",
       "status": "PASS",
-      "detail": "Staged pass on NeoForge 21.1.262: 1.21.1 world loaded and rendered with the original pack, image units 0-3 distinct, save/quit to title succeeded; captures 2026-10-19-1.21.1-neoforge-21.1.262-{world,title}.png. Exact 21.1.264, effect-by-effect fidelity, performance and lifecycle remain NOT RUN"
+      "detail": "Reference staged pass on the supported NeoForge 21.1.262 tuple: 1.21.1 world loaded and rendered with the original pack, image units 0-3 distinct, save/quit to title succeeded; captures 2026-10-19-1.21.1-neoforge-21.1.262-{world,title}.png. Effect-by-effect fidelity, performance and lifecycle remain open; 21.1.264 is optional future work"
     },
     {
       "name": "standard_effect_matrix",
@@ -304,7 +327,7 @@
     {
       "name": "advanced_effect_matrix",
       "status": "PARTIAL",
-      "detail": "ACT 192, WSR 128 and WSR 192 staged; WSR 256 blocked; player reflections and independent compute pack not run"
+      "detail": "ACT 192 and WSR 128 staged and required; WSR 192 optional staged headroom; WSR 256 optional/future X2E and blocked on X1E; player reflections and independent compute pack not run"
     },
     {
       "name": "performance",
@@ -317,5 +340,5 @@
     }
   ],
   "recommended_presets": [],
-  "not_qualified_reason": "The device has provider and staged pack evidence, but no pinned runtime lane has booted, no pack has passed effect-by-effect fidelity, and performance, lifecycle and recovery gates are unmeasured."
+  "not_qualified_reason": "The supported 21.1.262 tuple is staged/working and the device has provider and staged pack evidence, but no pack has passed effect-by-effect fidelity, and performance, lifecycle and recovery gates are unmeasured. NeoForge 21.1.264 is optional future work; WSR 256 is optional/future X2E, not an X1E release blocker."
 }

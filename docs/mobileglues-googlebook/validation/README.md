@@ -16,6 +16,10 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-duplicate-image.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 duplicate_image` | PASS: two formatless images at duplicate `binding=0` separated to units 0/1; values `11,22` |
 | `2026-10-19-x1e-wrapper-all-dup.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `5f8907a1…66ec` | 32/32 PASS after duplicate-binding handling |
 | `2026-10-19-x1e-wrapper-all-global.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `a3f5d9d9…0f0c` | 32/32 PASS with whole-source image declaration parsing |
+| `2026-10-19-x1e-wrapper-depth-filter.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 depth_filter` | PASS: D32F MIPMAP_LINEAR/LINEAR app state reads back 9986/9729, sampled depth `0.5` (not zero) |
+| `2026-10-19-x1e-wrapper-timer-query.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 timer_query` | PASS: 64-bit timestamp query returns increasing values |
+| `2026-10-19-x1e-wrapper-copy-image-depth.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 copy_image_depth` | PASS: same-format D32F `glCopyImageSubData`, sampled `0.5` |
+| `2026-10-19-x1e-wrapper-all-final2.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `59a9b230…f699` | 37/37 PASS including depth filtering, timer queries and depth image copy |
 
 ## Game-process captures and logs
 

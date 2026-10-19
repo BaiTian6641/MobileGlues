@@ -2,7 +2,7 @@
 
 Research date: 19 October 2026. This file defines what to test, what constitutes a pass, and which evidence informed the architecture and implementation plan.
 
-Source inspection, downloaded-artifact inspection, calculated resource sizes, and proposed acceptance targets are identified separately. No Snapdragon device benchmark or qualified game run was performed for this plan. Staged game-process smokes and provider probes exist on the HP X1E unit and are recorded in `mobileglues-googlebook/`; they are preliminary evidence at a different evidence level, not acceptance results.
+Source inspection, downloaded-artifact inspection, calculated resource sizes, and proposed acceptance targets are identified separately. No Snapdragon device benchmark or qualified game run was performed for this plan. Staged game-process runs and provider probes exist on the HP X1E unit and are recorded in `mobileglues-googlebook/`; the supported 21.1.262 tuple is staged/working, but none of these results is acceptance or release qualification.
 
 ## 1. Initial runtime lock
 
@@ -10,13 +10,13 @@ These are selected upstream inputs for qualification. They are not an already-ce
 
 | Lane | Minecraft | Java major | Iris | Sodium | Status |
 | --- | --- | --- | --- | --- | --- |
-| Delivery (current required) | 1.21.1 | 21 (`java-runtime-delta`) | 1.8.14-beta.1+1.21.1-neoforge, Modrinth `KduFYu4t` | mc1.21.1-0.8.13-neoforge, Modrinth `uMOpc5uV` | Exact tuple NOT RUN on device; the observed 21.1.262 instance is preliminary evidence |
+| Delivery (current required) | 1.21.1 | 21 (`java-runtime-delta`) | 1.8.14-beta.1+1.21.1-neoforge, Modrinth `KduFYu4t` | mc1.21.1-0.8.13-neoforge, Modrinth `uMOpc5uV` | Staged/working on the installed NeoForge 21.1.262 tuple (world load, render, save/quit). NeoForge 21.1.264 is an optional future patch, NOT RUN and not a blocker; effect fidelity, performance and lifecycle remain open |
 | Delivery fallback | 1.21.1 | 21 | 1.8.12+1.21.1-neoforge, `t3ruzodq` | mc1.21.1-0.6.13-neoforge, `Pb3OXVqC` | Stable pair; never pair Iris 1.8.12 with Sodium 0.8.13 |
 | Future/experimental | 26.3 | 25 | 1.11.7 Fabric, `vTN4NRGW` | 0.9.2 Fabric, `bAZQdGpg` | Not required for release; exact published dependency selection, unqualified |
 | Legacy required | 1.20.1 | 17 | 1.7.6 | 0.5.13 candidate | Resolve metadata discrepancy and validate the pair |
 | Optional engine comparison | 1.21.11 | 21 | 1.10.8 | 0.8.14 | Add if it isolates a regression; not an initial release multiplier |
 
-The delivery lane is Minecraft 1.21.1 on NeoForge with Java 21 and LWJGL 3.3.3 GLFW; it is the lane ordinary shaderpack ZIPs must load in. The observed installed instance is Minecraft 1.21.1 / NeoForge 21.1.262 / Iris 1.8.14-beta.1 / Sodium 0.8.13, and only its game-process smoke exists. The exact target tuple — NeoForge 21.1.264 with the locked Iris/Sodium pair — has not been launched, so no delivery-lane result is qualified.
+The delivery lane is Minecraft 1.21.1 on NeoForge with Java 21 and LWJGL 3.3.3 GLFW; it is the lane ordinary shaderpack ZIPs must load in. The supported X1E target is the installed Minecraft 1.21.1 / NeoForge 21.1.262 / Iris 1.8.14-beta.1 / Sodium 0.8.13 tuple, which is staged/working through a world load, render and save/quit pass. NeoForge 21.1.264 is an optional future patch: it is not a delivery target and not a release blocker. No pack is effect-by-effect or release-qualified yet.
 
 ### Delivery tuple identities
 
@@ -26,7 +26,10 @@ https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ac
 client SHA-1: 30c73b1c5da787909b2f73340419fdf13b9def88
 Java: java-runtime-delta, major 21; LWJGL 3.3.3 (GLFW path)
 
-NeoForge 21.1.264 installer
+NeoForge 21.1.262 (supported X1E target, installed launcher instance neoforge-21.1.262)
+Installer SHA-1/SHA-256: not recorded from the installed instance.
+
+NeoForge 21.1.264 (optional future patch; not a delivery target and not a release blocker)
 https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar
 SHA-1:   f801601bafa7f5957295353930e2cb61dcfddc6c
 SHA-256: d7c035dd5436a7c524dfbad6df191b0ef34179fd3edfee9dc99262af3b80239b
@@ -51,15 +54,15 @@ Pin the NeoForge version, relevant NeoForge/support mods, launcher, Android JVM 
 
 For the 1.20.1 machinery/train test, select a compatible Create Fabric build and its required rendering support mods explicitly. A Forge/Create/Oculus/Embeddium configuration is a separate lane. Iris/Fabric results do not certify it. Do the equivalent NeoForge-versioned selection for a delivery-lane Create test before claiming modded-geometry coverage there.
 
-Sources: [Minecraft 1.21.1 manifest](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json), [NeoForge 21.1.264](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar), [Iris 1.8.14-beta.1](https://modrinth.com/mod/iris/version/KduFYu4t), [Sodium 0.8.13](https://modrinth.com/mod/sodium/version/uMOpc5uV), [Iris 1.8.12](https://modrinth.com/mod/iris/version/t3ruzodq), [Sodium 0.6.13](https://modrinth.com/mod/sodium/version/Pb3OXVqC), [Iris 26.3 release](https://modrinth.com/mod/iris/version/vTN4NRGW), [Sodium 26.3 release](https://modrinth.com/mod/sodium/version/bAZQdGpg), [Mojang 26.3 manifest](https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json), publisher API records and JAR metadata inspected during this audit.
+Sources: [Minecraft 1.21.1 manifest](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json), [NeoForge 21.1.262](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.262/neoforge-21.1.262-installer.jar), [NeoForge 21.1.264 (optional future patch)](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar), [Iris 1.8.14-beta.1](https://modrinth.com/mod/iris/version/KduFYu4t), [Sodium 0.8.13](https://modrinth.com/mod/sodium/version/uMOpc5uV), [Iris 1.8.12](https://modrinth.com/mod/iris/version/t3ruzodq), [Sodium 0.6.13](https://modrinth.com/mod/sodium/version/Pb3OXVqC), [Iris 26.3 release](https://modrinth.com/mod/iris/version/vTN4NRGW), [Sodium 26.3 release](https://modrinth.com/mod/sodium/version/bAZQdGpg), [Mojang 26.3 manifest](https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json), publisher API records and JAR metadata inspected during this audit.
 
 ## 2. Shaderpack lock and qualification role
 
 | Pack | Selected version | Publisher version ID | Initial role |
 | --- | --- | --- | --- |
-| Complementary Reimagined | r5.9.3 | `Bqen1mJX` | Required standard and advanced corpus |
-| Complementary Unbound | r5.9.3 | `B1kyfoUZ` | Required distinct visual style and advanced corpus |
-| Complementary Reimagined/Unbound | r5.9.2 | Resolve original regression assets in S0 | Regression against the prior source generation |
+| Complementary Reimagined | r5.9.3 | `Bqen1mJX` | Required standard corpus; required ACT 192 and WSR 128 advanced corpus |
+| Complementary Unbound | r5.9.3 | `B1kyfoUZ` | Required distinct visual style and standard corpus; advanced corpus as scheduled |
+| Complementary Reimagined/Unbound | r5.9.2 | Resolve original regression assets in S0 | Regression against the prior source generation; carries the staged ACT/WSR evidence |
 | BSL | 10.1.8 | `Y68yiql9` | Required independent standard pack; advanced option test |
 | Photon | v1.4 | `BnGklH5y` | Independent compute-bearing pack |
 | Rethinking Voxels | r0.1-beta9 | `cpD4esk9` | Advanced stress on a publisher-listed game version |
@@ -97,8 +100,9 @@ These settings were read from the original r5.9.3 assets and matched to the publ
 | --- | ---: | --- | --- | --- |
 | High | 0 | Disabled | Off | Required standard fidelity |
 | Very High | 192 | 192 × 96 × 192 | Off | Required advanced lighting |
-| Ultra | 256 | 256 × 128 × 256 | On | Required advanced lighting and WSR |
-| Complementary | 512 | 512 × 256 × 512 | On | Optional extended stress; outside initial 1.0 claim |
+| WSR 128 (custom) | 128 | 128 × 64 × 128 | On | Required advanced WSR target |
+| Ultra | 256 | 256 × 128 × 256 | On | Optional/future X2E; NOT REQUIRED for the X1E release. `BLOCKED` on X1E: 202,899,456 B exceeds the 134,217,728 B storage-block limit |
+| Complementary | 512 | 512 × 256 × 512 | On | Optional extended stress; not a release claim |
 
 ACT means Advanced Color Tracing, the pack's voxel-based colored-lighting feature. WSR means world-space reflections. Test standard SSR separately from these two features. [Profile declarations](https://github.com/ComplementaryDevelopment/ComplementaryReimagined/blob/main/shaders/shaders.properties) [Option definitions](https://github.com/ComplementaryDevelopment/ComplementaryReimagined/blob/main/shaders/lang/en_US.lang)
 
@@ -119,7 +123,9 @@ No geometry or tessellation shader files were found in these Complementary asset
 
 Logical `colortex` indices can be high without requiring that many simultaneous draw buffers. The inspected static directives include five-output passes, while Iris maps logical targets into per-pass outputs. Count active outputs after preprocessing and loader transformation; do not derive MRT requirements from the largest logical index.
 
-### Ultra resource gate
+### Ultra resource gate (optional/future X2E)
+
+The required X1E advanced target is WSR 128: 128 × 64 × 128 images and a 50,855,936-byte SSBO, measured `PASS` on the X1E provider. The ACT 256/WSR 256 figures below are retained for future X2E sizing and are not an X1E release gate.
 
 Calculated raw allocations for ACT 256 with WSR are:
 
@@ -132,7 +138,7 @@ Calculated raw allocations for ACT 256 with WSR are:
 | Ultra rain-puddle image | 0.015625 MiB |
 | Listed resources including puddle image | 345.578125 MiB |
 
-The single SSBO requests **202,899,456 bytes**. Check `GL_MAX_SHADER_STORAGE_BLOCK_SIZE` and real access across the whole range. Sufficient system RAM cannot compensate for a smaller accessible storage-block range. The listed resources exclude ordinary framebuffers, history, atlas/world data, other optional resources, driver overhead and Java memory. Ultra's `RAIN_PUDDLES=2` enables the listed 128 × 128 R8UI image. Optional player reflections additionally allocate a 5,376-byte SSBO and a 64 × 64 RGBA8 atlas; qualify that option separately. On the X1E ANGLE provider the enabled option uses vertex-stage atomics and an image store that lose the device; the wrapper must not silently rewrite the option, so it remains NOT RUN until that path is implemented. [Allocation declarations](https://github.com/ComplementaryDevelopment/ComplementaryReimagined/blob/main/shaders/shaders.properties)
+The single SSBO requests **202,899,456 bytes**, which is future X2E work and not an X1E release gate; the X1E provider reports a 134,217,728-byte limit. Check `GL_MAX_SHADER_STORAGE_BLOCK_SIZE` and real access across the whole range. Sufficient system RAM cannot compensate for a smaller accessible storage-block range. The listed resources exclude ordinary framebuffers, history, atlas/world data, other optional resources, driver overhead and Java memory. Ultra's `RAIN_PUDDLES=2` enables the listed 128 × 128 R8UI image. Optional player reflections additionally allocate a 5,376-byte SSBO and a 64 × 64 RGBA8 atlas; qualify that option separately. On the X1E ANGLE provider the enabled option uses vertex-stage atomics and an image store that lose the device; the wrapper must not silently rewrite the option, so it remains NOT RUN until that path is implemented. [Allocation declarations](https://github.com/ComplementaryDevelopment/ComplementaryReimagined/blob/main/shaders/shaders.properties)
 
 The size calculation uses declared dimensions and bytes per texel; it is not a measurement of physical GPU allocation. Padding and backing-format expansion can increase actual use. Reducing the grid or disabling WSR produces a different profile.
 
@@ -152,6 +158,8 @@ Sources: original hashed assets; [BSL](https://modrinth.com/shader/bsl-shaders/v
 
 ## 5. Feature contract and test mapping
 
+The release contract is a truthful desktop GL surface for ordinary shaderpacks: the core version MobileGlues actually implements plus individually earned extensions, covering GLSL translation, framebuffer/target routing, image/SSBO resource mapping, compute dispatch, and each advertised barrier/fence/visibility rule. An unimplemented feature stays a named compatibility deviation; it is not advertised as a capability. This is not a claim of full OpenGL 4.6 conformance, and a pack that silently disables an effect does not pass.
+
 For each contract, record the pack/program/options that require it, desktop semantics, provider requirements, actual limits, exact emulation if any, expected cost, and proving tests.
 
 | Contract | Main risk | Minimum proving test |
@@ -169,6 +177,8 @@ For each contract, record the pack/program/options that require it, desktop sema
 | Texture views and layers | Broken storage aliasing or wrong layer/format | Write through one view, read through another with valid semantics |
 | Queries | Wrong timing type, units, availability or blocking | Pending/completed results, disjoint handling and independent wall-clock comparison |
 | Context and lifecycle | Stale metadata, reused names, lost targets/history | Shared contexts, deletion/reuse, surface-only replacement and real context loss |
+
+Depth-texture filter completeness, 64-bit timestamp queries, and same-format D32F `glCopyImageSubData` are implemented and device-tested on the X1E tuple (`validation/2026-10-19-x1e-wrapper-depth-filter.json`, `...-timer-query.json`, `...-copy-image-depth.json`; full suite 37/37). `glTextureBarrier`/NV and `glTextureView` remain named deviations: ES has no legal feedback barrier equivalent, and the X1E provider exposes no `GL_EXT_texture_view`. The pinned Iris/Sodium builds do not call those entry points. Logical attachment invalidation and backing-format copy substitutions remain backlog.
 
 Exact integer and API-state results should match exactly. Floating comparisons require an operation-specific tolerance, usually expressed as an absolute error plus a relative error term. Base tolerances on the specified representation and operation; do not hide a format substitution behind a broad full-frame threshold.
 
@@ -269,8 +279,9 @@ The numbers below are proposed engineering objectives for planning. No cited sou
 | Minimum playable standard experience | 1920 × 1200 | Sustained 30 FPS | Mandatory before a device receives a recommended standard configuration |
 | Smooth standard experience | 1920 × 1200 | 60 FPS target | Use an explicitly selected standard preset; measure sustained frame times |
 | Native-panel standard quality | 2560 × 1600 | 30 FPS target | Preserve the selected effects and disclose the measured preset |
-| Advanced lighting | Start at 1920 × 1200 | 30 FPS target | Keep the specified ACT setting enabled |
-| Ultra WSR 256 | Start at 1920 × 1200 | Correctness first; establish practical frame rate | Never claim an unmeasured 30/60 FPS result |
+| Advanced lighting (ACT 192) | Start at 1920 × 1200 | 30 FPS target | Keep the specified ACT setting enabled |
+| Advanced WSR 128 | Start at 1920 × 1200 | Correctness first; establish practical frame rate | Required advanced WSR target; never claim an unmeasured 30/60 FPS result |
+| Optional Ultra WSR 256 | Start at 1920 × 1200 | Future X2E only | Not an X1E release gate; `BLOCKED` on X1E by the provider storage-block limit |
 | High-refresh lightweight play | Device-appropriate size | 90/120 FPS exploratory | Independent target for eligible vanilla/light profiles |
 
 Use GPU work time and presentation intervals separately. For a 60 FPS target the frame period is approximately 16.67 ms; for 30 FPS it is approximately 33.33 ms. An average alone can hide substantial stutter.
@@ -363,13 +374,13 @@ Development branch commits are not automatically the source identities of releas
 
 ### 12.1 Delivery lane: Minecraft 1.21.1
 
-The official 1.21.1 manifest selects Java 21 (`java-runtime-delta`) and LWJGL 3.3.3 with GLFW, OpenGL, OpenAL, STB, FreeType, jemalloc, JNA and tinyfd modules. Like the 26.3 manifest, it does not list Android-native classifiers, so the launcher must supply the Android window/EGL surface and the desktop-GL bridge. The client artifact is `30c73b1c5da787909b2f73340419fdf13b9def88`, installed through NeoForge 21.1.264.
+The official 1.21.1 manifest selects Java 21 (`java-runtime-delta`) and LWJGL 3.3.3 with GLFW, OpenGL, OpenAL, STB, FreeType, jemalloc, JNA and tinyfd modules. Like the 26.3 manifest, it does not list Android-native classifiers, so the launcher must supply the Android window/EGL surface and the desktop-GL bridge. The client artifact is `30c73b1c5da787909b2f73340419fdf13b9def88`, installed through NeoForge 21.1.262, the supported X1E target. NeoForge 21.1.264 is an optional future patch only.
 
-Only a game-process start exists for this lane: FCL launched an installed Minecraft 1.21.1 / NeoForge 21.1.262 instance with Iris 1.8.14-beta.1 and Sodium 0.8.13, the main menu rendered, and the installed MobileGlues 2.0.0 build rejected `#version 400` shaders and produced `iris_Normal` syntax errors. A workspace-built plugin then initialized the original Complementary packs at High without fallback. These are staged, non-qualifying observations on 21.1.262; the 21.1.264 tuple, effect fidelity, performance and lifecycle gates remain NOT RUN.
+The supported tuple is the installed FCL Minecraft 1.21.1 / NeoForge 21.1.262 instance with Iris 1.8.14-beta.1 and Sodium 0.8.13. An early game-process start rendered the main menu while the installed MobileGlues 2.0.0 build rejected `#version 400` shaders and produced `iris_Normal` syntax errors. A workspace-built plugin then initialized the original Complementary packs at High without fallback, and a later whole-source-parser build loaded and rendered the world and saved/quit to title. These are staged/working results on the supported tuple; effect fidelity, performance and lifecycle gates remain open. NeoForge 21.1.264 is an optional future patch with no run and is not a blocker.
 
 A later workspace-plugin run reached terrain and then crashed; FCL's uploaded log is `https://mclo.gs/KgWJ5oC`. The renderer log exposed every active image uniform mapped to core unit 0, which the whole-source image parser now fixes and the X1E wrapper suite covers. The same log contains an independent `SodiumServiceModLocator` duplicate-class `LinkageError` and repeated `Failed to create fence object`; isolate the Sodium/mod instance before attributing that crash to the renderer. Neither run qualifies the lane.
 
-A subsequent whole-source-parser build loaded the same 1.21.1 / NeoForge 21.1.262 world, rendered the original pack, logged distinct image units 0–3 for the affected programs, and saved and quit to title. The earlier Sodium/fence failure did not reproduce. This is a staged pass for 21.1.262; the exact 21.1.264 tuple, effect-by-effect fidelity, performance and lifecycle gates remain NOT RUN. [Minecraft 1.21.1 manifest](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json) [NeoForge 21.1.264](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar)
+A subsequent whole-source-parser build loaded the same 1.21.1 / NeoForge 21.1.262 world, rendered the original pack, logged distinct image units 0–3 for the affected programs, and saved and quit to title. The earlier Sodium/fence failure did not reproduce. This is the staged/working reference pass for the supported 21.1.262 tuple; effect-by-effect fidelity, performance and lifecycle gates remain open. NeoForge 21.1.264 is an optional future patch and is not required. [Minecraft 1.21.1 manifest](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json) [NeoForge 21.1.262](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.262/neoforge-21.1.262-installer.jar)
 
 The delivery lane's Iris and Sodium binaries must each be audited for loader/LWJGL/provider restrictions. Sodium 0.8.13 has not been audited against this exact MobileGlues build; any Android adaptation is a maintained downstream build with its own version and hash.
 
@@ -423,7 +434,7 @@ Audited Iris 26.3 source still uses the OpenGL shader path and contains a guard 
 ### Game and loader
 
 22. [Minecraft 1.21.1 manifest](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json) — authoritative delivery-lane runtime and dependency selection (Java 21, LWJGL 3.3.3).
-23. [NeoForge 21.1.264 installer](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar) — delivery-lane loader artifact and hashes.
+23. [NeoForge 21.1.262 installer](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.262/neoforge-21.1.262-installer.jar) — supported delivery-lane loader; the installed instance is the reference. [NeoForge 21.1.264](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar) is an optional future patch, not a release gate.
 24. [Iris 1.8.14-beta.1 NeoForge](https://modrinth.com/mod/iris/version/KduFYu4t) — selected delivery-lane release.
 25. [Sodium 0.8.13 NeoForge](https://modrinth.com/mod/sodium/version/uMOpc5uV) — selected delivery-lane dependency.
 26. [Iris 1.8.12 NeoForge](https://modrinth.com/mod/iris/version/t3ruzodq) and [Sodium 0.6.13 NeoForge](https://modrinth.com/mod/sodium/version/Pb3OXVqC) — stable fallback pair; never pair 1.8.12 with 0.8.13.
@@ -462,6 +473,8 @@ Keep support classifications explicit:
 - **Experimental:** particular features or runtime combinations remain under test.
 - **Unsupported:** a known blocker prevents the requested configuration.
 - **Unqualified:** insufficient evidence; no pass/fail claim yet.
+
+Optional/future profiles stay outside the release claim without hiding their measured status. A real provider limit on an optional profile is recorded as `BLOCKED` with an explicit optional/future-X2E scope; it is not converted to `NOT APPLICABLE`, and the profile is never reported as supported.
 
 A version string cannot replace this matrix, and a capability probe cannot replace a whole-pack result.
 

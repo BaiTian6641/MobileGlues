@@ -2,7 +2,7 @@
 
 Research date: 19 October 2026. This roadmap implements the requirements in `01_MobileGlues_Googlebook_Architecture.md`. Acceptance methods and source evidence are in `03_MobileGlues_Googlebook_Validation_and_Sources.md`.
 
-The critical path is: reproduce the runtime and graphics stack, establish truthful capabilities, repair shader and resource semantics, validate complete effects, then optimize and release. Delivery-lane (Minecraft 1.21.1 / NeoForge 21.1.264) bootstrap and the GLES feasibility decision must happen early; unmodified pack import and effect rendering are the product blocker.
+The critical path is: reproduce the runtime and graphics stack, establish truthful capabilities, repair shader and resource semantics, validate complete effects, then optimize and release. Delivery-lane (Minecraft 1.21.1 / NeoForge 21.1.262) bootstrap and the GLES feasibility decision must happen early; unmodified pack import and effect rendering are the product blocker.
 
 ## 1. Workstreams and ownership
 
@@ -74,7 +74,7 @@ Make every result attributable to an exact source, binary, driver, runtime and s
 
 **S0.3 Select one launcher integration.** Inspect maintained Fold Craft Launcher and Zalith Launcher 2 integration paths because MobileGlues already interoperates with them. Select one primary integration through source review and a release-build prototype. Record the decision and exact commit. Reuse account handling, installation, instance management and update facilities; this project does not need a new launcher platform.
 
-**S0.4 Freeze the runtime lanes.** Define the delivery lane (Minecraft 1.21.1 / NeoForge 21.1.264 / Java 21), the legacy lane (Minecraft 1.20.1 / Fabric), and the future/experimental lane (Minecraft 26.3 / Fabric). Each lock includes the game manifest, Java runtime, LWJGL Java/native modules, windowing adaptation (GLFW for the delivery and legacy lanes, SDL for the future lane), loader, Iris, Sodium, support mods and renderer identity. The delivery lock also records the stable fallback pairing: Iris 1.8.12 NeoForge with Sodium 0.6.13 NeoForge, never with Sodium 0.8.13. Follow dependency metadata rather than choosing each component's newest version independently.
+**S0.4 Freeze the runtime lanes.** Define the delivery lane (Minecraft 1.21.1 / NeoForge 21.1.262 / Java 21; 21.1.264 is an optional future patch only), the legacy lane (Minecraft 1.20.1 / Fabric), and the future/experimental lane (Minecraft 26.3 / Fabric). Each lock includes the game manifest, Java runtime, LWJGL Java/native modules, windowing adaptation (GLFW for the delivery and legacy lanes, SDL for the future lane), loader, Iris, Sodium, support mods and renderer identity. The delivery lock also records the stable fallback pairing: Iris 1.8.12 NeoForge with Sodium 0.6.13 NeoForge, never with Sodium 0.8.13. Follow dependency metadata rather than choosing each component's newest version independently.
 
 **S0.5 Freeze original packs.** Acquire the selected official Complementary Reimagined/Unbound r5.9.3, r5.9.2 regression assets, BSL 10.1.8 and the selected additional pack through permitted channels. Record original asset hashes, provenance, options, licensing and supported game metadata.
 
@@ -102,9 +102,9 @@ Establish that the required game paths can initialize in an ordinary Googlebook 
 
 **S1.2 Complete legacy startup.** Bring the pinned Android Java runtime, legacy LWJGL/GLFW bridge and MobileGlues to a deterministic vanilla scene, then the pinned Sodium/Iris baseline. Verify GL entry-point resolution and window size/input events.
 
-**S1.3 Complete delivery-lane startup.** Establish Android-compatible Java 21 (`java-runtime-delta`) and matching LWJGL 3.3.3 GLFW/OpenGL/OpenAL/STB/FreeType/jemalloc/JNA modules for Minecraft 1.21.1, then boot NeoForge 21.1.264 and load Iris 1.8.14-beta.1 NeoForge with Sodium 0.8.13 NeoForge. Audit GLFW, OpenGL, OpenAL, STB, FreeType, jemalloc and core LWJGL dependencies, plus NeoForge module discovery and Mixin/bootstrap behaviour on Android. Include the launcher's actual AWT/font/Cacio requirements, JVM flags, native loading and crash handling in a minimal runtime smoke test. An unmodified pack ZIP must then import and reach its selected profile. Pin LWJGL JNI modules independently from MobileGlues' compiler dependencies; similar names do not establish ABI compatibility. Do not substitute Linux ARM64/glibc binaries for Android libraries.
+**S1.3 Complete delivery-lane startup.** Establish Android-compatible Java 21 (`java-runtime-delta`) and matching LWJGL 3.3.3 GLFW/OpenGL/OpenAL/STB/FreeType/jemalloc/JNA modules for Minecraft 1.21.1, then boot NeoForge 21.1.262 (the supported X1E target; 21.1.264 is an optional future patch, not a blocker) and load Iris 1.8.14-beta.1 NeoForge with Sodium 0.8.13 NeoForge. Audit GLFW, OpenGL, OpenAL, STB, FreeType, jemalloc and core LWJGL dependencies, plus NeoForge module discovery and Mixin/bootstrap behaviour on Android. Include the launcher's actual AWT/font/Cacio requirements, JVM flags, native loading and crash handling in a minimal runtime smoke test. An unmodified pack ZIP must then import and reach its selected profile. Pin LWJGL JNI modules independently from MobileGlues' compiler dependencies; similar names do not establish ABI compatibility. Do not substitute Linux ARM64/glibc binaries for Android libraries.
 
-The observed NeoForge 21.1.262 instance that reached its main menu is preliminary lane evidence only. The exact 21.1.264 tuple is NOT RUN until a real-device launch reaches a controlled scene with the locked Iris/Sodium pair.
+The installed NeoForge 21.1.262 instance with the locked Iris/Sodium pair is the supported X1E target and is staged/working: it loaded and rendered the 1.21.1 world with the original pack and saved/quit to title. Effect-by-effect fidelity, performance and lifecycle gates remain open. NeoForge 21.1.264 is an optional future patch and is not required for this gate.
 
 **S1.3-future Complete 26.3 startup (experimental).** Establish Android-compatible Java 25 and matching LWJGL 3.4.3 JNI modules for 26.3. Audit SDL, ShaderC, SPIRV-Cross, VMA/Vulkan and the remaining modules. This lane is not required for release, does not gate S5, and must not be described as qualifying the delivery lane.
 
@@ -114,7 +114,7 @@ The observed NeoForge 21.1.262 instance that reached its main menu is preliminar
 
 Test the real launcher's native closure in a non-debug release build on the reference device's actual page size and target-SDK loading rules. Verify read-only native loading where required, then add 16 KB emulator/device coverage as components become available. Repeat these early smoke tests for the delivery and legacy runtime lanes; S9 expands the final packaging matrix.
 
-**S1.6 Compare requirements against limits.** Parse the actual preprocessed pack programs and reflected active resources. Measure sampler/image/UBO/SSBO limits, required formats, atomics, render targets, compute limits and relevant synchronization features. Test Complementary's 512-invocation compute group, vertex-stage integer image writes, and Ultra's 202,899,456-byte single SSBO early. Validate access across the complete buffer range. Build a gap table with direct support, exact emulation, blocker and cost.
+**S1.6 Compare requirements against limits.** Parse the actual preprocessed pack programs and reflected active resources. Measure sampler/image/UBO/SSBO limits, required formats, atomics, render targets, compute limits and relevant synchronization features. Test Complementary's 512-invocation compute group, vertex-stage integer image writes, and the required WSR 128 50,855,936-byte storage buffer early. Validate access across the complete buffer range. Also characterize Ultra's 202,899,456-byte single SSBO as optional/future X2E work: on X1E it is expected to exceed `MAX_SHADER_STORAGE_BLOCK_SIZE` and is not an X1E release gate. Build a gap table with direct support, exact emulation, blocker and cost.
 
 Test the locked Iris release's effective feature checks, preprocessor state and pass activation as well as raw backend support. The inspected development branch requires OpenGL 4.4 or both SSBO and buffer-storage extensions for its SSBO flag; reverify the selected release. Earn the complete truthful contract it needs. A compiled pack with silently disabled ACT, WSR or compute passes is a failed advanced-feature test.
 
@@ -137,7 +137,7 @@ Selecting an alternate complete GL route requires a revised component lock, name
 
 ### Exit gate
 
-Both `S1-legacy` (1.20.1 / Fabric) and `S1-current` (1.21.1 / NeoForge 21.1.264) must render controlled vanilla and pinned Iris/Sodium scenes with ordinary shaderpack ZIPs on real X1E hardware through their release-loadable native closure. An identified, owned bootstrap blocker enables planning and unaffected work, but leaves that lane `BLOCKED` and aggregate S1 `PARTIAL/BLOCKED`. It cannot satisfy current-lane S5 or complete-product release. A game-process start on a different NeoForge patch of the same Minecraft version is preliminary evidence for `S1-current`; it does not pass the gate.
+Both `S1-legacy` (1.20.1 / Fabric) and `S1-current` (1.21.1 / NeoForge 21.1.262, the supported X1E target) must render controlled vanilla and pinned Iris/Sodium scenes with ordinary shaderpack ZIPs on real X1E hardware through their release-loadable native closure. An identified, owned bootstrap blocker enables planning and unaffected work, but leaves that lane `BLOCKED` and aggregate S1 `PARTIAL/BLOCKED`. It cannot satisfy current-lane S5 or complete-product release. The 21.1.262 tuple is staged/working through a world load, render and save/quit pass; effect-fidelity and lifecycle gates still apply. NeoForge 21.1.264 is an optional future patch and is not a gate.
 
 The initial GLES/alternative decision and capability reports exist. No stage assumes that a GPU family name guarantees a required format, feature, or GL version.
 
@@ -267,19 +267,19 @@ Meet the advanced-feature portion of the full-support requirement.
 
 **S6.1 Derive requirements from actual release ZIPs.** Resolve feature macros, Iris feature flags, geometry/compute stages, buffer sizes, image formats, clear schedule, atomic operations and update dependencies for each advanced option.
 
-**S6.2 Qualify advanced colored lighting independently.** Require the original Very High profile with ACT 192 and WSR off, followed by Ultra's ACT 256. Test moving colored emitters, placement/removal of lights, occlusion, camera movement, chunk load/unload, dimension changes and temporal convergence. Verify actual storage updates and light contribution.
+**S6.2 Qualify advanced colored lighting independently.** Require the original Very High profile with ACT 192 and WSR off. Test moving colored emitters, placement/removal of lights, occlusion, camera movement, chunk load/unload, dimension changes and temporal convergence. Verify actual storage updates and light contribution. Ultra's ACT 256 is an optional/future X2E check, not an X1E release requirement.
 
-**S6.3 Qualify WSR independently.** Require the original Ultra profile with ACT 256 and WSR on. Test off-screen geometry, reflection occlusion, reflective surfaces moving into view and scene updates. Verify that WSR is enabled in effective options and runtime programs. The named Complementary profile with ACT 512/WSR on is an additional optional stress result, not an initial 1.0 requirement.
+**S6.3 Qualify WSR independently.** Require the original pack's custom WSR 128 profile: `COLORED_LIGHTING=128` with `WORLD_SPACE_REFLECTIONS=1`. Test off-screen geometry, reflection occlusion, reflective surfaces moving into view and scene updates. Verify that WSR is enabled in effective options and runtime programs. WSR 128 is the required advanced WSR target. WSR 192 is optional staged headroom. Ultra's ACT 256/WSR 256 is optional/future X2E work; WSR 256 remains `BLOCKED` on X1E by the provider's 134,217,728-byte storage-block limit and must never be reported as supported. The named Complementary profile with ACT 512/WSR on is an additional optional stress result, not a release requirement.
 
 **S6.4 Audit memory at every step.** Compare declared SSBO sizes with provider limits and account for all image/buffer allocations and compiler peaks. Reject integer overflow or over-limit bindings cleanly. Do not relabel a smaller voxel grid as the requested grid.
 
 **S6.5 Qualify an independent compute-oriented pack.** Use a pinned release selected in the validation matrix. Derive its actual requirements; do not assume the same resources as Complementary.
 
-**S6.6 Resolve genuine ceilings through the S1 decision.** If a necessary limit or semantic cannot be implemented through the selected GLES provider, activate the documented complete-GL alternative track. A failed advanced profile remains a release blocker for that claim. Continue unaffected standard work.
+**S6.6 Resolve genuine ceilings through the S1 decision.** If a necessary limit or semantic cannot be implemented through the selected GLES provider, activate the documented complete-GL alternative track. A failed *required* profile (Very High ACT 192 or WSR 128) remains a release blocker for its claim. Optional Ultra ACT 256/WSR 256 and ACT 512 results do not gate the X1E release; keep the provider limit recorded as a known deviation and future X2E work. Continue unaffected standard work.
 
 ### Exit gate
 
-The specified advanced lighting and WSR profiles pass effect-specific image/temporal tests and endurance. Numeric allocations, options and actual dispatched/drawn programs are recorded. The enabled effect survives reload, movement and scene updates.
+The required advanced profiles — Very High ACT 192 and the custom WSR 128 profile — pass effect-specific image/temporal tests and endurance. Numeric allocations, options and actual dispatched/drawn programs are recorded. The enabled effect survives reload, movement and scene updates. Ultra ACT 256/WSR 256 is recorded as optional/future X2E work: `BLOCKED` on X1E by the 134,217,728-byte provider limit, with no support claim.
 
 ## 10. S7 Optimize X1E from measured bottlenecks
 
@@ -320,7 +320,7 @@ Extend support through evidence rather than inherited tuning.
 
 **S8.2 Re-run semantic tests.** Cover formats, compilation, reflection, synchronization, mapped buffers and hard-feature limits. A newer GPU can introduce new driver failures.
 
-**S8.3 Re-run the required pack corpus.** Include standard, advanced lighting and WSR profiles under the delivery and legacy runtime lanes. Keep any runtime incompatibility separate from graphics differences.
+**S8.3 Re-run the required pack corpus.** Include standard, Very High ACT 192 and WSR 128 profiles under the delivery and legacy runtime lanes. Treat Ultra ACT 256/WSR 256 and ACT 512 as optional/future X2E checks, not X1E release gates. Keep any runtime incompatibility separate from graphics differences.
 
 **S8.4 Recalibrate policies.** Measure provider and multidraw choices, compilation workers, memory budgets and presentation modes. Derive X2 recommendations from sustained results.
 

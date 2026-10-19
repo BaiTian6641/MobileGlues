@@ -27,7 +27,9 @@ For a certified configuration, users should not need shader source edits, driver
 
 A pack is supported only for an identified version, settings profile, runtime, renderer build, and device/driver combination. All enabled passes and requested effects must execute correctly. A successful compile, attractive screenshot, or average FPS result alone does not establish support.
 
-The project should support an expanding range of ordinary packs through general OpenGL and GLSL behavior. Its 1.0 completion gate requires both standard shader effects and the specified advanced Complementary features. Intermediate standard-shader releases remain useful, but must be labeled with that narrower scope.
+The primary goal is standard desktop OpenGL behavior through MobileGlues: ordinary shaderpack ZIPs must work out of the box with their intended effects, with performance secondary to correctness. The project should support an expanding range of ordinary packs through general OpenGL and GLSL behavior, not per-pack rewrites.
+
+The 1.0 completion gate requires the standard pack corpus plus the specified advanced Complementary coverage: Very High with ACT 192 and the custom WSR 128 profile (ACT 128, world-space reflections on). The author Ultra profile (ACT 256/WSR 256) is **not** an X1E release criterion; it remains optional/future X2E work and stays `BLOCKED` on X1E by the provider's 134,217,728-byte shader-storage-block limit. The ACT 512 stress profile is likewise optional. Intermediate standard-shader releases remain useful and must be labeled with that narrower scope.
 
 Keep three ratings separate: visual correctness, stability, and performance. A correctly rendered advanced preset that runs slowly is a performance failure for that preset, not evidence of a translator defect. A fast run with an omitted effect is a correctness failure.
 
@@ -58,16 +60,16 @@ Unknown devices start with conservative, truthful capabilities and an unqualifie
 | MobileGlues public release | V2.0.0; the release includes launcher-provided ANGLE integration and multidraw benchmarking | Preserve these facilities and strengthen their qualification |
 | Core source audit | `97558a69157b033b890958b1e49258c5b51a80c6`, dated 22 September 2026 | Reproduce source findings before treating them as device failures |
 | Plugin source | `f5105e4ddd1752cccdcc6421c402960d40ec3d9d`; core submodule `f56af31d3e490d95808b3adc4ace20234249a37a` | The release source and newer core main are different baselines |
-| Current delivery lane | Minecraft 1.21.1 on NeoForge 21.1.264 with Java 21 (`java-runtime-delta`) and LWJGL 3.3.3 GLFW; Iris 1.8.14-beta.1 and Sodium 0.8.13 NeoForge builds | This is the lane ordinary shaderpack ZIPs must work in; Android LWJGL/GLFW closure and NeoForge startup are the release blockers |
+| Current delivery lane | Minecraft 1.21.1 on NeoForge 21.1.262 with Java 21 (`java-runtime-delta`) and LWJGL 3.3.3 GLFW; Iris 1.8.14-beta.1 and Sodium 0.8.13 NeoForge builds. NeoForge 21.1.264 is an optional future patch, not a blocker | This is the lane ordinary shaderpack ZIPs must work in. The 21.1.262 tuple is staged/working; effect fidelity, performance, lifecycle and remaining Android native-closure work are the release blockers |
 | Delivery-lane fallback | Iris 1.8.12 NeoForge requires Sodium 0.6.13 NeoForge; it must never be paired with Sodium 0.8.13 | Keep a pinned, tested fallback pair rather than mixing versions |
 | Future/experimental lane | Minecraft 26.3 uses Java 25 and LWJGL 3.4.3 with SDL, ShaderC and SPIRV-Cross modules | Neither required nor qualified; a GLFW-only bridge is still insufficient for it |
 | Legacy modded lane | Minecraft 1.20.1 with an explicitly matched Fabric/Iris/Sodium stack | Retain a distinct compatibility and regression lane |
 | Complementary | Published r5.9.3 is the main project qualification target; retain r5.9.2 for regression | Pin original release assets, not only repository HEAD |
 | Sodium support | Upstream excludes OpenGL translation layers from its supported configurations | This project owns its tested compatibility and downstream fixes |
 
-Sources: [MobileGlues release](https://github.com/MobileGL-Dev/MobileGlues-release/releases/tag/V2.0.0), [core snapshot](https://github.com/MobileGL-Dev/MobileGlues/tree/97558a69157b033b890958b1e49258c5b51a80c6), [Minecraft 1.21.1 manifest](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json), [NeoForge 21.1.264 installer](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar), [Minecraft 26.3 manifest](https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json), [Complementary releases](https://modrinth.com/shader/complementary-reimagined/versions), [Sodium policy](https://github.com/CaffeineMC/sodium).
+Sources: [MobileGlues release](https://github.com/MobileGL-Dev/MobileGlues-release/releases/tag/V2.0.0), [core snapshot](https://github.com/MobileGL-Dev/MobileGlues/tree/97558a69157b033b890958b1e49258c5b51a80c6), [Minecraft 1.21.1 manifest](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json), [NeoForge 21.1.262 installer](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.262/neoforge-21.1.262-installer.jar), [NeoForge 21.1.264 installer (optional future patch)](https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar), [Minecraft 26.3 manifest](https://piston-meta.mojang.com/v1/packages/11f1aefe473eefba0af62e3286c33b692807b2eb/26.3.json), [Complementary releases](https://modrinth.com/shader/complementary-reimagined/versions), [Sodium policy](https://github.com/CaffeineMC/sodium).
 
-The version matrix in the validation document is a starting lock proposal, not a statement that these builds already work on Googlebook. The exact delivery tuple (1.21.1 / NeoForge 21.1.264 / Iris 1.8.14-beta.1 / Sodium 0.8.13) has not been launched on a device; the observed 21.1.262 instance is preliminary evidence only. Resolve every remaining dependency and asset hash in Stage 0.
+The version matrix in the validation document is a starting lock proposal, not a statement that these builds already work on Googlebook. The supported X1E target is the installed 1.21.1 / NeoForge 21.1.262 / Iris 1.8.14-beta.1 / Sodium 0.8.13 tuple, which is staged and working up to the recorded world/title pass. NeoForge 21.1.264 is an optional future patch: it is not a delivery target and not a release blocker. Effect fidelity, performance and lifecycle gates remain open. Resolve every remaining dependency and asset hash in Stage 0.
 
 ## 4. Architecture and ownership
 
@@ -102,13 +104,13 @@ Each process chooses one coherent provider path. The diagram does not authorize 
 
 ### The delivery lane requires its own bootstrap contract
 
-The delivery lane is Minecraft 1.21.1 on NeoForge 21.1.264 with Java 21 (`java-runtime-delta`). Its manifest selects LWJGL 3.3.3 with the GLFW, OpenGL, OpenAL, STB, FreeType, jemalloc, JNA and tinyfd modules. It contains no Android-classifier native libraries, no SDL, no ShaderC and no RenderPearl/SDL function-provider contract. The launcher therefore provides the Android window/EGL surface and the desktop-GL bridge underneath an unmodified GLFW-era client. Stage 0 locks the Java 21 runtime and LWJGL 3.3.3 closure, proves baseline source reproducibility, and records missing Android components as owned blockers. Stage 1 builds and validates the loadable Android runtime closure through NeoForge startup and Iris/Sodium loading. [S06](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json)
+The delivery lane is Minecraft 1.21.1 on NeoForge 21.1.262 with Java 21 (`java-runtime-delta`); NeoForge 21.1.264 is an optional future patch. Its manifest selects LWJGL 3.3.3 with the GLFW, OpenGL, OpenAL, STB, FreeType, jemalloc, JNA and tinyfd modules. It contains no Android-classifier native libraries, no SDL, no ShaderC and no RenderPearl/SDL function-provider contract. The launcher therefore provides the Android window/EGL surface and the desktop-GL bridge underneath an unmodified GLFW-era client. Stage 0 locks the Java 21 runtime and LWJGL 3.3.3 closure, proves baseline source reproducibility, and records missing Android components as owned blockers. Stage 1 builds and validates the loadable Android runtime closure through NeoForge startup and Iris/Sodium loading. [S06](https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json)
 
 In this lane, MobileGlues is reached through the launcher's native GL bridge: the game's LWJGL GL capability object must resolve its function pointers to the actual loadable MobileGlues frontend, and the launcher's EGL/GLES surface plus provider must be the one the game process uses. A function provider that supplies callbacks without the real library path is insufficient for desktop-equivalent behavior. Verify transformed entry points, not just `glGetError`. Reverify this contract per game and loader version.
 
 Minecraft 26.2 introduced an experimental Vulkan option while retaining OpenGL; the preference setting can fall back. A future 26.3 lane changes shader compilation under OpenGL and, per inspected bytecode, casts `GL.getFunctionProvider()` to `org.lwjgl.system.SharedLibrary` and passes its `getPath()` to SDL, which must agree with LWJGL on `glGetError`. That artifact also confirms an OpenGL shader path using ShaderC and SPIRV-Cross outputting GLSL 330 before ordinary GL source/compile calls. This is retained as future-lane evidence only; it is neither required nor implemented in the delivery lane. [S04](https://www.minecraft.net/en-us/article/minecraft-java-edition-26-2) [S05](https://feedback.minecraft.net/hc/en-us/articles/48913133328013-Minecraft-Java-Edition-26-3)
 
-The delivery lane's Iris 1.8.14-beta.1 NeoForge build is a beta, and its metadata points to Sodium 0.8.13 NeoForge. The stable fallback is Iris 1.8.12 NeoForge with Sodium 0.6.13 NeoForge; Iris 1.8.12 with Sodium 0.8.13 is an untested pair and must not be shipped. Inspect the exact selected binaries for loader, LWJGL, ABI and provider restrictions, maintain any necessary licensed downstream adaptation with distinct versions, hashes and diagnostics, and record which pair produced every result. A game-process start at NeoForge 21.1.262 with these mods exists as preliminary evidence; the exact 21.1.264 tuple remains NOT RUN.
+The delivery lane's Iris 1.8.14-beta.1 NeoForge build is a beta, and its metadata points to Sodium 0.8.13 NeoForge. The stable fallback is Iris 1.8.12 NeoForge with Sodium 0.6.13 NeoForge; Iris 1.8.12 with Sodium 0.8.13 is an untested pair and must not be shipped. Inspect the exact selected binaries for loader, LWJGL, ABI and provider restrictions, maintain any necessary licensed downstream adaptation with distinct versions, hashes and diagnostics, and record which pair produced every result. The supported tuple is the installed NeoForge 21.1.262 instance with these mods, which is staged and working through a world load, render and save/quit pass. NeoForge 21.1.264 is an optional future patch with no run; it is not a release blocker.
 
 Qualify Iris against the game's actual OpenGL backend in every lane. A Vulkan implementation underneath the GL frontend still presents the OpenGL contract to Minecraft/Iris; it does not establish support for any native Vulkan backend. Development-branch findings in the validation document are leads to recheck against the selected release.
 
@@ -152,6 +154,10 @@ The separate MobileGL project is under development with independent GLES/Vulkan 
 ## 6. OpenGL implementation contract
 
 Maintain a single per-context capability model, backed by provider probes and implementation tests. It drives context negotiation, version strings, extension enumeration, limits, function routing, shader lowering, and diagnostics.
+
+**Capability coverage.** MobileGlues must expose a truthful desktop GL contract for ordinary packs: a core version it actually implements plus individually earned extensions. The contract covers GLSL translation and program/link state, framebuffer and render-target routing, texture/image and SSBO resource mapping, compute dispatch, and the barrier/fence/visibility semantics each advertised feature promises. A capability is advertised only when its complete required behavior is implemented and tested on the named provider. Unimplemented features remain named compatibility deviations and are never counted as claims; advertising a core version does not erase a deviation. This targets the contract ordinary shaderpacks use and does not promise full OpenGL 4.6 conformance.
+
+On the supported X1E 1.21.1 / NeoForge 21.1.262 tuple, depth-texture filter completeness, 64-bit timestamp queries, same-format depth `glCopyImageSubData`, and program/array image-unit routing are implemented and device-tested. `glTextureBarrier`/NV, `glTextureView`, and logical attachment invalidation remain named deviations; the pinned Iris/Sodium builds do not call the first two. The reported core version and GLSL level remain a truthful subset of the implementation, not a 4.6 conformance claim.
 
 For each feature, store:
 
@@ -207,15 +213,16 @@ Persistent mapping needs correct explicit flush behavior, coherent visibility wh
 | --- | --- | --- |
 | Base rendering | Vanilla, Sodium, deterministic diagnostic packs | Correct geometry, state, targets, input and presentation |
 | Standard packs | Complementary Reimagined/Unbound and BSL at pinned normal presets | All selected shadows, lighting, water, SSR, PBR and temporal effects match the reference |
-| Advanced colored lighting | Required r5.9.3 Very High with ACT 192 and WSR off, then Ultra with ACT 256 | Correct light transport, updates, temporal behavior and storage visibility |
-| World-space reflections | Required r5.9.3 Ultra with ACT 256 and WSR on | Reflect off-screen geometry correctly with accurate allocation, access and update behavior |
-| Extended stress | The named Complementary profile with ACT 512 and WSR on | Separate optional stress result; not an initial full-support claim |
+| Advanced colored lighting | Required r5.9.3 Very High with ACT 192 and WSR off | Correct light transport, updates, temporal behavior and storage visibility |
+| World-space reflections | Required r5.9.3 custom WSR 128 profile: `COLORED_LIGHTING=128`, `WORLD_SPACE_REFLECTIONS=1` | Reflect off-screen geometry correctly with accurate allocation, access and update behavior; WSR 128 is the advanced WSR release target |
+| Optional/future Ultra | Ultra ACT 256 with WSR on (WSR 256) | Not an X1E release criterion. `BLOCKED` on X1E by the provider's 134,217,728-byte storage-block limit; future X2E work, never claimed as supported |
+| Extended stress | The named Complementary profile with ACT 512 and WSR on | Optional stress result; not a release claim |
 | Broader coverage | A pinned compute-oriented pack and independently structured pack | Demonstrate generality beyond Complementary-specific code paths |
 | Compatibility expansion | Additional approved packs, OptiFine-specific behavior and mod-loader combinations | Separate versioned test results and owner |
 
 Standard SSR and WSR are different workloads. SSR reconstructs a reflection from screen-space data and can miss off-screen objects by design. A WSR test must include off-screen geometry so a fallback to SSR cannot accidentally pass.
 
-Use each pack's actual options, programs, and feature requests to derive API requirements. Do not assign compute requirements solely from an effect's name. Preserve the distinction between High, Ultra, advanced colored lighting, and the specific WSR voxel-size setting.
+Use each pack's actual options, programs, and feature requests to derive API requirements. Do not assign compute requirements solely from an effect's name. Preserve the distinction between High, Very High ACT 192, the custom WSR 128 profile, the optional Ultra ACT 256/WSR 256 profile, and the specific WSR voxel-size setting.
 
 Original ZIP support permits implementation-side GLSL translation and normal Iris option handling. It does not permit shipping a visually reduced derivative pack under the original pack's name.
 
@@ -252,7 +259,7 @@ Track license and redistribution obligations separately for MobileGlues, the lau
 A Googlebook release is complete only when:
 
 - The exact hardware/software profiles pass their required functional and image tests.
-- Standard and specified advanced pack modes preserve their enabled effects.
+- Standard packs, Very High ACT 192 and the WSR 128 profile preserve their enabled effects. Ultra ACT 256/WSR 256 is not an X1E release criterion; it remains optional/future X2E work and is never reported as supported on X1E.
 - Fresh installation, import, ordinary launch, update, recovery and desktop lifecycle tests pass.
 - Performance and memory results are measured and published for each recommended preset.
 - Every advertised GL capability has evidence.

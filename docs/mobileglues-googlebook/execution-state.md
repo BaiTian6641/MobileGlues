@@ -7,23 +7,27 @@ Last updated: 2026-10-19 (bridge 1.0.17).
 
 Stage labels below retain the historical `Stage 0`-`Stage 8` numbering used when the evidence
 was captured. The approximate `S0`-`S9` mapping and lane status are in `README.md`. In current
-terms: S0 partial; S1-provider partial; S1-legacy NOT RUN; S1-current PARTIAL on a preliminary
-21.1.262 game process with the exact 21.1.264 tuple NOT RUN; S2/S3 partial; S4 partial; S5/S6
-staged with WSR 256 blocked; S7-S9 NOT RUN.
+terms: S0 partial; S1-provider partial; S1-legacy NOT RUN; S1-current STAGED/WORKING on the
+supported 21.1.262 tuple (world load, render, save/quit); 21.1.264 is an optional future patch,
+not a blocker; S2/S3 partial; S4 partial; S5/S6 staged, with ACT 192 and WSR 128 as the required
+advanced gates; WSR 256 is optional/future X2E and `BLOCKED` on X1E by the provider limit;
+S7-S9 NOT RUN.
 
 ## Delivery lane lock (2026-10-19)
 
-The required lane is now Minecraft 1.21.1 on NeoForge 21.1.264 with Java 21
+The required lane is Minecraft 1.21.1 on **NeoForge 21.1.262** with Java 21
 (`java-runtime-delta`), Iris 1.8.14-beta.1 NeoForge (`KduFYu4t`) and Sodium 0.8.13 NeoForge
-(`uMOpc5uV`). Ordinary shaderpack ZIPs must import, select their own profile and render their
-enabled effects in this lane. The stable fallback pair is Iris 1.8.12 NeoForge (`t3ruzodq`) with
-Sodium 0.6.13 NeoForge (`Pb3OXVqC`); Iris 1.8.12 must never be paired with Sodium 0.8.13.
+(`uMOpc5uV`). The installed 21.1.262 instance is the supported X1E target and is staged/working:
+it loaded and rendered the 1.21.1 world with the original pack and saved/quit to title.
+Ordinary shaderpack ZIPs must import, select their own profile and render their enabled effects
+in this lane. The stable fallback pair is Iris 1.8.12 NeoForge (`t3ruzodq`) with Sodium 0.6.13
+NeoForge (`Pb3OXVqC`); Iris 1.8.12 must never be paired with Sodium 0.8.13. NeoForge 21.1.264
+is an optional future patch: it is not a delivery target and not a release blocker.
 
-The existing game-process evidence was captured on **NeoForge 21.1.262** with Iris
-1.8.14-beta.1 and Sodium 0.8.13. It is preliminary evidence for this lane: it proves the launcher,
-JVM, native bridge and Iris/Sodium path can start, and that original packs can initialize. It
-does not qualify the lane. The exact 21.1.264 tuple, effect fidelity, performance and lifecycle
-gates remain **NOT RUN**.
+The game-process evidence is the reference pass for the supported tuple. It proves the launcher,
+JVM, native bridge and Iris/Sodium path can start, and that original packs can initialize and
+render. It does not qualify the lane for effects, performance or lifecycle. The 21.1.264 patch,
+effect fidelity, performance and lifecycle gates remain **NOT RUN/NOT COMPLETE**.
 
 Minecraft 26.3 / Java 25 / LWJGL 3.4.3 SDL on Fabric is a future/experimental lane; its
 bytecode and manifest findings stay recorded as future-lane evidence. Minecraft 1.20.1 / Java 17
@@ -35,12 +39,16 @@ Fabric remains the legacy lane and is still unbeaten.
   complete for the tested contracts; remaining capability/cache/ownership items stay open.
 - Stage 3 (historical): both original Complementary r5.9.2 styles initialize at High without fallback;
   named-effect fidelity matrix remains open. The game process was Minecraft 1.21.1 / NeoForge
-  21.1.262, i.e. a preliminary build of the delivery lane, not the locked 21.1.264 tuple and not the
-  pinned 1.20.1/Fabric legacy lane.
+  21.1.262, the supported delivery-lane tuple; 21.1.264 is an optional future patch and this is not
+  the pinned 1.20.1/Fabric legacy lane.
 - Stage 4 (historical): ACT 192 staged pass on the original pack.
-- Stage 5 (historical): WSR 128 and WSR 192 staged passes on the original pack; WSR 256 blocked by
-  the provider's 134,217,728-byte storage-block limit.
-- Active task: WSR 256 negative gate and optional player reflections, then return to named-effect fidelity.
+- Stage 5 (historical): WSR 128 and WSR 192 staged passes on the original pack. WSR 128 is the
+  required advanced WSR target for the X1E release; WSR 192 is optional staged headroom. WSR 256 is
+  optional/future X2E work, `BLOCKED` on X1E by the provider's 134,217,728-byte storage-block limit,
+  and is not an X1E release blocker.
+- Active task: close the required advanced gates (ACT 192 and WSR 128) with effect-specific evidence,
+  then return to standard named-effect fidelity. Optional player reflections and WSR 256 remain
+  future work, never claimed as supported on X1E.
 - Image binding / ACT repair (bridge 1.0.17): fixed name-to-unit registry shared by the transformer and
   Iris ProgramImages; `voxel_img` per-frame clear restored. On X1E, ACT 192 colors are distinct, WSR 192
   is stable in motion, and the earlier light ghosting/flicker is gone. Residual: the pack's half-rate
@@ -78,9 +86,10 @@ output is `validation/2026-10-18-x1e-provider-probe.json`. Key results:
 - 512-invocation compute and vertex-stage image stores (`rgba16f`) work.
 - `r8ui`/`r16ui` are not legal ESSL image qualifiers on this provider, and `glBindImageTexture`
   rejects those formats. `r32ui` images work and are the first lowering candidate.
-- `MAX_SHADER_STORAGE_BLOCK_SIZE` is 128 MiB. WSR 128 and WSR 192 read/write correctly; WSR 256
-  (193.5 MiB) cannot be written at the end of its declared range. WSR 256 is therefore blocked on
-  this provider as a single SSBO.
+- `MAX_SHADER_STORAGE_BLOCK_SIZE` is 128 MiB. WSR 128 (required advanced target) and WSR 192
+  (optional headroom) read/write correctly; WSR 256 (193.5 MiB) cannot be written at the end of its
+  declared range. WSR 256 is therefore `BLOCKED` on this provider as a single SSBO; it is
+  optional/future X2E work and not an X1E release blocker.
 - `RGB8_SNORM` is texture-valid but not color-renderable; Complementary colortex1 requests it.
   `RGBA8_SNORM`, `R11F_G11F_B10F`, `RGB16F`, and `RGBA16F` render correctly.
 - Raw and comparison depth sampling with LINEAR works in the probe's 32F case.
@@ -104,7 +113,7 @@ game process.
   Iris 1.8.14-beta.1, Sodium 0.8.13, 9 mods) with the installed MobileGlues 2.0.0 renderer. The main menu
   rendered, but the installed build's logcat rejected `#version 400` shaders and generated `iris_Normal`
   syntax errors. This is staged smoke evidence for the delivery lane's launcher/provider path on the
-  previous NeoForge patch, not qualification of the 21.1.264 tuple and not pack qualification.
+  supported NeoForge tuple, not pack qualification and not a release claim.
 - Host semantic tests pass unchanged: `sh MobileGlues-cpp/tests/run.sh` → 0 failures.
 - Reproducible ARM64 build succeeds with NDK r28c; artifact is 16 KB-aligned and ThinLTO is active.
 - Explicit image bindings are now authoritative: the transformer preserves `layout(binding=N)` from
@@ -140,8 +149,23 @@ game process.
   with the original pack, logcat showed distinct image units 0-3 for programs 435/438/256/441/433,
   and Save and Quit to Title succeeded. Captures
   `2026-10-19-1.21.1-neoforge-21.1.262-world.png` and `...-title.png`. A 26.2 world downgrade prompt
-  was canceled; that world was not loaded. This is a staged 21.1.262 pass only. The exact
-  NeoForge 21.1.264 tuple, effect-by-effect fidelity, performance and lifecycle remain NOT RUN.
+  was canceled; that world was not loaded. This is the staged/working reference pass for the
+  supported 21.1.262 tuple. Effect-by-effect fidelity, performance and lifecycle remain NOT RUN;
+  NeoForge 21.1.264 is an optional future patch and not a blocker.
+- Desktop-parity increments after the reference pass:
+  - `glProgramUniform1i/1iv` and `glUniform1iv` now route image units through the target program's
+    map; image-array elements are registered by location/unit run. X1E
+    `program_uniform_image_binding` and `image_array_uniform_iv` pass.
+  - Depth completeness port: application-visible depth filters are preserved while the driver gets
+    ES-legal filters; a draw-time guard covers sampler-object overrides. Host `depth_filter_test`
+    passes 31 checks; X1E `depth_filter_complete` samples `0.5` and reads back 9986/9729.
+  - 64-bit timer queries are wired to `GL_EXT_disjoint_timer_query`; extension advertising is gated
+    on loaded entry points. X1E `timer_query64` returns increasing timestamps.
+  - Same-format D32F `glCopyImageSubData` passes on X1E. Full wrapper suite: **37/37**; evidence
+    `validation/2026-10-19-x1e-wrapper-all-final2.json`, build `59a9b230…f699`.
+  - Named deviations remain: `glTextureBarrier`/NV and `glTextureView` have no legal/available ES
+    implementation; `glInvalidateFramebuffer` attachment mapping and copy format substitutions
+    remain backlog.
 
 ### Stage 1/2 implementation evidence (X1E, wrapper level)
 
@@ -268,19 +292,25 @@ Still open in these stages:
 
 ## Blockers
 
-1. **Exact delivery tuple not launched.** The game process is NeoForge 21.1.262 with Iris
-   1.8.14-beta.1 / Sodium 0.8.13. The locked 1.21.1 / NeoForge 21.1.264 tuple has not booted, so
-   `S1-current` is not passed. Relaunch the exact tuple with the workspace plugin and record the
-   process/provider/pack tuple.
-2. **WSR 256 provider limit.** `MAX_SHADER_STORAGE_BLOCK_SIZE` is 134,217,728 B; the pack requests
-   202,899,456 B. This is a provider boundary, not a wrapper regression. WSR 128/192 pass.
-3. **Named-effect fidelity is incomplete.** PBR, shadow edges, bloom, TAA/history isolation, and player
-   reflections are not yet effect-by-effect qualified on both original styles.
-4. **Pack-load diagnostics in the exact tuple.** Custom-uniform warnings (`BIOME_PALE_GARDEN`,
+1. **Delivery tuple is staged, not release-qualified.** The supported tuple is the installed
+   Minecraft 1.21.1 / NeoForge 21.1.262 / Iris 1.8.14-beta.1 / Sodium 0.8.13 instance. It loaded,
+   rendered the original pack and saved/quit to title, but effect-specific, performance and
+   lifecycle gates remain open. NeoForge 21.1.264 is an optional future patch, not a blocker.
+2. **Named-effect fidelity is incomplete.** Standard PBR, shadow edges, bloom, TAA/history isolation,
+   SSR, and the required ACT 192 and WSR 128 advanced sets are not yet effect-by-effect qualified on
+   both original styles. This is the primary release work.
+3. **Pack-load diagnostics in the supported tuple.** Custom-uniform warnings (`BIOME_PALE_GARDEN`,
    `BIOME_SULFUR_CAVES`, `endFlashIntensity`) appear with the 21.1.262 / Iris 1.8.14-beta.1 pair and can
    suppress effects; resolve with a compatible Iris/pack tuple rather than editing packs.
-5. **Performance/lifecycle gates pending.** Sustained 60 FPS at 1920×1200, 20-minute thermal run,
+4. **Performance/lifecycle gates pending.** Sustained 60 FPS at 1920×1200, 20-minute thermal run,
    resize/focus/context recovery, packaging/release, and X2E onboarding remain open.
+
+### Non-blocking provider limit (optional/future)
+
+`MAX_SHADER_STORAGE_BLOCK_SIZE` is 134,217,728 B on the X1E provider; Ultra requests 202,899,456 B.
+This is a provider boundary, not a wrapper regression, and it is not a blocker for the X1E release.
+WSR 128 passes staged and is the supported advanced WSR target. Ultra ACT 256/WSR 256 remains
+`BLOCKED` on X1E, optional/future X2E work only, and is never claimed as supported.
 
 ## Latest test evidence
 
@@ -306,11 +336,14 @@ performed.
 
 ## Exact next action
 
-Run the **Ultra WSR 256** negative gate on the original pack: expect the
-provider's 134,217,728 B `MAX_SHADER_STORAGE_BLOCK_SIZE` to reject the
-202,899,456 B request; record the exact loader/pipeline behavior, not a
-shaderpack edit. In parallel, qualify **optional player reflections**
-(`WORLD_SPACE_PLAYER_REF=1`) at WSR 128/192, and add a native core
-`glClearBufferSubData` implementation so the Iris zero-fill bridge is no
-longer required. Keep named-effect Stage 3 fidelity, graphics-stage image
-formats, performance, and lifecycle gates separate.
+Close the required advanced gates on the original pack: qualify **Very High ACT 192** and the
+**custom WSR 128 profile** (`COLORED_LIGHTING=128`, `WORLD_SPACE_REFLECTIONS=1`) effect by effect,
+then add a native core `glClearBufferSubData` implementation so the Iris zero-fill bridge is no
+longer required. WSR 128 is the advanced release gate. Standard named-effect fidelity remains the
+primary release work.
+
+Ultra ACT 256/WSR 256 is **optional/future X2E** work only. If it is characterized, record the
+provider's 134,217,728 B `MAX_SHADER_STORAGE_BLOCK_SIZE` rejecting the 202,899,456 B request as a
+known deviation; do not edit packs and do not present it as an X1E release gate. Optional player
+reflections (`WORLD_SPACE_PLAYER_REF=1`) remain future work. Keep graphics-stage image formats,
+performance, and lifecycle gates separate.

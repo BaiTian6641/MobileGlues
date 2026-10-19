@@ -7,6 +7,13 @@ No row is release-qualified. The X1E Googlebook (`C1L63708PZ`) and the FCL game 
 staged rows below are device evidence, but named-effect coverage, performance, and lifecycle gates remain
 open.
 
+The primary goal is standard desktop OpenGL behavior through MobileGlues so ordinary shaderpacks work
+out of the box. Required advanced X1E coverage is Very High ACT 192 and the custom WSR 128 profile;
+Ultra ACT 256/WSR 256 is optional/future X2E and `BLOCKED` on X1E by the provider storage-block limit.
+The contract is a truthful core version plus individually earned extensions covering translation,
+framebuffer routing, image/SSBO mapping, compute and barrier semantics; unimplemented features are
+named deviations, not claims, and full GL 4.6 conformance is not promised.
+
 This file preserves evidence captured under the historical X1E plan. Its stage labels and status
 vocabulary are not the current `S0`-`S9` table; see `README.md` and `../README.md` for the mapping and
 current lane status. The connected unit is an HP Googlebook 14 rather than the XPS reference
@@ -17,15 +24,15 @@ specification.
 | Field | Value |
 | --- | --- |
 | Minecraft | 1.21.1, Java 21 (`java-runtime-delta`), LWJGL 3.3.3 GLFW |
-| Loader | NeoForge 21.1.264 |
+| Loader | NeoForge 21.1.262 (supported X1E target; 21.1.264 is an optional future patch) |
 | Iris | 1.8.14-beta.1+1.21.1-neoforge, Modrinth `KduFYu4t` |
 | Sodium | mc1.21.1-0.8.13-neoforge, Modrinth `uMOpc5uV` |
 | Stable fallback pair | Iris 1.8.12 NeoForge (`t3ruzodq`) with Sodium 0.6.13 NeoForge (`Pb3OXVqC`); never 1.8.12 with 0.8.13 |
-| Status | **NOT RUN** on the exact tuple; staged evidence exists only on NeoForge 21.1.262 |
+| Status | **STAGED/WORKING** on the supported 21.1.262 tuple (world load, render, save/quit); effect fidelity, performance and lifecycle remain open. NeoForge 21.1.264 is optional future work, not a blocker |
 
 Every game-process row below was captured on **Minecraft 1.21.1 / NeoForge 21.1.262** with Iris
-1.8.14-beta.1 and Sodium 0.8.13. That is the same lane on the previous loader patch, so it is
-preliminary delivery-lane evidence, not qualification. No row is upgraded by this header. The
+1.8.14-beta.1 and Sodium 0.8.13. That is the supported delivery-lane tuple; the 13:45 world/title
+pass is the reference evidence. Effect-specific rows are not upgraded by this header. The
 1.20.1/Fabric legacy and 26.3/Fabric future lanes have no game-process rows here.
 
 ## Renderer / build rows
@@ -55,9 +62,9 @@ Evidence: `validation/2026-10-18-x1e-provider-probe.json` (SHA-256
 | 3D image allocation/clear | pass | core uses immutable `glTexStorage3D` for null-pixel 3D image formats, and skips FBO clears of layered/3D textures that crash ANGLE; WSR 128 binds 128×64×128 R32UI |
 | Iris SSBO zero-fill | pass | bridge 1.0.5 zero-fills the 50,855,936 B WSR buffer through core `glBufferSubData` when `glClearBufferSubData` is unavailable |
 | R32UI 3D image substitution | pass | `r32ui_image_substitution` wrote/read `0x12345678`; legal backing at 4 bytes/texel |
-| WSR 128 SSBO (50,855,936 B) | pass | allocation, binding, compute write near end, mapped readback |
-| WSR 192 SSBO (114,229,248 B) | pass | same test |
-| WSR 256 SSBO (202,899,456 B) | **fail** | `MAX_SHADER_STORAGE_BLOCK_SIZE=134,217,728`; allocation/map succeed but the shader cannot write the last element |
+| WSR 128 SSBO (50,855,936 B) | pass — **required advanced WSR target** | allocation, binding, compute write near end, mapped readback; staged pack scenes pass |
+| WSR 192 SSBO (114,229,248 B) | pass (optional staged headroom) | same test |
+| WSR 256 SSBO (202,899,456 B) | **fail — optional/future X2E only** | `MAX_SHADER_STORAGE_BLOCK_SIZE=134,217,728`; allocation/map succeed but the shader cannot write the last element. Not an X1E release blocker; never claimed as supported |
 | Raw + comparison depth sampling with LINEAR | pass at probe level | `depth_raw_and_compare_linear`, 32F depth; raw and compare results non-zero |
 | `RGB8_SNORM` color attachment | **fail** | FBO incomplete (`36054`); Complementary colortex1 requests it |
 | `RGBA8_SNORM` / `R11F_G11F_B10F` / `RGB16F` / `RGBA16F` attachments | pass | per-format FBO completeness |
@@ -66,7 +73,7 @@ Evidence: `validation/2026-10-18-x1e-provider-probe.json` (SHA-256
 
 ## Game-process results (X1E, test plugin)
 
-Preliminary delivery-lane evidence on NeoForge 21.1.262 (target lock is 21.1.264). The test plugin
+Delivery-lane evidence on the supported NeoForge 21.1.262 tuple. The test plugin
 APK packaged core `0557189` (NDK 27.3 debug build) and was installed
 on `C1L63708PZ`. FCL launched `neoforge-21.1.262`; the log's env map points
 `SDL_OPENGL_LIBRARY` / `LD_LIBRARY_PATH` at the newly installed plugin APK, so the
@@ -105,11 +112,11 @@ fidelity reference.
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | High | water/surface SSR | ARM64 / X1E / unknown | not tested | fixture not yet acquired |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | High | rough/specular PBR | ARM64 / X1E / unknown | not tested | — |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | High | shadows / AO / fog / clouds / bloom / TAA | ARM64 / X1E / unknown | not tested | — |
-| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 128, WSR 1) | WSR 128 + ACT 128 | ARM64 / X1E / ANGLE | pass (staged) | original pack, bridge 1.0.5; log `mclo.gs/adG0NiA`; water/room captures |
-| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Very High | ACT 192 colored lighting | ARM64 / X1E / ANGLE | pass (staged, one emissive scene) | F3 `2026-10-19-r592-act192-bridge-f3.png`, 8 s clip, log `mclo.gs/Dz8wXmm` |
-| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 128, WSR 1) | WSR 128 | ARM64 / X1E / ANGLE | pass (staged) | original pack; WSR images 128×64×128; SSBO 50,855,936 B; log `mclo.gs/adG0NiA` |
+| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 128, WSR 1) | WSR 128 + ACT 128 | ARM64 / X1E / ANGLE | pass (staged; **required advanced target**) | original pack, bridge 1.0.5; log `mclo.gs/adG0NiA`; water/room captures |
+| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Very High | ACT 192 colored lighting | ARM64 / X1E / ANGLE | pass (staged, one emissive scene; **required advanced target**) | F3 `2026-10-19-r592-act192-bridge-f3.png`, 8 s clip, log `mclo.gs/Dz8wXmm` |
+| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 128, WSR 1) | WSR 128 | ARM64 / X1E / ANGLE | pass (staged; **required advanced target**) | original pack; WSR images 128×64×128; SSBO 50,855,936 B; log `mclo.gs/adG0NiA` |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 192, WSR 1) | WSR 192 + ACT 192 | ARM64 / X1E / ANGLE | pass (staged, bridge 1.0.17) | original pack; distinct cyan/warm ACT; WSR stable in motion; bridge hash `2e1c083c…6397`; residual: visible half-rate floodfill circle on light placement/world entry |
-| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | WSR 256 | ARM64 / X1E / ANGLE | blocked | provider `MAX_SHADER_STORAGE_BLOCK_SIZE=134,217,728`; request 202,899,456 B |
+| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | WSR 256 | ARM64 / X1E / ANGLE | blocked — **optional/future X2E; not an X1E release blocker** | provider `MAX_SHADER_STORAGE_BLOCK_SIZE=134,217,728`; request 202,899,456 B; never claimed as supported on X1E |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | player reflections (binding 3) | ARM64 / X1E / ANGLE | not tested / unsupported | Enabled option uses vertex-stage atomics and an image store that lose the ANGLE device; the wrapper does not silently disable it |
 | Complementary Unbound r5.9.2 | `2b4e9c71…21d2` | High | standard fidelity suite | ARM64 / X1E / unknown | not tested | — |
 | BSL v10.1.8 | `36b0a50f…30b5` | default | standard fidelity suite | ARM64 / X1E / unknown | not tested | — |
@@ -126,7 +133,11 @@ fidelity reference.
 | `glShaderSource` multi-string / explicit-length regression | pass | host `tests/run.sh`; X1E `wrapper_probe source_multi`, `source_multi_implicit` |
 | RGB8_SNORM render-target backing | pass | X1E `wrapper_probe rgb8_snorm_attachment`: both TexImage2D and TexStorage2D FBOs complete |
 | Desktop GLSL version normalization | pass for simple shaders | X1E `wrapper_probe desktop_glsl_120/150/330/400/460` |
-| Full wrapper contract suite | pass (25/25 historical; 32/32 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-global.json` |
+| Full wrapper contract suite | pass (25/25 historical; 37/37 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-final2.json` |
+| Depth texture filter completeness | pass | X1E `wrapper_probe depth_filter_complete`: D32F app filters read back 9986/9729, sampled `0.5`; host `depth_filter_test` 31 checks |
+| 64-bit timestamp queries | pass | X1E `wrapper_probe timer_query64`: two increasing 64-bit timestamps; EXT entry points loaded and timer extension advertised only when they exist |
+| Same-format depth image copy | pass | X1E `wrapper_probe copy_image_subdata_depth`: D32F `glCopyImageSubData`, sampled `0.5`; format-substitution copies remain untested |
+| Program/array image-uniform routing | pass | X1E `program_uniform_image_binding` and `image_array_uniform_iv`; non-image `1iv` writes preserve caller bytes |
 | Explicit image bindings preserved / fallback scoped per share group | pass | X1E `wrapper_probe explicit_image_binding`, `layout(binding=5)` write/read `0x12345678`; build `86a73e18…9093`; `validation/2026-10-19-x1e-wrapper-explicit-image.json` |
 | Dynamic image units across bind-before-program and program switch | pass | X1E `wrapper_probe act_pingpong`: `values=11,22`, `program_values=11,22`; logical bindings replayed on `glUseProgram` and image-uniform updates; build `cc2b5e2f…8252` |
 | Duplicate/default image binding alias | pass | X1E `wrapper_probe duplicate_image_binding`: repeated formatless `binding=0` separated to units 0/1, values `11,22`; whole-source parser build `a3f5d9d9…0f0c`; `validation/2026-10-19-x1e-wrapper-all-global.json` |
@@ -142,7 +153,7 @@ fidelity reference.
 
 ## Game-process smoke (X1E, installed renderer 2.0.0)
 
-Staged preliminary evidence for the delivery lane on the previous NeoForge patch.
+Staged evidence for the supported delivery-lane tuple.
 FCL 1.3.4.0 launched its existing NeoForge 1.21.1 instance
 (`neoforge-21.1.262`, 9 mods) under the installed MobileGlues 2.0.0 renderer.
 The Minecraft main menu rendered and the process stayed alive. Logcat from that
@@ -152,8 +163,8 @@ unsupported `GL_ARB_shader_image_load_store` / `GL_ARB_gpu_shader5` /
 warnings, and failing generated `iris_Normal` syntax. Those logs are from the
 **installed 2.0.0 library**, not this workspace's build. No shaderpack was loaded.
 The game-process smoke therefore proves only that the launcher/provider path
-starts on 21.1.262; it does not test the locked NeoForge 21.1.264 tuple and
-closes no fidelity, Iris, or pack gate.
+starts on the supported 21.1.262 tuple; it closes no fidelity, Iris, or pack gate.
+NeoForge 21.1.264 is an optional future patch, not a blocker.
 
 ## Game-process runs (X1E, workspace plugin)
 
@@ -178,20 +189,44 @@ units 0–3 for programs 435, 438, 256, 441 and 433. The world was saved and qui
 `2026-10-19-1.21.1-neoforge-21.1.262-world.png` and `...-title.png`. A 26.2 world downgrade prompt was
 canceled; no 26.2 world was loaded. The earlier Sodium/fence failure did not reproduce in this run.
 
-This is a staged pass for NeoForge 21.1.262 only. The exact 1.21.1 / NeoForge 21.1.264 tuple,
-effect-by-effect fidelity, performance, endurance and lifecycle gates remain NOT RUN.
+This is the staged/working reference pass for the supported NeoForge 21.1.262 tuple.
+Effect-by-effect fidelity, performance, endurance and lifecycle gates remain NOT RUN;
+NeoForge 21.1.264 is an optional future patch and is not a gate.
+
+## Named deviations and untested boundaries
+
+These are not advertised as capabilities and are not release passes. The pinned Iris 1.8.14/Sodium
+0.8.13 builds do not call the first two paths; this prevents accidental support claims, not future
+compatibility work.
+
+- **`glTextureBarrier` / `glTextureBarrierNV`:** no legal GLES equivalent for render-to-texture
+  feedback; `glMemoryBarrier`/`glFlush`/`glFinish` cannot remove the ES feedback undefinedness.
+  Remains a named deviation, not advertised. Iris uses its BufferFlipper alternate-texture scheme.
+- **`glTextureView`:** ES has no texture views and the X1E provider lists no
+  `GL_EXT_texture_view`; whole-level EGL image aliasing cannot express mip/layer ranges or format
+  reinterpretation. Not advertised; no pinned call site.
+- **`glInvalidateFramebuffer` logical attachment routing:** native forward does not map logical
+  draw-buffer attachments through the shuffle map. No pinned call site; scheduled with the
+  framebuffer parity backlog.
+- **Depth-filter scan boundary:** draw-time sampler override handling covers 2D depth textures;
+  arrays/cubes/3D get depth-legal texture filters at set/allocation but a sampler override on those
+  targets is not rewritten. Stencil-index mode is not modelled. One-level textures with a
+  mip-requiring min filter remain mip-incomplete, matching desktop.
+- **Copy format substitutions:** same-format D32F copy passes; R16UI→R32UI / RGB8_SNORM→RGBA8_SNORM
+  compatibility-class changes are not yet validated for `glCopyImageSubData`.
 
 ## Device gates (all pending)
 
 | Gate | Required evidence |
 | --- | --- |
-| Exact delivery tuple boot (1.21.1 / NeoForge 21.1.264 / Iris 1.8.14-beta.1 / Sodium 0.8.13) | game-process log naming the exact loader and mod versions |
+| Supported delivery tuple boot (1.21.1 / NeoForge 21.1.262 / Iris 1.8.14-beta.1 / Sodium 0.8.13) | STAGED/PASS for the recorded world/title run; keep the game-process log and captures. Optional 21.1.264 patch is not a gate |
 | Unmodified pack ZIP import and profile selection | F3 capture plus Iris log for an original r5.9.3 ZIP |
 | Same provider in probe and game process | provider library paths, EGL vendor/version, GLES renderer |
 | Vertex image stores / 512-invocation groups | behavioral probe pass/fail on X1E |
 | R8UI/R16UI image representation | allocation, integer read/write, sampling, clear/copy |
-| 202,899,456-byte SSBO binding 0 | allocation plus access near the end of range |
-| WSR 128 / WSR 256 independent | visual reference scenes and resource logs |
+| 50,855,936-byte WSR 128 SSBO binding 0 (required advanced WSR gate) | allocation plus access near the end of range |
+| WSR 128 visual/temporal reference scenes (required) | staged water/room captures and resource logs; effect-specific evidence still open |
+| 202,899,456-byte Ultra SSBO (optional/future X2E) | optional characterization only; `BLOCKED` on X1E and not a release gate |
 | 60 FPS at 1920 × 1200 (target) | frame-time distribution, features constant |
 | 20-minute AC/battery sustained run | thermal/frequency data, no failure or unbounded memory |
 | Lifecycle: resize/maximize/sleep/resume/provider fallback | launcher/game-process evidence |

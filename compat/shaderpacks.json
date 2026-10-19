@@ -5,7 +5,7 @@
   "source_policy": "Original publisher archives are test inputs. Keep them byte-identical, store only hashes and acquisition metadata in Git, and never ship a visually reduced derivative under the original pack name.",
   "lane_reference": {
     "source": "compat/runtime-lock.json#lanes",
-    "current": "S1-current-1.21.1-neoforge: Minecraft 1.21.1 / Java 21 / NeoForge 21.1.264 delivery lane (exact tuple NOT RUN)",
+    "current": "S1-current-1.21.1-neoforge: Minecraft 1.21.1 / Java 21 / NeoForge 21.1.262 delivery lane (supported X1E target; staged/working. 21.1.264 is an optional future patch)",
     "legacy": "S1-legacy: Minecraft 1.20.1 / Java 17 / Fabric",
     "future": "S1-future-26.3: Minecraft 26.3 / Java 25 / Fabric, future/experimental",
     "optional_comparison": "optional-engine-comparison: Minecraft 1.21.11 / Java 21"
@@ -23,21 +23,30 @@
       "colored_lighting": 192,
       "act_volume": [192, 96, 192],
       "world_space_reflections": false,
-      "release_role": "required advanced lighting"
+      "release_role": "required advanced lighting (ACT 192)"
+    },
+    "wsr128": {
+      "author_profile": "custom",
+      "settings": "COLORED_LIGHTING=128, WORLD_SPACE_REFLECTIONS=1",
+      "colored_lighting": 128,
+      "act_volume": [128, 64, 128],
+      "world_space_reflections": true,
+      "release_role": "required advanced WSR target (staged on X1E)"
     },
     "ultra": {
       "author_profile": "Ultra",
       "colored_lighting": 256,
       "act_volume": [256, 128, 256],
       "world_space_reflections": true,
-      "release_role": "required advanced lighting and WSR"
+      "release_role": "optional/future X2E only; NOT REQUIRED for the X1E release",
+      "x1e_status": "BLOCKED by the provider's 134,217,728-byte MAX_SHADER_STORAGE_BLOCK_SIZE; never claimed as supported on X1E"
     },
     "complementary": {
       "author_profile": "Complementary",
       "colored_lighting": 512,
       "act_volume": [512, 256, 512],
       "world_space_reflections": true,
-      "release_role": "optional extended stress; outside the initial full-support claim"
+      "release_role": "optional extended stress; not a release claim"
     }
   },
   "hard_requirements": {
@@ -60,6 +69,7 @@
       "observed_static_max_outputs": 5
     },
     "act_256_resources_mib": {
+      "role": "optional/future X2E sizing; not an X1E release gate",
       "act_images": 144,
       "wsr_images_including_lod": 8.0625,
       "selected_act_wsr_subtotal": 345.5625,
@@ -79,9 +89,14 @@
       "provider_max_shader_storage_block_size": 134217728,
       "wsr_128_ssbo_bytes": 50855936,
       "wsr_128_status": "PASS (staged)",
+      "wsr_128_role": "required advanced WSR target for the X1E release",
+      "wsr_128_required_for_x1e_release": true,
       "wsr_192_ssbo_bytes": 114229248,
       "wsr_192_status": "PASS (staged)",
-      "wsr_256_status": "BLOCKED by the provider limit; system RAM does not repair a smaller accessible range",
+      "wsr_192_role": "optional staged headroom; not an X1E release gate",
+      "wsr_256_status": "BLOCKED on X1E by the provider limit; optional/future X2E work; NOT REQUIRED for the X1E release",
+      "wsr_256_required_for_x1e_release": false,
+      "wsr_256_note": "System RAM does not repair a smaller accessible storage-block range. Never claim WSR 256 as supported on X1E.",
       "optional_player_reflection": {
         "additional_ssbo_bytes": 5376,
         "atlas": "64 x 64 RGBA8",
@@ -109,13 +124,15 @@
       "size": 553397,
       "sha256": "fed6c879e732cf7fc7bc6570ebb1def43235aa7e96f62859fbdbdbfa0b484b38",
       "sha512": "45304b1d7862afdb2177b7e6226fc9c6737911d17a4ad46cc9c519ca4deb935f05072cd337cd8b19a15bb8062b57b54eceec7bdee4cd572d94858e2946d37d85",
-      "role": "required standard and advanced corpus",
-      "profiles": ["high", "very_high", "ultra", "complementary"],
+      "role": "required standard corpus; required ACT 192 and WSR 128 advanced corpus",
+      "profiles": ["high", "very_high", "wsr128", "ultra", "complementary"],
+      "required_profiles": ["high", "very_high", "wsr128"],
+      "optional_future_profiles": ["ultra", "complementary"],
       "lanes": ["current", "legacy", "future"],
       "qualification": {
         "status": "STAGED",
         "effect_matrix": "NOT RUN",
-        "advanced_profiles": "NOT RUN on r5.9.3; ACT/WSR evidence was collected on the r5.9.2 regression asset",
+        "advanced_profiles": "NOT RUN on r5.9.3; ACT 192 and WSR 128 evidence was collected on the r5.9.2 regression asset",
         "staged_evidence": [
           "Historical smoke: MC 1.21.1 / NeoForge, High, pipeline active without fallback, 22 FPS at 2880 x 1585."
         ]
@@ -130,8 +147,10 @@
       "size": 553400,
       "sha256": "98ac741dee294d2a3c82d153349148c3bb7fb688c30eb3b49c3b9ac37e968c5a",
       "sha512": "a085d1d8cda67cd17a2b414eeba48bbd809da069f269bab46246235ec8fe714a275013c70d0504527b0987d810deddddba4564332414ab3b3bd7435932ff808c",
-      "role": "required distinct visual style and advanced corpus",
+      "role": "required distinct visual style and standard corpus; advanced corpus as scheduled",
       "profiles": ["high", "very_high", "ultra", "complementary"],
+      "required_profiles": ["high", "very_high"],
+      "optional_future_profiles": ["ultra", "complementary"],
       "lanes": ["current", "legacy", "future"],
       "qualification": {
         "status": "NOT RUN",
@@ -148,26 +167,27 @@
       "size": 553236,
       "sha256": "7ae5f1d6a4237a5c8893578397e58c9d08b79d7403bc27242aef56957489a278",
       "sha512": "28e138fcd5b53b8f84cceb572d383c9584fd255ffab6a2b726f0ad425d162c2540e31160e0e85402b6df81e29aa0124cdf6b6701ed5e78f0ac4c75135cd555f4",
-      "role": "regression against the prior source generation",
-      "profiles": ["high", "very_high", "ultra", "complementary"],
+      "role": "regression against the prior source generation; carries the staged ACT/WSR evidence",
+      "profiles": ["high", "very_high", "wsr128", "ultra", "complementary"],
+      "required_profiles": ["high", "very_high", "wsr128"],
+      "optional_future_profiles": ["ultra", "complementary"],
       "lanes": ["current", "legacy"],
       "qualification": {
         "status": "STAGED",
-        "blockers": [
-          "WSR 256 exceeds the measured provider storage-block limit"
-        ],
+        "x1e_release_blockers": [],
         "effect_matrix": "NOT RUN",
         "staged_evidence": [
           "High: pipeline active without fallback on the historical 1.21.1/NeoForge instance; 21 FPS at 2880 x 1585.",
-          "Very High ACT 192: distinct cyan and warm colored light, stable over an 8 s sample in one emissive scene.",
-          "WSR 128: 50,855,936-byte SSBO, water and room reflections visible.",
-          "WSR 192: 114,229,248-byte SSBO, terrain and island reflections visible.",
-          "WSR 256: BLOCKED; 202,899,456-byte request exceeds the 134,217,728-byte provider limit."
+          "Very High ACT 192: distinct cyan and warm colored light, stable over an 8 s sample in one emissive scene; required advanced ACT target.",
+          "WSR 128: 50,855,936-byte SSBO, water and room reflections visible; required advanced WSR target.",
+          "WSR 192: 114,229,248-byte SSBO, terrain and island reflections visible; optional staged headroom.",
+          "WSR 256: BLOCKED on X1E; 202,899,456-byte request exceeds the 134,217,728-byte provider limit. Optional/future X2E only; not an X1E release blocker and never claimed as supported."
         ],
         "not_yet_qualified": [
           "effect-by-effect PBR, shadows, bloom, TAA/history and SSR",
-          "player reflections",
-          "the exact 1.21.1 NeoForge 21.1.264 tuple; evidence is from NeoForge 21.1.262"
+          "effect-specific ACT 192 and WSR 128 release qualification; staged scenes are not a full matrix",
+          "optional player reflections",
+          "the supported 1.21.1 NeoForge 21.1.262 tuple is staged/working; effect, performance and lifecycle gates remain open. NeoForge 21.1.264 is an optional future patch"
         ]
       }
     },
@@ -243,7 +263,8 @@
   "qualification_summary": {
     "release_qualified_packs": [],
     "standard_preview_gate": "NOT RUN",
-    "advanced_gate": "BLOCKED by WSR 256 on the current X1E provider",
+    "advanced_gate": "STAGED on X1E: Very High ACT 192 and WSR 128, with WSR 128 the required advanced WSR target. Effect-specific qualification remains open.",
+    "optional_future": "Ultra ACT 256/WSR 256 is NOT REQUIRED for the X1E release and is BLOCKED on X1E by the 134,217,728-byte provider storage-block limit; future X2E work, never claimed as supported. ACT 512 is optional stress.",
     "x2e": "NOT RUN",
     "note": "Staged scene evidence is not an effect-by-effect or release qualification."
   }

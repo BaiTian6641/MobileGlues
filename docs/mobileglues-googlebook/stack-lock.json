@@ -23,7 +23,7 @@
     "lane": "S1-current-1.21.1-neoforge",
     "reference": "compat/runtime-lock.json#lanes.current",
     "role": "delivery lane; unmodified shaderpack ZIPs must import, select a profile and render without effect suppression",
-    "status": "PARTIAL; the exact pinned tuple is NOT RUN",
+    "status": "STAGED / WORKING on NeoForge 21.1.262",
     "minecraft": {
       "version": "1.21.1",
       "manifest": "https://piston-meta.mojang.com/v1/packages/499680d659b7a0ccb2fa9a809c345c5baf2ace7d/1.21.1.json",
@@ -35,10 +35,15 @@
     },
     "loader": {
       "type": "neoforge",
-      "version": "21.1.264",
-      "installer_url": "https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar",
-      "installer_sha1": "f801601bafa7f5957295353930e2cb61dcfddc6c",
-      "installer_sha256": "d7c035dd5436a7c524dfbad6df191b0ef34179fd3edfee9dc99262af3b80239b"
+      "version": "21.1.262",
+      "pin_status": "OBSERVED INSTANCE (installer hashes not recorded)",
+      "optional_future_patch": {
+        "version": "21.1.264",
+        "installer_url": "https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.264/neoforge-21.1.264-installer.jar",
+        "installer_sha1": "f801601bafa7f5957295353930e2cb61dcfddc6c",
+        "installer_sha256": "d7c035dd5436a7c524dfbad6df191b0ef34179fd3edfee9dc99262af3b80239b",
+        "status": "NOT RUN; optional future patch, not a delivery target or release blocker"
+      }
     },
     "iris": {
       "version": "1.8.14-beta.1+1.21.1-neoforge",
@@ -71,7 +76,7 @@
       },
       "pairing_rule": "Sodium 0.8.13 is not the declared pairing for Iris 1.8.12; t3ruzodq declares Pb3OXVqC."
     },
-    "observed_precedent": "Only NeoForge 21.1.262 has a game-process smoke; see game_tuple.observed_device_instance and compat/launcher-lock.json. The exact 21.1.264 tuple is NOT RUN.",
+    "observed_precedent": "NeoForge 21.1.262 is the supported X1E target and has the reference game-process run; see game_tuple.observed_device_instance and compat/launcher-lock.json. NeoForge 21.1.264 is an optional future patch, not a blocker.",
     "support_claim": "none"
   },
   "core": {
