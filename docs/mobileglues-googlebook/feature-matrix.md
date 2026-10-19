@@ -133,7 +133,7 @@ fidelity reference.
 | `glShaderSource` multi-string / explicit-length regression | pass | host `tests/run.sh`; X1E `wrapper_probe source_multi`, `source_multi_implicit` |
 | RGB8_SNORM render-target backing | pass | X1E `wrapper_probe rgb8_snorm_attachment`: both TexImage2D and TexStorage2D FBOs complete |
 | Desktop GLSL version normalization | pass for simple shaders | X1E `wrapper_probe desktop_glsl_120/150/330/400/460` |
-| Full wrapper contract suite | pass (25/25 historical; 55/55 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-translation55.json` |
+| Full wrapper contract suite | pass (25/25 historical; 56/56 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-perf-all-56.json` |
 | Failed translation replaces backend source | pass | X1E `translation_failure_not_stale`: valid source compiles, then rejected desktop source leaves backend source length 0 and compile status false |
 | Shared fragment shader program ownership | pass | X1E `frag_data_shared_shader`: program A patches location 5; program B links the restored original with no location 5 |
 | Initialized uniform array suffix | pass | X1E `initialized_uniform_array`: `uniform float weights[4] = float[4](...)` becomes `uniform highp float weights[4];` |
@@ -177,6 +177,7 @@ fidelity reference.
 | Per-physical-unit image-binding dedupe | measured on X1E | identical image bind **54.74 → 23.80 ns** (`performance.md`) |
 | Image-bind backend error probe gated to lowered/unknown formats | implemented, included in bind measurement | source; not separately isolated |
 | Uniform fast path for programs without image uniforms | implemented, unmeasured | source; perfetto pending |
+| 3D image clear reuse/dispatch reduction | measured on X1E | 128×64×128 R32UI **151.1 → 88.9 µs** per clear; last-x canary passes |
 
 ## iterationRP Alpha 0.8.31 adoption
 

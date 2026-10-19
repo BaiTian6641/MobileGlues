@@ -50,8 +50,8 @@ Fabric remains the legacy lane and is still unbeaten.
   (user-reported) but fail the performance/power gate; WSR 128 without player reflections remains
   the supported advanced target. First wrapper CPU changes are measured on X1E: depth-guard plain
   dispatch **780.4 → 588.6 ns**, guard path **862.6 → 713.0 ns**, identical image bind
-  **54.74 → 23.80 ns**. Correctness suite is **55/55** on the performance build. In-game FPS,
-  power and thermal gates remain open. WSR 256 remains future X2E work, never claimed on X1E.
+  **54.74 → 23.80 ns**; 128×64×128 R32UI image clear **151.1 → 88.9 µs**. Correctness suite is
+  **56/56** on the performance build. In-game FPS, power and thermal gates remain open. WSR 256 remains future X2E work, never claimed on X1E.
 - Image binding / ACT repair (bridge 1.0.17): fixed name-to-unit registry shared by the transformer and
   Iris ProgramImages; `voxel_img` per-frame clear restored. On X1E, ACT 192 colors are distinct, WSR 192
   is stable in motion, and the earlier light ghosting/flicker is gone. Residual: the pack's half-rate

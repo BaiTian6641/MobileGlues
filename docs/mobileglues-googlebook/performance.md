@@ -18,6 +18,7 @@ future X2E work. Player reflections now render but are performance/power-unquali
 | Per-physical-unit image-binding shadow; skip identical `glBindImageTexture` calls from `glBindImageTexture`, `mg_materialize_image_bindings` and program switches | Each program switch and image-uniform write replayed every image; reflection scenes have several live images and frequent switches | Removes redundant ANGLE/Vulkan descriptor binds; no deferral, so ordering is unchanged | X1E, 100k identical binds: **54.74 → 23.80 ns/bind** (−56.5%). `validation/2026-10-19-x1e-perf-image-rebind-{before,after}.json` |
 | Probe backend `glGetError` only when a format was lowered or is unknown | The common R32UI/RGBA image bind paid a backend error round trip per call | Removes one round trip from the common image-bind path | Included in the image-rebind measurement; not separately isolated |
 | Fast path for `glUniform1i`/`glUniform1iv` when the current program has no image uniforms; per-program `has_image_uniforms` flag | Sampler/scalar writes were doing share-group and location hash lookups for a feature the program does not use | Removes two hash probes from the common uniform path | Not separately measured yet; `perfetto`/`simpleperf` pending |
+| 3D image clear: level-0 recorded extents, four x-spans per invocation, dispatch groups ÷4 | Iris clears voxel/WSR volumes every frame; the old path issued one invocation per voxel and three driver queries per clear | Fewer invocations/groups and no bind/query on the dominant level-0 path | X1E 128×64×128 R32UI: **151.1 → 88.9 µs** per clear (−41.1%); `validation/2026-10-19-x1e-perf-clear-{before,after}.json`; 128×64×128 canary clears last x voxel (`...-clear-volume.json`) |
 
 Source review: `PerformanceAudit` agent, 2026-10-19. The audit ranked image replay first, the
 unconditional image-bind error probe second, and the uniform hash path third. It explicitly marked
@@ -50,6 +51,6 @@ adb -s C1L63708PZ shell 'cd /data/local/tmp && MG_DIR_PATH=/data/local/tmp/mgcon
 ```
 
 In-game A/B: same world, camera route, resolution, pack profile and warmup; capture F3 frame time
-and logcat. Correctness suite on this build is **55/55**
-(`validation/2026-10-19-x1e-perf-all-55.json`). In-game FPS, power and thermal results remain
+and logcat. Correctness suite on the clear-optimized build is **56/56**
+(`validation/2026-10-19-x1e-perf-all-56.json`). In-game FPS, power and thermal results remain
 pending; these microbenchmarks do not establish a playable profile.

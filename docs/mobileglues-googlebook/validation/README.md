@@ -54,6 +54,10 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-perf-image-rebind-before.json` | 2026-10-19 | target device, wrapper microbenchmark | `image_rebind_bench` on core `e7795ad5…54b` | `54.74 ns` per identical image bind |
 | `2026-10-19-x1e-perf-image-rebind-after.json` | 2026-10-19 | target device, wrapper microbenchmark | same probe on performance core `cbebfc77…7105` | `23.80 ns` per identical image bind |
 | `2026-10-19-x1e-perf-all-55.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` on performance core `cbebfc77…7105` | 55/55 PASS |
+| `2026-10-19-x1e-perf-clear-before.json` | 2026-10-19 | target device, wrapper microbenchmark | `clear_bench` on core `cbebfc77…7105` | 128×64×128 R32UI clear `151.1 µs` |
+| `2026-10-19-x1e-perf-clear-after.json` | 2026-10-19 | target device, wrapper microbenchmark | `clear_bench` on core `a7558cd4…45a6` | 128×64×128 R32UI clear `88.9 µs` |
+| `2026-10-19-x1e-clear-volume.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 clear_tex_volume` | PASS: 128×64×128 clear covers last x voxel; all canaries read 0 |
+| `2026-10-19-x1e-perf-all-56.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` on clear-optimized core `a7558cd4…45a6` | 56/56 PASS |
 
 ## Game-process captures and logs
 
