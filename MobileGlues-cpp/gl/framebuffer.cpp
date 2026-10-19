@@ -365,6 +365,34 @@ void glBlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint
                        GLint dstY1, GLbitfield mask, GLenum filter) {
     LOG()
     mg_fsr_read_scope_t fsr_read;
+    // Desktop GL requires the complete depth/stencil formats to match when
+    // either bit is blitted; mismatch is GL_INVALID_OPERATION. GLES has the same
+    // rule, but ANGLE's Vulkan path can lose the device before it reports it on
+    // this provider. Enforce the specified error here, before the driver. The
+    // FSR scope is active first: when the app reads framebuffer 0, the real
+    // source is the FSR target and its depth attachment must be the one checked.
+    if (mask & (GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)) {
+        GLint srcDepth = 0, srcStencil = 0, dstDepth = 0, dstStencil = 0;
+        GLES.glGetFramebufferAttachmentParameteriv(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                                   GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE, &srcDepth);
+        GLES.glGetFramebufferAttachmentParameteriv(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                                   GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE, &srcStencil);
+        GLES.glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                                   GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE, &dstDepth);
+        GLES.glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                                   GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE, &dstStencil);
+        const bool depth_missing =
+            (mask & GL_DEPTH_BUFFER_BIT) && (srcDepth == 0 || dstDepth == 0);
+        const bool stencil_missing =
+            (mask & GL_STENCIL_BUFFER_BIT) && (srcStencil == 0 || dstStencil == 0);
+        if (depth_missing || stencil_missing || srcDepth != dstDepth || srcStencil != dstStencil) {
+            FB_WARN_ONCE("glBlitFramebuffer: depth/stencil formats do not match "
+                         "(src=%d/%d dst=%d/%d mask=0x%x); reporting GL_INVALID_OPERATION",
+                         srcDepth, srcStencil, dstDepth, dstStencil, (unsigned)mask);
+            mg_set_gl_error(GL_INVALID_OPERATION);
+            return;
+        }
+    }
     GLES.glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
     CHECK_GL_ERROR
 }

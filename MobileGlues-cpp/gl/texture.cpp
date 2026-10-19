@@ -1489,12 +1489,29 @@ void glCopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffse
         // it; unsized destinations are normalized to DEPTH24 at allocation.
         GLint srcDepthSize = 0;
         GLint dstDepthSize = 0;
+        GLint srcStencilSize = 0;
+        GLint dstStencilSize = 0;
         glGetFramebufferAttachmentParameteriv(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
                                               GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE, &srcDepthSize);
+        glGetFramebufferAttachmentParameteriv(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                              GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE, &srcStencilSize);
         glGetTexLevelParameteriv(target, level, GL_TEXTURE_DEPTH_SIZE, &dstDepthSize);
-        if (srcDepthSize != 0 && dstDepthSize != 0 && srcDepthSize != dstDepthSize) {
-            TX_WARN_ONCE("glCopyTexSubImage2D: skipping depth blit with mismatched sizes src=%d dst=%d", srcDepthSize,
-                         dstDepthSize);
+        glGetTexLevelParameteriv(target, level, GL_TEXTURE_STENCIL_SIZE, &dstStencilSize);
+        // ANGLE requires the complete depth/stencil formats to match, not just
+        // the depth width. A D24 destination copied from a D24S8 source passed
+        // the width check and lost the Vulkan device inside the blit; the next
+        // fence then failed and the game crashed. A source without depth is
+        // equally unblittable and must not reach the driver.
+        if (srcDepthSize == 0 || dstDepthSize == 0) {
+            TX_WARN_ONCE("glCopyTexSubImage2D: skipping depth blit without a depth source (src=%d dst=%d)",
+                         srcDepthSize, dstDepthSize);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, prevDrawFBO);
+            glDeleteFramebuffers(1, &tempDrawFBO);
+            return;
+        }
+        if (srcDepthSize != dstDepthSize || srcStencilSize != dstStencilSize) {
+            TX_WARN_ONCE("glCopyTexSubImage2D: skipping depth blit with mismatched formats src=%d/%d dst=%d/%d",
+                         srcDepthSize, srcStencilSize, dstDepthSize, dstStencilSize);
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, prevDrawFBO);
             glDeleteFramebuffers(1, &tempDrawFBO);
             return;
