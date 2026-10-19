@@ -1046,9 +1046,13 @@ void* glMapBuffer(GLenum target, GLenum access) {
         borrowed_target_t t(target);
         return GLES.glMapBufferOES(t.target, access);
     }
-    GLint buffer_size;
+    GLint buffer_size = 0;
     glGetBufferParameteriv(target, GL_BUFFER_SIZE, &buffer_size);
-    if (buffer_size <= 0 || glGetError() != GL_NO_ERROR) {
+    // This is an internal query, not an application contract. It used to call
+    // the frontend glGetError(), which always answered GL_NO_ERROR; with truthful
+    // error reporting that check would either consume an unrelated application
+    // error or fail on stale state. The buffer size is the only fact needed.
+    if (buffer_size <= 0) {
         return nullptr;
     }
     GLbitfield flags = 0;

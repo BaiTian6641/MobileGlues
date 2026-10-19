@@ -95,10 +95,13 @@ void glGetIntegerv(GLenum pname, GLint* params) {
         }
         break;
     case GL_MAX_TEXTURE_IMAGE_UNITS: {
-        int es_params = 16;
-        GLES.glGetIntegerv(pname, &es_params);
-        CHECK_GL_ERROR(*params) = es_params * 2;
-        // Why is the real GL_MAX_TEXTURE_IMAGE_UNITS bigger than what GLES.glGetIntegerv returns?
+        // Report the backend's actual per-stage limit. This used to double it,
+        // which promised applications twice the texture units the driver would
+        // accept; on the X1E provider the driver reports 32 and the frontend
+        // advertised 64. The layer tracks more units, but it cannot make the
+        // fragment stage sample them.
+        GLES.glGetIntegerv(pname, params);
+        CHECK_GL_ERROR
         break;
     }
     case GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS: {
@@ -175,37 +178,31 @@ void glGetIntegerv(GLenum pname, GLint* params) {
         }
         GLES.glGetIntegerv(pname, params);
         LOG_D("  -> %d", *params)
-        CHECK_GL_ERROR
+        // A query the backend rejected is an application-visible error. Promote
+        // it here so glGetError() reports it; the general CHECK_GL_ERROR path
+        // intentionally leaves internal translation errors as diagnostics.
+        const GLenum backend_error = GLES.glGetError();
+        if (backend_error != GL_NO_ERROR) mg_set_gl_error(backend_error);
     }
     }
 }
 
 GLenum glGetError() {
     LOG()
-    // Both are consumed whether or not they get reported: leaving either latched
-    // would hand it to a later, unrelated glGetError.
+    // Both queues are drained on every call so an error cannot be handed to a
+    // later, unrelated glGetError. The frontend queue is the application-visible
+    // one: it contains errors raised by this layer's validation and by wrappers
+    // that forward an invalid operation. Backend errors that never passed
+    // through that queue are internal translation diagnostics; they are logged
+    // rather than impersonating the application's error state.
     const GLenum backend = GLES.glGetError();
     const GLenum frontend = g_frontend_error;
     g_frontend_error = GL_NO_ERROR;
 
-    // GL_NO_ERROR, always, in every configuration and whatever ignoreError says.
-    //
-    // Deliberate, and not the same thing as not knowing. This layer emulates
-    // enough of desktop GL on top of GLES that a faithfully forwarded error is
-    // more often an artefact of how a call had to be translated than something the
-    // application got wrong -- and hosts treat errors as fatal or fall back to
-    // slower paths on them. One example from inside this very library:
-    // gl/buffer.cpp's glMapBuffer asks glGetError and returns nullptr if it is
-    // not clear, a branch that only stays dead because of this.
-    //
-    // What the errors are still for is the log. Every path that raises one names
-    // itself right next to the call, so a quiet failure is diagnosable from a
-    // logcat even though the application will never be told.
-    const GLenum swallowed = frontend != GL_NO_ERROR ? frontend : backend;
-    if (swallowed != GL_NO_ERROR) {
-        LOG_W("glGetError -> %s, reported to the application as GL_NO_ERROR", glEnumToString(swallowed))
+    if (backend != GL_NO_ERROR) {
+        LOG_W("internal GLES error drained by glGetError: %s", glEnumToString(backend))
     }
-    return GL_NO_ERROR;
+    return frontend;
 }
 
 static std::string es_ext;

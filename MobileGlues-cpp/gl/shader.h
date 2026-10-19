@@ -10,19 +10,6 @@
 #include <GL/gl.h>
 #include <string>
 
-struct shader_t {
-    GLuint id;
-    std::string converted;
-    // Owned by value. It was a char* holding a `new char[]` that nothing ever
-    // deleted: glBindFragDataLocation overwrote it, glLinkProgram nulled it and
-    // glShaderSource abandoned it, so every patched shader source stayed on the
-    // heap for the life of the process.
-    std::string frag_data_changed_converted;
-    int frag_data_changed;
-};
-
-extern struct shader_t shaderInfo;
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -32,6 +19,8 @@ extern "C"
                                          const GLint* length);
 
     GLAPI GLAPIENTRY void glGetShaderiv(GLuint shader, GLenum pname, GLint* params);
+
+    GLAPI GLAPIENTRY void glDeleteShader(GLuint shader);
 
 #ifdef __cplusplus
 }

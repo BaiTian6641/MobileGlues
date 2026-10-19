@@ -18,6 +18,10 @@
 
 thread_local MGContext* g_current_ctx = nullptr;
 
+unsigned long long mg_current_share_group_id() {
+    return (g_current_ctx && g_current_ctx->share_group) ? g_current_ctx->share_group->id : 0;
+}
+
 namespace {
 
 // The library initialises itself from a static constructor, and that

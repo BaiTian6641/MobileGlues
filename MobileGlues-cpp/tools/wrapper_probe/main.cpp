@@ -1,0 +1,628 @@
+// MobileGlues - tools/wrapper_probe/main.cpp
+// SPDX-License-Identifier: LGPL-2.1-only
+//
+// Loads a built libmobileglues.so and exercises the frontend contracts that are
+// testable without Minecraft: EGL context creation, multi-string glShaderSource,
+// compile-status truthfulness, glGetError, and advertised limits.
+//
+// Usage: wrapper_probe [case]
+//   all (default), source_multi, source_embedded_nul, compile_failure,
+//   get_error, limits, strings
+// Each case runs in the process named by the caller; run "all" in a child process
+// so a frontend defect cannot take the harness's launcher with it.
+
+#include <EGL/egl.h>
+#include <GLES3/gl32.h>
+#include <MG/extensions.h>
+
+#include <dlfcn.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+#include <vector>
+#include <unistd.h>
+
+namespace {
+
+void* g_lib = nullptr;
+FILE* g_out = stdout;
+
+template <typename T>
+T sym(const char* name) {
+    void* p = dlsym(g_lib, name);
+    if (!p) {
+        fprintf(stderr, "missing symbol: %s\n", name);
+        exit(90);
+    }
+    return reinterpret_cast<T>(p);
+}
+
+struct Api {
+    PFNEGLGETDISPLAYPROC eglGetDisplay;
+    PFNEGLINITIALIZEPROC eglInitialize;
+    PFNEGLBINDAPIPROC eglBindAPI;
+    PFNEGLCHOOSECONFIGPROC eglChooseConfig;
+    PFNEGLCREATEPBUFFERSURFACEPROC eglCreatePbufferSurface;
+    PFNEGLCREATECONTEXTPROC eglCreateContext;
+    PFNEGLMAKECURRENTPROC eglMakeCurrent;
+    PFNEGLDESTROYSURFACEPROC eglDestroySurface;
+    PFNEGLDESTROYCONTEXTPROC eglDestroyContext;
+    PFNEGLTERMINATEPROC eglTerminate;
+    PFNEGLGETPROCADDRESSPROC eglGetProcAddress;
+
+    PFNGLGETSTRINGPROC glGetString;
+    PFNGLGETSTRINGIPROC glGetStringi;
+    PFNGLGETINTEGERVPROC glGetIntegerv;
+    PFNGLGETERRORPROC glGetError;
+    PFNGLCREATESHADERPROC glCreateShader;
+    PFNGLSHADERSOURCEPROC glShaderSource;
+    PFNGLCOMPILESHADERPROC glCompileShader;
+    PFNGLGETSHADERIVPROC glGetShaderiv;
+    PFNGLGETSHADERINFOLOGPROC glGetShaderInfoLog;
+    PFNGLGETSHADERSOURCEPROC glGetShaderSource;
+    PFNGLDELETESHADERPROC glDeleteShader;
+    PFNGLCREATEPROGRAMPROC glCreateProgram;
+    PFNGLATTACHSHADERPROC glAttachShader;
+    PFNGLLINKPROGRAMPROC glLinkProgram;
+    PFNGLGETPROGRAMIVPROC glGetProgramiv;
+    PFNGLGETPROGRAMINFOLOGPROC glGetProgramInfoLog;
+    PFNGLDELETEPROGRAMPROC glDeleteProgram;
+    GLint (*glBindFragDataLocation)(GLuint, GLuint, const GLchar*);
+    GLint (*glGetFragDataLocation)(GLuint, const GLchar*);
+    PFNGLUSEPROGRAMPROC glUseProgram;
+    PFNGLBINDBUFFERPROC glBindBuffer;
+    PFNGLBUFFERDATAPROC glBufferData;
+    PFNGLBINDBUFFERBASEPROC glBindBufferBase;
+    PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation;
+    PFNGLUNIFORM1UIPROC glUniform1ui;
+    PFNGLDISPATCHCOMPUTEPROC glDispatchCompute;
+    PFNGLMEMORYBARRIERPROC glMemoryBarrier;
+    PFNGLMAPBUFFERRANGEPROC glMapBufferRange;
+    PFNGLUNMAPBUFFERPROC glUnmapBuffer;
+    PFNGLBINDIMAGETEXTUREPROC glBindImageTexture;
+    PFNGLTEXSTORAGE2DPROC glTexStorage2D;
+    PFNGLTEXSTORAGE3DPROC glTexStorage3D;
+    PFNGLGENTEXTURESPROC glGenTextures;
+    PFNGLBINDTEXTUREPROC glBindTexture;
+    PFNGLTEXPARAMETERIPROC glTexParameteri;
+    PFNGLDELETETEXTURESPROC glDeleteTextures;
+    PFNGLDRAWARRAYSPROC glDrawArrays;
+    PFNGLGENVERTEXARRAYSPROC glGenVertexArrays;
+    PFNGLBINDVERTEXARRAYPROC glBindVertexArray;
+    PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
+    PFNGLFINISHPROC glFinish;
+    PFNGLVIEWPORTPROC glViewport;
+    PFNGLENABLEPROC glEnable;
+    PFNGLDISABLEPROC glDisable;
+    PFNGLBLENDFUNCPROC glBlendFunc;
+};
+
+Api api;
+EGLDisplay display = EGL_NO_DISPLAY;
+EGLSurface surface = EGL_NO_SURFACE;
+EGLContext context = EGL_NO_CONTEXT;
+
+bool make_context() {
+    display = api.eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (display == EGL_NO_DISPLAY) return false;
+    EGLint major = 0, minor = 0;
+    if (!api.eglInitialize(display, &major, &minor)) return false;
+    api.eglBindAPI(EGL_OPENGL_ES_API);
+    const EGLint cfg_attribs[] = {
+        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+        EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
+        EGL_NONE,
+    };
+    EGLConfig config = nullptr;
+    EGLint num = 0;
+    if (!api.eglChooseConfig(display, cfg_attribs, &config, 1, &num) || num <= 0) return false;
+    const EGLint pb_attribs[] = {EGL_WIDTH, 64, EGL_HEIGHT, 64, EGL_NONE};
+    surface = api.eglCreatePbufferSurface(display, config, pb_attribs);
+    if (surface == EGL_NO_SURFACE) return false;
+    // Ask for the desktop GL 4.0 profile the plugin advertises, then fall back
+    // to the ES3 context MobileGlues also exposes. The frontend chooses what it
+    // can grant; record which one we got.
+    const EGLint desktop_attribs[] = {EGL_CONTEXT_MAJOR_VERSION, 4, EGL_CONTEXT_MINOR_VERSION, 0, EGL_NONE};
+    context = api.eglCreateContext(display, config, EGL_NO_CONTEXT, desktop_attribs);
+    if (context == EGL_NO_CONTEXT) {
+        const EGLint es_attribs[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
+        context = api.eglCreateContext(display, config, EGL_NO_CONTEXT, es_attribs);
+    }
+    if (context == EGL_NO_CONTEXT) return false;
+    return api.eglMakeCurrent(display, surface, surface, context);
+}
+
+void destroy_context() {
+    if (display == EGL_NO_DISPLAY) return;
+    api.eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    if (surface != EGL_NO_SURFACE) api.eglDestroySurface(display, surface);
+    if (context != EGL_NO_CONTEXT) api.eglDestroyContext(display, context);
+    api.eglTerminate(display);
+}
+
+std::string gl_string(GLenum name) {
+    const GLubyte* s = api.glGetString(name);
+    return s ? reinterpret_cast<const char*>(s) : "<null>";
+}
+
+std::string escape(const std::string& s) {
+    std::string out = "\"";
+    for (char c : s) {
+        if (c == '"' || c == '\\') out += '\\';
+        if (c == '\0') {
+            out += "\\u0000";
+        } else if (c == '\n') {
+            out += "\\n";
+        } else if (c == '\r') {
+            out += "\\r";
+        } else {
+            out += c;
+        }
+    }
+    out += '"';
+    return out;
+}
+
+std::string shader_log(GLuint shader) {
+    GLint len = 0;
+    api.glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+    if (len <= 0) return {};
+    std::string log(static_cast<size_t>(len), '\0');
+    api.glGetShaderInfoLog(shader, len, nullptr, log.data());
+    const size_t nul = log.find('\0');
+    if (nul != std::string::npos) log.resize(nul);
+    return log;
+}
+
+struct Result {
+    bool ok = false;
+    std::string detail;
+};
+
+Result compile_multi_string(const char* label, const std::vector<std::string>& pieces,
+                            const std::vector<GLint>& lengths, bool pass_lengths) {
+    Result r;
+    std::string joined;
+    for (const auto& p : pieces) joined += p;
+    GLuint shader = api.glCreateShader(GL_FRAGMENT_SHADER);
+    std::vector<const GLchar*> pointers;
+    for (const auto& p : pieces) pointers.push_back(p.c_str());
+    api.glShaderSource(shader, static_cast<GLsizei>(pointers.size()), pointers.data(),
+                       pass_lengths ? lengths.data() : nullptr);
+    api.glCompileShader(shader);
+    GLint status = GL_FALSE;
+    api.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+    const std::string log = shader_log(shader);
+    r.ok = (status == GL_TRUE);
+    r.detail = std::string(label) + " status=" + (status ? "true" : "false") +
+               " pieces=" + std::to_string(pieces.size()) +
+               " expected_bytes=" + std::to_string(joined.size()) +
+               (log.empty() ? "" : " log=" + log);
+    api.glDeleteShader(shader);
+    return r;
+}
+
+Result test_source_multi() {
+    const char* a = "#version 300 es\nprecision mediump float;\n";
+    const char* b = "out vec4 color;\nvoid main() {\n";
+    const char* c = "  color = vec4(1.0, 0.5, 0.25, 1.0);\n}\n";
+    std::vector<std::string> pieces = {a, b, c};
+    std::vector<GLint> lengths = {static_cast<GLint>(strlen(a)), static_cast<GLint>(strlen(b)),
+                                  static_cast<GLint>(strlen(c))};
+    return compile_multi_string("multi_string_explicit_lengths", pieces, lengths, true);
+}
+
+Result test_source_multi_implicit() {
+    const char* a = "#version 300 es\nprecision mediump float;\n";
+    const char* b = "out vec4 color;\nvoid main(){color=vec4(0.0,1.0,0.0,1.0);}\n";
+    std::vector<std::string> pieces = {a, b};
+    std::vector<GLint> lengths = {0, 0};
+    return compile_multi_string("multi_string_no_lengths", pieces, lengths, false);
+}
+
+Result test_source_embedded_nul() {
+    // A length-delimited source containing NUL is legal at the API boundary.
+    // A frontend that calls strlen() instead of using the supplied length will
+    // truncate it and produce a different source. Keep the shader text itself
+    // valid after the NUL so the backend compile can still be observed.
+    const char prefix[] = "#version 300 es\nprecision mediump float;\nout vec4 color;\nvoid main(){color=vec4(1.0);}\n";
+    std::string piece(prefix, sizeof(prefix) - 1);
+    piece.push_back('\0');
+    piece += "// trailing comment after an embedded NUL\n";
+    const GLint len = static_cast<GLint>(piece.size());
+    return compile_multi_string("single_string_embedded_nul", {piece}, {len}, true);
+}
+
+Result test_compile_failure() {
+    Result r;
+    const char* bad = "#version 300 es\nprecision mediump float;\nout vec4 color;\nvoid main(){ color = not_a_value; }\n";
+    GLuint shader = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(shader, 1, &bad, nullptr);
+    api.glCompileShader(shader);
+    GLint status = GL_TRUE;
+    api.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+    const std::string log = shader_log(shader);
+    r.ok = (status == GL_FALSE);
+    r.detail = "invalid_shader_reported_status=" + std::string(status ? "true (MASKED)" : "false (truthful)") +
+               (log.empty() ? "" : " log=" + log);
+    api.glDeleteShader(shader);
+    return r;
+}
+
+Result test_get_error() {
+    Result r;
+    while (api.glGetError() != GL_NO_ERROR) {}
+    GLint value = 0;
+    api.glGetIntegerv(static_cast<GLenum>(0xdeadbeef), &value);
+    const GLenum error = api.glGetError();
+    r.ok = (error == GL_INVALID_ENUM);
+    r.detail = "after_invalid_enum=" + std::to_string(error) +
+               (error == GL_NO_ERROR ? " (SWALLOWED)" : " (reported)");
+    return r;
+}
+
+Result test_limits() {
+    Result r;
+    GLint frontend = 0;
+    api.glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &frontend);
+    const GLubyte* exts = api.glGetString(GL_EXTENSIONS);
+    const bool backend_access = exts && strstr(reinterpret_cast<const char*>(exts), "GL_MG_backend_string_getter_access");
+    // The backend limit is in the below-wrapper probe; this harness records what
+    // the application is actually told. MG_EXPECT_MAX_TEXTURE_IMAGE_UNITS lets a
+    // runner pin the provider's value without hardcoding one device in the test.
+    const char* expected_env = getenv("MG_EXPECT_MAX_TEXTURE_IMAGE_UNITS");
+    const int expected = expected_env ? atoi(expected_env) : -1;
+    r.ok = (expected < 0) ? true : (frontend == expected);
+    r.detail = "frontend_max_texture_image_units=" + std::to_string(frontend) +
+               " backend_access=" + (backend_access ? "yes" : "no") +
+               (expected >= 0 ? " expected=" + std::to_string(expected) : "");
+    return r;
+}
+
+Result test_strings() {
+    Result r;
+    r.ok = true;
+    r.detail = "renderer=" + gl_string(GL_RENDERER) + " version=" + gl_string(GL_VERSION) +
+               " shading=" + gl_string(GL_SHADING_LANGUAGE_VERSION);
+    return r;
+}
+
+Result test_link_failure() {
+    Result r;
+    // A vertex/fragment interface mismatch must fail to link. A compute-only
+    // program links successfully as a compute program and is not a failure.
+    const char* vs = "#version 300 es\nout vec3 mismatch;\nvoid main() { mismatch = vec3(1.0); gl_Position = vec4(0.0); }\n";
+    const char* fs = "#version 300 es\nprecision mediump float;\nin vec4 mismatch;\nout vec4 color;\nvoid main() { color = mismatch; }\n";
+    GLuint vshader = api.glCreateShader(GL_VERTEX_SHADER);
+    api.glShaderSource(vshader, 1, &vs, nullptr);
+    api.glCompileShader(vshader);
+    GLuint fshader = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(fshader, 1, &fs, nullptr);
+    api.glCompileShader(fshader);
+    GLint vstatus = GL_FALSE, fstatus = GL_FALSE;
+    api.glGetShaderiv(vshader, GL_COMPILE_STATUS, &vstatus);
+    api.glGetShaderiv(fshader, GL_COMPILE_STATUS, &fstatus);
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, vshader);
+    api.glAttachShader(program, fshader);
+    api.glLinkProgram(program);
+    GLint lstatus = GL_TRUE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &lstatus);
+    GLint plen = 0;
+    api.glGetProgramiv(program, GL_INFO_LOG_LENGTH, &plen);
+    std::string log(static_cast<size_t>(plen), '\0');
+    if (plen > 0) api.glGetProgramInfoLog(program, plen, nullptr, log.data());
+    r.ok = (vstatus == GL_TRUE && fstatus == GL_TRUE && lstatus == GL_FALSE);
+    r.detail = "interface_mismatch_link_status=" + std::string(lstatus ? "true (MASKED?)" : "false") +
+               " vshader=" + (vstatus ? "compiled" : "failed") +
+               " fshader=" + (fstatus ? "compiled" : "failed") +
+               (log.empty() ? "" : " log=" + log);
+    api.glDeleteProgram(program);
+    api.glDeleteShader(vshader);
+    api.glDeleteShader(fshader);
+    return r;
+}
+
+Result test_frag_data_isolation() {
+    Result r;
+    const char* vs = "#version 300 es\nvoid main() { gl_Position = vec4(0.0, 0.0, 0.0, 1.0); }\n";
+    const char* fs_a = "#version 300 es\nprecision mediump float;\nout vec4 myOut;\nvoid main() { myOut = vec4(1.0, 0.0, 0.0, 1.0); }\n";
+    const char* fs_b = "#version 300 es\nprecision mediump float;\nout vec4 myOut;\nvoid main() { myOut = vec4(0.0, 1.0, 0.0, 1.0); }\n";
+
+    GLuint vshader = api.glCreateShader(GL_VERTEX_SHADER);
+    api.glShaderSource(vshader, 1, &vs, nullptr);
+    api.glCompileShader(vshader);
+    GLint vstatus = GL_FALSE;
+    api.glGetShaderiv(vshader, GL_COMPILE_STATUS, &vstatus);
+
+    GLuint fshader_a = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(fshader_a, 1, &fs_a, nullptr);
+    api.glCompileShader(fshader_a);
+    GLuint fshader_b = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(fshader_b, 1, &fs_b, nullptr);
+    api.glCompileShader(fshader_b);
+    GLint fstatus_a = GL_FALSE, fstatus_b = GL_FALSE;
+    api.glGetShaderiv(fshader_a, GL_COMPILE_STATUS, &fstatus_a);
+    api.glGetShaderiv(fshader_b, GL_COMPILE_STATUS, &fstatus_b);
+
+    GLuint program_a = api.glCreateProgram();
+    api.glAttachShader(program_a, vshader);
+    api.glAttachShader(program_a, fshader_a);
+    api.glBindFragDataLocation(program_a, 2, "myOut");
+    api.glLinkProgram(program_a);
+
+    GLuint program_b = api.glCreateProgram();
+    api.glAttachShader(program_b, vshader);
+    api.glAttachShader(program_b, fshader_b);
+    api.glBindFragDataLocation(program_b, 1, "myOut");
+    api.glLinkProgram(program_b);
+
+    GLint link_a = GL_FALSE, link_b = GL_FALSE;
+    api.glGetProgramiv(program_a, GL_LINK_STATUS, &link_a);
+    api.glGetProgramiv(program_b, GL_LINK_STATUS, &link_b);
+    const GLint loc_a = api.glGetFragDataLocation(program_a, "myOut");
+    const GLint loc_b = api.glGetFragDataLocation(program_b, "myOut");
+
+    // Relink A after changing only A's binding. B must stay at 1.
+    api.glBindFragDataLocation(program_a, 3, "myOut");
+    api.glLinkProgram(program_a);
+    GLint link_a2 = GL_FALSE;
+    api.glGetProgramiv(program_a, GL_LINK_STATUS, &link_a2);
+    const GLint loc_a2 = api.glGetFragDataLocation(program_a, "myOut");
+    const GLint loc_b2 = api.glGetFragDataLocation(program_b, "myOut");
+
+    r.ok = (vstatus && fstatus_a && fstatus_b && link_a && link_b && link_a2 &&
+            loc_a == 2 && loc_b == 1 && loc_a2 == 3 && loc_b2 == 1);
+    r.detail = "vs=" + std::to_string(vstatus) + " fsa=" + std::to_string(fstatus_a) +
+               " fsb=" + std::to_string(fstatus_b) + " linkA=" + std::to_string(link_a) +
+               " linkB=" + std::to_string(link_b) + " linkA2=" + std::to_string(link_a2) +
+               " locA=" + std::to_string(loc_a) + " locB=" + std::to_string(loc_b) +
+               " locA2=" + std::to_string(loc_a2) + " locB2=" + std::to_string(loc_b2);
+
+    api.glDeleteProgram(program_a);
+    api.glDeleteProgram(program_b);
+    api.glDeleteShader(vshader);
+    api.glDeleteShader(fshader_a);
+    api.glDeleteShader(fshader_b);
+    return r;
+}
+
+std::string shader_source_text(GLuint shader) {
+    GLint length = 0;
+    api.glGetShaderiv(shader, GL_SHADER_SOURCE_LENGTH, &length);
+    if (length <= 0) return {};
+    std::string source(static_cast<size_t>(length), '\0');
+    GLsizei written = 0;
+    api.glGetShaderSource(shader, length, &written, source.data());
+    if (written >= 0 && static_cast<size_t>(written) < source.size()) source.resize(static_cast<size_t>(written));
+    return source;
+}
+
+Result test_frag_data_interleaved() {
+    Result r;
+    // Source the shader the program will use, then source an unrelated shader.
+    // The old global "last shader" record made the second source the patch
+    // target, so the attached shader never received its binding.
+    const char* fs_a = "#version 300 es\nprecision mediump float;\nout vec4 interleavedOut;\nvoid main() { interleavedOut = vec4(1.0); }\n";
+    const char* fs_b = "#version 300 es\nprecision mediump float;\nout vec4 unrelatedOut;\nvoid main() { unrelatedOut = vec4(0.0); }\n";
+    const char* vs = "#version 300 es\nvoid main() { gl_Position = vec4(0.0); }\n";
+    GLuint shader_a = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(shader_a, 1, &fs_a, nullptr);
+    api.glCompileShader(shader_a);
+    GLuint shader_b = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(shader_b, 1, &fs_b, nullptr);
+    api.glCompileShader(shader_b);
+    GLuint vertex_shader = api.glCreateShader(GL_VERTEX_SHADER);
+    api.glShaderSource(vertex_shader, 1, &vs, nullptr);
+    api.glCompileShader(vertex_shader);
+
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, vertex_shader);
+    api.glAttachShader(program, shader_a);
+    api.glBindFragDataLocation(program, 5, "interleavedOut");
+    api.glLinkProgram(program);
+    GLint link_status = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &link_status);
+    const std::string patched_a = shader_source_text(shader_a);
+    const std::string patched_b = shader_source_text(shader_b);
+    const bool a_has_binding = patched_a.find("location = 5") != std::string::npos;
+    const bool b_has_binding = patched_b.find("location = 5") != std::string::npos;
+    r.ok = (link_status == GL_TRUE && a_has_binding && !b_has_binding);
+    r.detail = "link=" + std::to_string(link_status) + " attached_has_location5=" +
+               (a_has_binding ? "yes" : "no") + " unrelated_has_location5=" +
+               (b_has_binding ? "yes" : "no") + " attached_source_prefix=" +
+               patched_a.substr(0, std::min<size_t>(patched_a.size(), 120));
+    api.glDeleteProgram(program);
+    api.glDeleteShader(shader_a);
+    api.glDeleteShader(shader_b);
+    api.glDeleteShader(vertex_shader);
+    return r;
+}
+
+Result test_frag_data_replaces_existing_layout() {
+    Result r;
+    // The pack and translator may already emit a layout location. Rebinding must
+    // replace it, not append a second qualifier.
+    const char* fs = "#version 300 es\nprecision mediump float;\nlayout(location = 0) out vec4 existingOut;\nvoid main() { existingOut = vec4(1.0); }\n";
+    const char* vs = "#version 300 es\nvoid main() { gl_Position = vec4(0.0); }\n";
+    GLuint shader = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(shader, 1, &fs, nullptr);
+    api.glCompileShader(shader);
+    GLuint vshader = api.glCreateShader(GL_VERTEX_SHADER);
+    api.glShaderSource(vshader, 1, &vs, nullptr);
+    api.glCompileShader(vshader);
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, vshader);
+    api.glAttachShader(program, shader);
+    api.glBindFragDataLocation(program, 6, "existingOut");
+    api.glLinkProgram(program);
+    GLint link_status = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &link_status);
+    const std::string source = shader_source_text(shader);
+    const size_t first = source.find("location = 6");
+    const size_t second = first == std::string::npos ? std::string::npos : source.find("location = 6", first + 1);
+    const bool has_existing_old = source.find("location = 0") != std::string::npos;
+    r.ok = (link_status == GL_TRUE && first != std::string::npos && second == std::string::npos && !has_existing_old);
+    r.detail = "link=" + std::to_string(link_status) + " location6_count=" +
+               std::to_string(first == std::string::npos ? 0 : (second == std::string::npos ? 1 : 2)) +
+               " location0_present=" + (has_existing_old ? "yes" : "no") +
+               " source=" + source.substr(0, std::min<size_t>(source.size(), 160));
+    api.glDeleteProgram(program);
+    api.glDeleteShader(shader);
+    api.glDeleteShader(vshader);
+    return r;
+}
+
+Result test_integer_image_binding() {
+    Result r;
+    // ESSL 3.10 cannot name an r16ui image on this provider. The frontend must
+    // report that refusal; an r32ui image is the current legal fallback. When
+    // the loader implements the r16ui/r8ui lowering, replace this with an
+    // imageStore/readback test instead of weakening the assertion.
+    GLuint tex16 = 0;
+    api.glGenTextures(1, &tex16);
+    api.glBindTexture(GL_TEXTURE_2D, tex16);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_R16UI, 1, 1);
+    while (api.glGetError() != GL_NO_ERROR) {}
+    api.glBindImageTexture(0, tex16, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R16UI);
+    const GLenum e16 = api.glGetError();
+
+    GLuint tex32 = 0;
+    api.glGenTextures(1, &tex32);
+    api.glBindTexture(GL_TEXTURE_2D, tex32);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32UI, 1, 1);
+    while (api.glGetError() != GL_NO_ERROR) {}
+    api.glBindImageTexture(1, tex32, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32UI);
+    const GLenum e32 = api.glGetError();
+
+    r.ok = (e16 != GL_NO_ERROR && e32 == GL_NO_ERROR);
+    r.detail = "r16ui=" + std::string(e16 == GL_NO_ERROR ? "accepted (translation missing)" : "refused (visible)") +
+               " error=" + std::to_string(e16) +
+               " r32ui=" + std::string(e32 == GL_NO_ERROR ? "accepted" : "refused") +
+               " error=" + std::to_string(e32);
+    api.glDeleteTextures(1, &tex16);
+    api.glDeleteTextures(1, &tex32);
+    return r;
+}
+
+void print_result(const char* name, const Result& r) {
+    printf("  \"%s\": {\"pass\": %s, \"detail\": %s}%s\n", name, r.ok ? "true" : "false",
+           escape(r.detail).c_str(), ",");
+}
+
+} // namespace
+
+int main(int argc, char** argv) {
+    const char* mode = (argc > 1) ? argv[1] : "all";
+    const char* output_path = getenv("MG_PROBE_OUTPUT");
+    if (output_path && *output_path) {
+        g_out = fopen(output_path, "w");
+        if (!g_out) {
+            fprintf(stderr, "cannot open probe output %s\n", output_path);
+            return 89;
+        }
+    }
+    const char* library = getenv("MG_LIBRARY");
+    if (!library) library = "libmobileglues.so";
+    g_lib = dlopen(library, RTLD_NOW | RTLD_LOCAL);
+    if (!g_lib) {
+        fprintf(stderr, "dlopen %s failed: %s\n", library, dlerror());
+        return 91;
+    }
+
+    api.eglGetDisplay = sym<PFNEGLGETDISPLAYPROC>("eglGetDisplay");
+    api.eglInitialize = sym<PFNEGLINITIALIZEPROC>("eglInitialize");
+    api.eglBindAPI = sym<PFNEGLBINDAPIPROC>("eglBindAPI");
+    api.eglChooseConfig = sym<PFNEGLCHOOSECONFIGPROC>("eglChooseConfig");
+    api.eglCreatePbufferSurface = sym<PFNEGLCREATEPBUFFERSURFACEPROC>("eglCreatePbufferSurface");
+    api.eglCreateContext = sym<PFNEGLCREATECONTEXTPROC>("eglCreateContext");
+    api.eglMakeCurrent = sym<PFNEGLMAKECURRENTPROC>("eglMakeCurrent");
+    api.eglDestroySurface = sym<PFNEGLDESTROYSURFACEPROC>("eglDestroySurface");
+    api.eglDestroyContext = sym<PFNEGLDESTROYCONTEXTPROC>("eglDestroyContext");
+    api.eglTerminate = sym<PFNEGLTERMINATEPROC>("eglTerminate");
+    api.eglGetProcAddress = sym<PFNEGLGETPROCADDRESSPROC>("eglGetProcAddress");
+
+    api.glGetString = sym<PFNGLGETSTRINGPROC>("glGetString");
+    api.glGetStringi = sym<PFNGLGETSTRINGIPROC>("glGetStringi");
+    api.glGetIntegerv = sym<PFNGLGETINTEGERVPROC>("glGetIntegerv");
+    api.glGetError = sym<PFNGLGETERRORPROC>("glGetError");
+    api.glCreateShader = sym<PFNGLCREATESHADERPROC>("glCreateShader");
+    api.glShaderSource = sym<PFNGLSHADERSOURCEPROC>("glShaderSource");
+    api.glCompileShader = sym<PFNGLCOMPILESHADERPROC>("glCompileShader");
+    api.glGetShaderiv = sym<PFNGLGETSHADERIVPROC>("glGetShaderiv");
+    api.glGetShaderInfoLog = sym<PFNGLGETSHADERINFOLOGPROC>("glGetShaderInfoLog");
+    api.glGetShaderSource = sym<PFNGLGETSHADERSOURCEPROC>("glGetShaderSource");
+    api.glDeleteShader = sym<PFNGLDELETESHADERPROC>("glDeleteShader");
+    api.glCreateProgram = sym<PFNGLCREATEPROGRAMPROC>("glCreateProgram");
+    api.glAttachShader = sym<PFNGLATTACHSHADERPROC>("glAttachShader");
+    api.glLinkProgram = sym<PFNGLLINKPROGRAMPROC>("glLinkProgram");
+    api.glGetProgramiv = sym<PFNGLGETPROGRAMIVPROC>("glGetProgramiv");
+    api.glGetProgramInfoLog = sym<PFNGLGETPROGRAMINFOLOGPROC>("glGetProgramInfoLog");
+    api.glDeleteProgram = sym<PFNGLDELETEPROGRAMPROC>("glDeleteProgram");
+    api.glBindFragDataLocation = sym<GLint (*)(GLuint, GLuint, const GLchar*)>("glBindFragDataLocation");
+    api.glGetFragDataLocation = sym<GLint (*)(GLuint, const GLchar*)>("glGetFragDataLocation");
+    api.glUseProgram = sym<PFNGLUSEPROGRAMPROC>("glUseProgram");
+    api.glBindBuffer = sym<PFNGLBINDBUFFERPROC>("glBindBuffer");
+    api.glBufferData = sym<PFNGLBUFFERDATAPROC>("glBufferData");
+    api.glBindBufferBase = sym<PFNGLBINDBUFFERBASEPROC>("glBindBufferBase");
+    api.glGetUniformLocation = sym<PFNGLGETUNIFORMLOCATIONPROC>("glGetUniformLocation");
+    api.glUniform1ui = sym<PFNGLUNIFORM1UIPROC>("glUniform1ui");
+    api.glDispatchCompute = sym<PFNGLDISPATCHCOMPUTEPROC>("glDispatchCompute");
+    api.glMemoryBarrier = sym<PFNGLMEMORYBARRIERPROC>("glMemoryBarrier");
+    api.glMapBufferRange = sym<PFNGLMAPBUFFERRANGEPROC>("glMapBufferRange");
+    api.glUnmapBuffer = sym<PFNGLUNMAPBUFFERPROC>("glUnmapBuffer");
+    api.glBindImageTexture = sym<PFNGLBINDIMAGETEXTUREPROC>("glBindImageTexture");
+    api.glTexStorage2D = sym<PFNGLTEXSTORAGE2DPROC>("glTexStorage2D");
+    api.glTexStorage3D = sym<PFNGLTEXSTORAGE3DPROC>("glTexStorage3D");
+    api.glGenTextures = sym<PFNGLGENTEXTURESPROC>("glGenTextures");
+    api.glBindTexture = sym<PFNGLBINDTEXTUREPROC>("glBindTexture");
+    api.glTexParameteri = sym<PFNGLTEXPARAMETERIPROC>("glTexParameteri");
+    api.glDeleteTextures = sym<PFNGLDELETETEXTURESPROC>("glDeleteTextures");
+    api.glDrawArrays = sym<PFNGLDRAWARRAYSPROC>("glDrawArrays");
+    api.glGenVertexArrays = sym<PFNGLGENVERTEXARRAYSPROC>("glGenVertexArrays");
+    api.glBindVertexArray = sym<PFNGLBINDVERTEXARRAYPROC>("glBindVertexArray");
+    api.glDeleteVertexArrays = sym<PFNGLDELETEVERTEXARRAYSPROC>("glDeleteVertexArrays");
+    api.glFinish = sym<PFNGLFINISHPROC>("glFinish");
+    api.glViewport = sym<PFNGLVIEWPORTPROC>("glViewport");
+    api.glEnable = sym<PFNGLENABLEPROC>("glEnable");
+    api.glDisable = sym<PFNGLDISABLEPROC>("glDisable");
+    api.glBlendFunc = sym<PFNGLBLENDFUNCPROC>("glBlendFunc");
+
+    if (!make_context()) {
+        fprintf(stderr, "failed to create a MobileGlues context\n");
+        return 92;
+    }
+
+    fprintf(g_out, "{\n");
+    fprintf(g_out, "  \"wrapper\": {\"library\": %s, \"renderer\": %s, \"version\": %s, \"shading\": %s},\n",
+           escape(library).c_str(), escape(gl_string(GL_RENDERER)).c_str(),
+           escape(gl_string(GL_VERSION)).c_str(), escape(gl_string(GL_SHADING_LANGUAGE_VERSION)).c_str());
+
+    bool first = true;
+    auto run = [&](const char* name, Result (*fn)()) {
+        Result r = fn();
+        if (!first) fprintf(g_out, ",\n");
+        first = false;
+        fprintf(g_out, "  \"%s\": {\"pass\": %s, \"detail\": %s}", name, r.ok ? "true" : "false",
+                escape(r.detail).c_str());
+    };
+    if (!strcmp(mode, "all") || !strcmp(mode, "source_multi")) run("source_multi", test_source_multi);
+    if (!strcmp(mode, "all") || !strcmp(mode, "source_multi_implicit")) run("source_multi_implicit", test_source_multi_implicit);
+    if (!strcmp(mode, "all") || !strcmp(mode, "source_embedded_nul")) run("source_embedded_nul", test_source_embedded_nul);
+    if (!strcmp(mode, "all") || !strcmp(mode, "compile_failure")) run("compile_failure", test_compile_failure);
+    if (!strcmp(mode, "all") || !strcmp(mode, "link_failure")) run("link_failure", test_link_failure);
+    if (!strcmp(mode, "all") || !strcmp(mode, "get_error")) run("get_error", test_get_error);
+    if (!strcmp(mode, "all") || !strcmp(mode, "limits")) run("limits", test_limits);
+    if (!strcmp(mode, "all") || !strcmp(mode, "strings")) run("strings", test_strings);
+    if (!strcmp(mode, "all") || !strcmp(mode, "frag_data")) run("frag_data_isolation", test_frag_data_isolation);
+    if (!strcmp(mode, "all") || !strcmp(mode, "frag_data_interleaved")) run("frag_data_interleaved", test_frag_data_interleaved);
+    if (!strcmp(mode, "all") || !strcmp(mode, "frag_data_relayout")) run("frag_data_replaces_existing_layout", test_frag_data_replaces_existing_layout);
+    if (!strcmp(mode, "all") || !strcmp(mode, "integer_image")) run("integer_image", test_integer_image_binding);
+    fprintf(g_out, "\n}\n");
+
+    destroy_context();
+    if (g_out != stdout) fclose(g_out);
+    return 0;
+}

@@ -231,6 +231,11 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
     LOG_D("glBindImageTexture, unit: %d, texture: %d, level: %d, layered: %d, layer: %d, access: %d, format: %d", unit,
           texture, level, layered, layer, access, format)
     GLES.glBindImageTexture(unit, texture, level, layered, layer, access, format);
+    // The provider rejects formats that ESSL 3.10 cannot name, notably r8ui and
+    // r16ui. Until the loader lowers those formats, the application must see the
+    // refusal rather than a silently unbound image unit.
+    const GLenum backend_error = GLES.glGetError();
+    if (backend_error != GL_NO_ERROR) mg_set_gl_error(backend_error);
     CHECK_GL_ERROR
 }
 

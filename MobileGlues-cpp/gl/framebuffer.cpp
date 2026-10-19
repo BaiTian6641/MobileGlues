@@ -553,9 +553,8 @@ void glReadBuffer(GLenum src) {
     GLES.glReadBuffer(src);
 }
 GLenum glCheckFramebufferStatus(GLenum target) {
-    GLenum status = GLES.glCheckFramebufferStatus(target);
-    if (global_settings.ignore_error == IgnoreErrorLevel::Full && status != GL_FRAMEBUFFER_COMPLETE) {
-        return GL_FRAMEBUFFER_COMPLETE;
-    }
-    return status;
+    // An incomplete framebuffer is a real result. Rewriting it to COMPLETE was
+    // another ignore-error shortcut that hid missing attachments and formats
+    // from Iris; the application must see the status the backend returned.
+    return GLES.glCheckFramebufferStatus(target);
 }

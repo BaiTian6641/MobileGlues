@@ -73,6 +73,11 @@ struct MGContext {
 // thread is still pointing at.
 extern thread_local MGContext* g_current_ctx;
 
+// The current share group's identity, or 0 when no context is current. GL
+// object names are shared within a share group, so object-state tables key on
+// this rather than on the raw name alone.
+unsigned long long mg_current_share_group_id();
+
 // Called from the EGL wrappers.
 MGContext* mg_context_create(EGLDisplay dpy, EGLContext handle, EGLContext share_handle, EGLenum client_type,
                              EGLint major, EGLint minor, EGLint profile_mask, EGLint context_flags);

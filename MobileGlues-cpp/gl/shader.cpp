@@ -6,9 +6,13 @@
 // End of Source File Header
 
 #include <cctype>
+#include <limits>
 #include "shader.h"
+#include "shader_source.h"
+#include "shader_state.h"
 
 #include <GL/gl.h>
+#include "getter.h"
 #include "log.h"
 #include "program.h"
 #include "../gles/loader.h"
@@ -18,10 +22,6 @@
 #include "FSR1/FSR1.h"
 
 #define DEBUG 0
-
-struct shader_t shaderInfo;
-
-UnorderedMap<GLuint, bool> shader_map_is_sampler_buffer_emulated;
 
 bool can_run_essl3(unsigned int esversion, const char* glsl) {
     if (strncmp(glsl, "#version 100", 12) == 0) {
@@ -52,26 +52,15 @@ bool check_if_sampler_buffer_used(std::string str) {
 
 void glShaderSource(GLuint shader, GLsizei count, const GLchar* const* string, const GLint* length) {
     LOG()
-    shaderInfo.id = 0;
-    shaderInfo.converted = "";
-    shaderInfo.frag_data_changed_converted.clear();
-    shaderInfo.frag_data_changed = 0;
-    size_t l = 0;
-    for (int i = 0; i < count; i++)
-        l += (length && length[i] >= 0) ? length[i] : strlen(string[i]);
+    MgShaderObject& state = g_mg_shaders[mg_object_key(shader)];
+    state.converted_source.clear();
+
     std::string glsl_src, essl_src;
-    glsl_src.reserve(l + 1);
-    if (length) {
-        for (int i = 0; i < count; i++) {
-            if (length[i] >= 0)
-                glsl_src += std::string_view(string[i], length[i]);
-            else
-                glsl_src += string[i];
-        }
-    } else {
-        for (int i = 0; i < count; i++) {
-            glsl_src += string[i];
-        }
+    GLenum source_error = GL_NO_ERROR;
+    if (!mg_collect_shader_source(count, string, length, &glsl_src, &source_error)) {
+        mg_set_gl_error(source_error);
+        LOG_E("Rejected glShaderSource(%u): invalid count/string/length argument", shader)
+        return;
     }
 
     bool is_sampler_buffer_emulated = hardware->emulate_texture_buffer && check_if_sampler_buffer_used(glsl_src);
@@ -96,12 +85,21 @@ void glShaderSource(GLuint shader, GLsizei count, const GLchar* const* string, c
         LOG_D("\n[INFO] [Shader] Converted Shader source: \n%s", essl_src.c_str())
     }
     if (!essl_src.empty()) {
-        shaderInfo.id = shader;
-        shaderInfo.converted = essl_src;
-        const char* s[] = {essl_src.c_str()};
-        GLES.glShaderSource(shader, count, s, nullptr);
-        if (hardware->emulate_texture_buffer)
-            shader_map_is_sampler_buffer_emulated[shader] = is_sampler_buffer_emulated;
+        if (essl_src.size() > static_cast<size_t>(std::numeric_limits<GLint>::max())) {
+            mg_set_gl_error(GL_OUT_OF_MEMORY);
+            LOG_E("Translated shader %u exceeds the GLint source length limit", shader)
+            return;
+        }
+        state.converted_source = essl_src;
+        state.sampler_buffer_emulated = is_sampler_buffer_emulated;
+        // The frontend has already performed the concatenation. The backend
+        // contract is one pointer, one explicit length: passing the original
+        // count with a single-element array made the driver read past the
+        // array (observed as a segfault on the X1E device), and dropping the
+        // length would truncate at an embedded NUL.
+        const GLchar* s = essl_src.data();
+        GLint s_length = static_cast<GLint>(essl_src.size());
+        GLES.glShaderSource(shader, 1, &s, &s_length);
     } else
         LOG_E("Failed to convert glsl.")
     CHECK_GL_ERROR
@@ -110,12 +108,15 @@ void glShaderSource(GLuint shader, GLsizei count, const GLchar* const* string, c
 void glGetShaderiv(GLuint shader, GLenum pname, GLint* params) {
     LOG()
     GLES.glGetShaderiv(shader, pname, params);
-    if (global_settings.ignore_error >= IgnoreErrorLevel::Partial && pname == GL_COMPILE_STATUS && !*params) {
-        GLchar infoLog[512];
-        GLES.glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-        LOG_W_FORCE("Shader %d compilation failed: \n%s", shader, infoLog)
-        LOG_W_FORCE("Now try to cheat.")
-        *params = GL_TRUE;
+    if (params && pname == GL_COMPILE_STATUS && !*params) {
+        // A compile failure is a result, not a compatibility annoyance. The
+        // ignore-error setting used to rewrite this to GL_TRUE, which made a
+        // missing effect indistinguishable from a working program in every
+        // qualification run. Keep the driver's answer and put the reason in the
+        // log where it survives release logging settings.
+        GLchar infoLog[512] = {0};
+        GLES.glGetShaderInfoLog(shader, sizeof(infoLog), nullptr, infoLog);
+        LOG_W_FORCE("Shader %u compilation failed: \n%s", shader, infoLog)
     }
     CHECK_GL_ERROR
 }
@@ -128,7 +129,29 @@ GLuint glCreateShader(GLenum shaderType) {
     LOG()
     LOG_D("glCreateShader(%s)", glEnumToString(shaderType))
     GLuint shader = GLES.glCreateShader(shaderType);
-    if (shader != 0 && hardware->emulate_texture_buffer) shader_map_is_sampler_buffer_emulated[shader] = false;
+    if (shader != 0) {
+        MgShaderObject& state = g_mg_shaders[mg_object_key(shader)];
+        state = MgShaderObject{};
+        state.type = shaderType;
+    }
     CHECK_GL_ERROR
     return shader;
+}
+
+void glDeleteShader(GLuint shader) {
+    LOG()
+    LOG_D("glDeleteShader(%u)", shader)
+    auto it = g_mg_shaders.find(mg_object_key(shader));
+    if (it != g_mg_shaders.end()) {
+        if (it->second.attached_programs.empty()) {
+            g_mg_shaders.erase(it);
+        } else {
+            // GL defers deletion until every program detaches the object. Keep
+            // the translated source for a later link, but do not let a new
+            // glCreateShader reuse of the name inherit it.
+            it->second.deleted = true;
+        }
+    }
+    GLES.glDeleteShader(shader);
+    CHECK_GL_ERROR
 }
