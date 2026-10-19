@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <vector>
+#include <unordered_map>
 
 #ifdef __ANDROID__
 #include <android/log.h>
@@ -562,7 +563,7 @@ void internal_convert(GLenum* internal_format, GLenum* type, GLenum* format, boo
             // glTexSubImage2D(GL_UNSIGNED_INT) both succeed as written here, and
             // resolving to 32F turned that second call into GL_INVALID_OPERATION
             // with the texture left holding its old contents.
-            *internal_format = GL_DEPTH_COMPONENT;
+            *internal_format = GL_DEPTH_COMPONENT24;
             *type = GL_UNSIGNED_INT;
         } else {
             // glTexStorage*. There is no data and no type to be wrong about, and
@@ -1357,6 +1358,22 @@ void glCopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffse
         // reproducibly. glFinish also works but synchronizes the CPU; the flush
         // is enough. Mali needs neither and is unaffected. Copies are rare
         // operations, so one flush here is cheap.
+        // A blit between differently sized depth formats is not just a
+        // no-op: ANGLE's Vulkan backend can lose the device. Compare the read
+        // attachment's depth size with the destination level before submitting
+        // it; unsized destinations are normalized to DEPTH24 at allocation.
+        GLint srcDepthSize = 0;
+        GLint dstDepthSize = 0;
+        glGetFramebufferAttachmentParameteriv(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                              GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE, &srcDepthSize);
+        glGetTexLevelParameteriv(target, level, GL_TEXTURE_DEPTH_SIZE, &dstDepthSize);
+        if (srcDepthSize != 0 && dstDepthSize != 0 && srcDepthSize != dstDepthSize) {
+            TX_WARN_ONCE("glCopyTexSubImage2D: skipping depth blit with mismatched sizes src=%d dst=%d",
+                         srcDepthSize, dstDepthSize);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, prevDrawFBO);
+            glDeleteFramebuffers(1, &tempDrawFBO);
+            return;
+        }
         if (GLES.glFlush != nullptr) GLES.glFlush();
         GLES.glBlitFramebuffer(x, y, x + width, y + height, xoffset, yoffset, xoffset + width, yoffset + height, mask,
                                GL_NEAREST);
@@ -1908,6 +1925,145 @@ bool decode_clear_value(GLenum format, GLenum type, const void* data, GLfloat* r
     }
 }
 
+
+struct mg_clear_program_t {
+    GLuint program = 0;
+    GLint size_location = -1;
+    bool integer = false;
+};
+
+std::unordered_map<GLenum, mg_clear_program_t> g_clear_programs;
+
+// Zero a 3D custom image with imageStore. This is the only path that is both
+// correct and safe on ANGLE: FBO clears crash for layered textures, and
+// glTexSubImage3D on a texture that has ever been image-bound faults.
+bool mg_clear_image3d_zero(GLuint texture, TextureObject* tex) {
+    if (texture == 0 || tex == nullptr || tex->target != TextureTarget::TEXTURE_3D || tex->width <= 0 ||
+        tex->height <= 0 || tex->depth <= 0) {
+        fprintf(stderr, "[MG-CLEAR] reject texture=%u tex=%p target=%d size=%dx%dx%d\n", texture, (void*)tex,
+                tex ? (int)tex->target : -1, tex ? tex->width : 0, tex ? tex->height : 0, tex ? tex->depth : 0);
+        fflush(stderr);
+        return false;
+    }
+    const char* qualifier = nullptr;
+    bool integer = false;
+    GLenum backing = tex->internal_format;
+    switch (backing) {
+    case GL_R32UI:
+        qualifier = "r32ui";
+        integer = true;
+        break;
+    case GL_R32I:
+        qualifier = "r32i";
+        integer = true;
+        break;
+    case GL_R32F:
+        qualifier = "r32f";
+        break;
+    case GL_RGBA16F:
+        qualifier = "rgba16f";
+        break;
+    case GL_RGBA32F:
+        qualifier = "rgba32f";
+        break;
+    case GL_RGBA8:
+        qualifier = "rgba8";
+        break;
+    case GL_RGBA8_SNORM:
+        qualifier = "rgba8_snorm";
+        break;
+    default:
+        fprintf(stderr, "[MG-CLEAR] unsupported internal=0x%x texture=%u\n", backing, texture);
+        fflush(stderr);
+        return false;
+    }
+    if (!GLES.glGetIntegeri_v || !GLES.glBindImageTexture || !GLES.glDispatchCompute) {
+        fprintf(stderr, "[MG-CLEAR] missing image/compute entry point\n");
+        fflush(stderr);
+        return false;
+    }
+
+    mg_clear_program_t& clear = g_clear_programs[backing];
+    if (clear.program == 0) {
+        std::string source = "#version 310 es\n";
+        source += "layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;\n";
+        source += std::string("layout(") + qualifier + ", binding = 0) writeonly uniform highp " +
+                  (integer ? "uimage3D" : "image3D") + " img;\n";
+        source += "uniform ivec3 volumeSize;\n";
+        source += "void main() {\n";
+        source += "  ivec3 p = ivec3(gl_GlobalInvocationID);\n";
+        source += "  if (any(greaterThanEqual(p, volumeSize))) return;\n";
+        source += integer ? "  imageStore(img, p, uvec4(0u));\n" : "  imageStore(img, p, vec4(0.0));\n";
+        source += "}\n";
+        const char* src = source.c_str();
+        GLuint shader = GLES.glCreateShader(GL_COMPUTE_SHADER);
+        GLES.glShaderSource(shader, 1, &src, nullptr);
+        GLES.glCompileShader(shader);
+        GLint compiled = GL_FALSE;
+        GLES.glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+        if (compiled != GL_TRUE) {
+            char log[512] = {0};
+            GLES.glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
+            fprintf(stderr, "[MG-CLEAR] clear compute compile failed: %s\n", log);
+            fflush(stderr);
+            GLES.glDeleteShader(shader);
+            return false;
+        }
+        GLuint program = GLES.glCreateProgram();
+        GLES.glAttachShader(program, shader);
+        GLES.glLinkProgram(program);
+        GLES.glDeleteShader(shader);
+        GLint linked = GL_FALSE;
+        GLES.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+        if (linked != GL_TRUE) {
+            char log[512] = {0};
+            GLES.glGetProgramInfoLog(program, sizeof(log), nullptr, log);
+            fprintf(stderr, "[MG-CLEAR] clear compute link failed: %s\n", log);
+            fflush(stderr);
+            GLES.glDeleteProgram(program);
+            return false;
+        }
+        clear.program = program;
+        clear.size_location = GLES.glGetUniformLocation(program, "volumeSize");
+        clear.integer = integer;
+    }
+    if (clear.program == 0 || clear.size_location < 0) {
+        fprintf(stderr, "[MG-CLEAR] bad program=%u size_loc=%d internal=0x%x\n", clear.program, clear.size_location,
+                backing);
+        fflush(stderr);
+        return false;
+    }
+
+    // Save unit 0 and the current program; restore both on every exit.
+    GLint previous_texture = 0, previous_level = 0, previous_layered = 0, previous_layer = 0, previous_access = 0,
+          previous_format = 0;
+    GLES.glGetIntegeri_v(GL_IMAGE_BINDING_NAME, 0, &previous_texture);
+    GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LEVEL, 0, &previous_level);
+    GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LAYERED, 0, &previous_layered);
+    GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LAYER, 0, &previous_layer);
+    GLES.glGetIntegeri_v(GL_IMAGE_BINDING_ACCESS, 0, &previous_access);
+    GLES.glGetIntegeri_v(GL_IMAGE_BINDING_FORMAT, 0, &previous_format);
+    GLint previous_program = 0;
+    GLES.glGetIntegerv(GL_CURRENT_PROGRAM, &previous_program);
+
+    GLES.glBindImageTexture(0, texture, 0, GL_TRUE, 0, GL_READ_WRITE, backing);
+    GLES.glUseProgram(clear.program);
+    GLES.glUniform3i(clear.size_location, tex->width, tex->height, tex->depth);
+    GLES.glDispatchCompute((GLuint)((tex->width + 7) / 8), (GLuint)((tex->height + 7) / 8),
+                           (GLuint)((tex->depth + 7) / 8));
+    GLES.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT |
+                         GL_SHADER_STORAGE_BARRIER_BIT);
+
+    if (previous_texture != 0) {
+        GLES.glBindImageTexture(0, (GLuint)previous_texture, previous_level, (GLboolean)previous_layered,
+                                previous_layer, (GLenum)previous_access, (GLenum)previous_format);
+    } else {
+        GLES.glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);
+    }
+    GLES.glUseProgram((GLuint)previous_program);
+    return true;
+}
+
 } // namespace
 
 void glClearTexImage(GLuint texture, GLint level, GLenum format, GLenum type, const void* data) {
@@ -1950,15 +2106,18 @@ void glClearTexImage(GLuint texture, GLint level, GLenum format, GLenum type, co
 
     // Clearing through a temporary framebuffer attachment crashes inside
     // ANGLE's GL_Clear for layered/3D textures (observed on
-    // wsr_img/wsr_lod_img at beginLevelRendering). The image-bound tracking
-    // above cannot be relied on because LWJGL can enter the backend image
-    // functions directly. Skip the FBO clear for these targets; the ACT/WSR
-    // compute passes rewrite the visible volume before sampling. A future
-    // image-store clear path can restore exact per-frame clearing.
-    if (textureTarget == TextureTarget::TEXTURE_3D || textureTarget == TextureTarget::TEXTURE_2D_ARRAY ||
-        textureTarget == TextureTarget::TEXTURE_1D_ARRAY || textureTarget == TextureTarget::TEXTURE_CUBE_MAP_ARRAY ||
-        textureTarget == TextureTarget::TEXTURE_CUBE_MAP) {
-        TX_WARN_ONCE("glClearTexImage: layered/3D texture %u clear skipped (ANGLE FBO-clear crash)", texture);
+    // wsr_img/wsr_lod_img at beginLevelRendering). An image-store compute
+    // shader preserves the clear semantics without
+    // attaching the texture to an FBO. The clear value is zero in all Iris
+    // calls; non-zero conversions remain rejected rather than guessed.
+    const bool layered_target =
+        textureTarget == TextureTarget::TEXTURE_3D || textureTarget == TextureTarget::TEXTURE_2D_ARRAY ||
+        textureTarget == TextureTarget::TEXTURE_CUBE_MAP;
+    if (layered_target) {
+        const bool zero = data == nullptr || (rgba[0] == 0.0f && rgba[1] == 0.0f && rgba[2] == 0.0f &&
+                                             rgba[3] == 0.0f && depth == 0.0f && stencil == 0);
+        if (zero && textureTarget == TextureTarget::TEXTURE_3D && mg_clear_image3d_zero(texture, tex)) return;
+        TX_WARN_ONCE("glClearTexImage: layered texture %u target=%d clear not supported without an image-store path", texture, (int)textureTarget);
         return;
     }
 
