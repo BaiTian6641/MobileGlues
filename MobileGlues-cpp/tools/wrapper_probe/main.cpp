@@ -2235,6 +2235,179 @@ void main() { color = vec4(1.0, 0.0, 0.0, 1.0); }
     return r;
 }
 
+Result test_vertex_ssbo_atomics() {
+    Result r;
+    // The player-reflection option adds six vertex-stage atomics on its 5,376
+    // byte binding-3 block. This probe is the direct device test for H1: it
+    // performs those six operations and then checks that the context still
+    // creates a fence and the atomics landed.
+    const char* vs = R"(#version 430 core
+layout(std430, binding = 3) buffer V {
+    vec3 positions[216];
+    vec2 data[216];
+    ivec3 boxMin[6];
+    ivec3 boxMax[6];
+} v;
+void main() {
+    atomicMin(v.boxMin[0].x, -10);
+    atomicMin(v.boxMin[0].y, -10);
+    atomicMin(v.boxMin[0].z, -10);
+    atomicMax(v.boxMax[0].x, 10);
+    atomicMax(v.boxMax[0].y, 10);
+    atomicMax(v.boxMax[0].z, 10);
+    gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+}
+)";
+    const char* fs = R"(#version 420 core
+out vec4 color;
+void main() { color = vec4(1.0, 0.0, 0.0, 1.0); }
+)";
+    GLuint vs_obj = api.glCreateShader(GL_VERTEX_SHADER);
+    api.glShaderSource(vs_obj, 1, &vs, nullptr);
+    api.glCompileShader(vs_obj);
+    GLint vstatus = GL_FALSE;
+    api.glGetShaderiv(vs_obj, GL_COMPILE_STATUS, &vstatus);
+    const std::string vlog = shader_log(vs_obj);
+    GLuint fs_obj = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(fs_obj, 1, &fs, nullptr);
+    api.glCompileShader(fs_obj);
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, vs_obj);
+    api.glAttachShader(program, fs_obj);
+    api.glLinkProgram(program);
+    GLint linked = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+
+    std::vector<unsigned char> initial(5376, 0);
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, initial.size(), initial.data(), GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, buffer);
+
+    GLuint tex = 0, fbo = 0, vao = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 1, 1);
+    api.glGenFramebuffers(1, &fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    api.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+    api.glViewport(0, 0, 1, 1);
+    api.glGenVertexArrays(1, &vao);
+    api.glBindVertexArray(vao);
+    while (api.glGetError() != GL_NO_ERROR) {}
+    api.glUseProgram(program);
+    api.glDrawArrays(GL_POINTS, 0, 1);
+    const GLenum draw_error = api.glGetError();
+    GLsync fence = api.glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    const GLenum fence_error = api.glGetError();
+    api.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    api.glFinish();
+    int values[27] = {};
+    void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 5184, 108, GL_MAP_READ_BIT);
+    if (ptr) {
+        memcpy(values, ptr, sizeof(values));
+        api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    }
+    const GLenum map_error = api.glGetError();
+    const bool atomics_ok = values[0] == -10 && values[1] == -10 && values[2] == -10 &&
+                            values[24] == 10 && values[25] == 10 && values[26] == 10;
+    r.ok = vstatus == GL_TRUE && linked == GL_TRUE && draw_error == GL_NO_ERROR && fence != nullptr &&
+           fence_error == GL_NO_ERROR && map_error == GL_NO_ERROR && atomics_ok;
+    r.detail = "vstatus=" + std::to_string(vstatus) + " link=" + std::to_string(linked) +
+               " draw_error=" + std::to_string(draw_error) + " fence=" + (fence ? "ok" : "null") +
+               " fence_error=" + std::to_string(fence_error) + " map_error=" + std::to_string(map_error) +
+               " min=" + std::to_string(values[0]) + "," + std::to_string(values[1]) + "," +
+               std::to_string(values[2]) + " max=" + std::to_string(values[24]) + "," +
+               std::to_string(values[25]) + "," + std::to_string(values[26]) +
+               (vlog.empty() ? "" : " vlog=" + vlog);
+    if (fence && api.glDeleteSync) api.glDeleteSync(fence);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    api.glDeleteFramebuffers(1, &fbo);
+    api.glDeleteTextures(1, &tex);
+    api.glDeleteVertexArrays(1, &vao);
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteProgram(program);
+    api.glDeleteShader(vs_obj);
+    api.glDeleteShader(fs_obj);
+    return r;
+}
+
+Result test_vertex_image2d_store() {
+    Result r;
+    // The player atlas is a 2D RGBA8 image stored from the vertex stage. The
+    // existing vertex-image probe covers a 3D RGBA16F image; this is the exact
+    // remaining shape introduced by player reflections.
+    const char* vs = R"(#version 420 core
+layout(binding = 0, rgba8) writeonly uniform highp image2D atlas_img;
+void main() {
+    imageStore(atlas_img, ivec2(0), vec4(0.25, 0.5, 0.75, 1.0));
+    gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
+}
+)";
+    const char* fs = R"(#version 420 core
+out vec4 color;
+void main() { color = vec4(1.0, 0.0, 0.0, 1.0); }
+)";
+    GLuint tex = 0, fbo = 0, vao = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 1, 1);
+    api.glGenFramebuffers(1, &fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    api.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+    const GLenum fb_status = api.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    api.glViewport(0, 0, 1, 1);
+    api.glGenVertexArrays(1, &vao);
+    api.glBindVertexArray(vao);
+    api.glBindImageTexture(0, tex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+
+    GLuint vs_obj = api.glCreateShader(GL_VERTEX_SHADER);
+    api.glShaderSource(vs_obj, 1, &vs, nullptr);
+    api.glCompileShader(vs_obj);
+    GLint vstatus = GL_FALSE;
+    api.glGetShaderiv(vs_obj, GL_COMPILE_STATUS, &vstatus);
+    const std::string vlog = shader_log(vs_obj);
+    GLuint fs_obj = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(fs_obj, 1, &fs, nullptr);
+    api.glCompileShader(fs_obj);
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, vs_obj);
+    api.glAttachShader(program, fs_obj);
+    api.glLinkProgram(program);
+    GLint linked = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    while (api.glGetError() != GL_NO_ERROR) {}
+    api.glUseProgram(program);
+    api.glDrawArrays(GL_POINTS, 0, 1);
+    const GLenum draw_error = api.glGetError();
+    unsigned char pixel[4] = {};
+    api.glReadPixels(0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+    const GLenum read_error = api.glGetError();
+    const bool color_ok = pixel[0] >= 63 && pixel[0] <= 65 && pixel[1] >= 127 && pixel[1] <= 129 &&
+                          pixel[2] >= 191 && pixel[2] <= 193;
+    GLsync fence = api.glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    const GLenum fence_error = api.glGetError();
+    r.ok = vstatus == GL_TRUE && linked == GL_TRUE && fb_status == GL_FRAMEBUFFER_COMPLETE &&
+           draw_error == GL_NO_ERROR && read_error == GL_NO_ERROR && color_ok && fence != nullptr &&
+           fence_error == GL_NO_ERROR;
+    r.detail = "vstatus=" + std::to_string(vstatus) + " link=" + std::to_string(linked) +
+               " fb=" + std::to_string(fb_status) + " draw_error=" + std::to_string(draw_error) +
+               " read_error=" + std::to_string(read_error) + " pixel=" + std::to_string(pixel[0]) + "," +
+               std::to_string(pixel[1]) + "," + std::to_string(pixel[2]) +
+               " fence=" + (fence ? "ok" : "null") + " fence_error=" + std::to_string(fence_error) +
+               (vlog.empty() ? "" : " vlog=" + vlog);
+    if (fence && api.glDeleteSync) api.glDeleteSync(fence);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    api.glDeleteFramebuffers(1, &fbo);
+    api.glDeleteTextures(1, &tex);
+    api.glDeleteVertexArrays(1, &vao);
+    api.glDeleteProgram(program);
+    api.glDeleteShader(vs_obj);
+    api.glDeleteShader(fs_obj);
+    return r;
+}
+
 Result test_patch_default_levels() {
     Result r;
     // ES has no default tessellation-level entry point. The frontend must say
@@ -2988,6 +3161,8 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "clear_tex_level")) run("clear_tex_level", test_clear_tex_level);
     if (!strcmp(mode, "all") || !strcmp(mode, "translated_image_decl")) run("translated_image_decl", test_translated_image_decl);
     if (!strcmp(mode, "all") || !strcmp(mode, "metadata_image_format")) run("metadata_image_format", test_metadata_image_format);
+    if (!strcmp(mode, "all") || !strcmp(mode, "vertex_ssbo_atomics")) run("vertex_ssbo_atomics", test_vertex_ssbo_atomics);
+    if (!strcmp(mode, "all") || !strcmp(mode, "vertex_image2d")) run("vertex_image2d_store", test_vertex_image2d_store);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
     if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);
