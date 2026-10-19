@@ -2463,15 +2463,22 @@ namespace {
     // glTexSubImage3D on a texture that has ever been image-bound faults.
     bool mg_clear_image3d_zero(GLuint texture, TextureObject* tex, GLint level) {
         GLint width = 0, height = 0, depth = 0;
-        GLint previous_bound_texture = 0;
-        GLES.glGetIntegerv(GL_TEXTURE_BINDING_3D, &previous_bound_texture);
-        glBindTexture(GL_TEXTURE_3D, texture);
-        if (level >= 0) {
+        if (level == 0 && tex != nullptr) {
+            // Level 0 extents are already recorded by the allocation path. Every
+            // Iris custom image is cleared at level 0; avoid a bind plus three
+            // driver queries for the dominant case.
+            width = tex->width;
+            height = tex->height;
+            depth = tex->depth;
+        } else if (level >= 0) {
+            GLint previous_bound_texture = 0;
+            GLES.glGetIntegerv(GL_TEXTURE_BINDING_3D, &previous_bound_texture);
+            glBindTexture(GL_TEXTURE_3D, texture);
             GLES.glGetTexLevelParameteriv(GL_TEXTURE_3D, level, GL_TEXTURE_WIDTH, &width);
             GLES.glGetTexLevelParameteriv(GL_TEXTURE_3D, level, GL_TEXTURE_HEIGHT, &height);
             GLES.glGetTexLevelParameteriv(GL_TEXTURE_3D, level, GL_TEXTURE_DEPTH, &depth);
+            glBindTexture(GL_TEXTURE_3D, static_cast<GLuint>(previous_bound_texture));
         }
-        glBindTexture(GL_TEXTURE_3D, static_cast<GLuint>(previous_bound_texture));
         if (texture == 0 || tex == nullptr || tex->target != TextureTarget::TEXTURE_3D || level < 0 || width <= 0 ||
             height <= 0 || depth <= 0) {
             fprintf(stderr, "[MG-CLEAR] reject texture=%u tex=%p level=%d target=%d size=%dx%dx%d\n", texture,
@@ -2526,8 +2533,13 @@ namespace {
             source += "uniform ivec3 volumeSize;\n";
             source += "void main() {\n";
             source += "  ivec3 p = ivec3(gl_GlobalInvocationID);\n";
-            source += "  if (any(greaterThanEqual(p, volumeSize))) return;\n";
-            source += integer ? "  imageStore(img, p, uvec4(0u));\n" : "  imageStore(img, p, vec4(0.0));\n";
+            source += "  if (p.y >= volumeSize.y || p.z >= volumeSize.z) return;\n";
+            source += "  int xStride = int(gl_NumWorkGroups.x * gl_WorkGroupSize.x);\n";
+            source += "  for (int i = 0; i < 4; ++i) {\n";
+            source += "    ivec3 q = ivec3(p.x + i * xStride, p.y, p.z);\n";
+            source += "    if (q.x >= volumeSize.x) continue;\n";
+            source += integer ? "    imageStore(img, q, uvec4(0u));\n" : "    imageStore(img, q, vec4(0.0));\n";
+            source += "  }\n";
             source += "}\n";
             const char* src = source.c_str();
             GLuint shader = GLES.glCreateShader(GL_COMPUTE_SHADER);
@@ -2583,7 +2595,7 @@ namespace {
         GLES.glBindImageTexture(0, texture, level, GL_TRUE, 0, GL_READ_WRITE, backing);
         GLES.glUseProgram(clear.program);
         GLES.glUniform3i(clear.size_location, width, height, depth);
-        GLES.glDispatchCompute((GLuint)((width + 7) / 8), (GLuint)((height + 7) / 8),
+        GLES.glDispatchCompute((GLuint)((width + 31) / 32), (GLuint)((height + 7) / 8),
                                (GLuint)((depth + 7) / 8));
         GLES.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT |
                              GL_SHADER_STORAGE_BARRIER_BIT);

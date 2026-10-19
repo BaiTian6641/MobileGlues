@@ -2716,6 +2716,108 @@ void main() { imageStore(img, ivec2(0), vec4(1.0)); }
     return r;
 }
 
+Result test_clear_tex_volume() {
+    Result r;
+    const char* write_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+layout(r32ui, binding = 0) writeonly uniform highp uimage3D img;
+void main() {
+    imageStore(img, ivec3(0, 0, 0), uvec4(4294967295u));
+    imageStore(img, ivec3(127, 0, 0), uvec4(4294967295u));
+    imageStore(img, ivec3(127, 63, 127), uvec4(4294967295u));
+}
+)";
+    const char* read_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+layout(r32ui, binding = 0) readonly uniform highp uimage3D img;
+layout(std430, binding = 1) buffer Out { uint v[3]; } outb;
+void main() {
+    outb.v[0] = imageLoad(img, ivec3(0, 0, 0)).r;
+    outb.v[1] = imageLoad(img, ivec3(127, 0, 0)).r;
+    outb.v[2] = imageLoad(img, ivec3(127, 63, 127)).r;
+}
+)";
+    auto build = [&](const char* src, GLuint& shader, GLuint& program) {
+        shader = api.glCreateShader(GL_COMPUTE_SHADER);
+        api.glShaderSource(shader, 1, &src, nullptr);
+        api.glCompileShader(shader);
+        GLint compiled = GL_FALSE;
+        api.glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+        program = api.glCreateProgram();
+        api.glAttachShader(program, shader);
+        api.glLinkProgram(program);
+        GLint linked = GL_FALSE;
+        api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+        return compiled == GL_TRUE && linked == GL_TRUE;
+    };
+    GLuint tex = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_3D, tex);
+    api.glTexStorage3D(GL_TEXTURE_3D, 1, GL_R32UI, 128, 64, 128);
+    GLuint write_shader = 0, write_program = 0, read_shader = 0, read_program = 0;
+    const bool write_ok = build(write_cs, write_shader, write_program);
+    const bool read_ok = build(read_cs, read_shader, read_program);
+    api.glBindImageTexture(0, tex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+    api.glUseProgram(write_program);
+    api.glDispatchCompute(1, 1, 1);
+    api.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
+    api.glClearTexImage(tex, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+    const GLenum clear_error = api.glGetError();
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 12, nullptr, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+    api.glBindImageTexture(0, tex, 0, GL_TRUE, 0, GL_READ_ONLY, GL_R32UI);
+    api.glUseProgram(read_program);
+    api.glDispatchCompute(1, 1, 1);
+    api.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    api.glFinish();
+    GLuint values[3] = {};
+    void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(values), GL_MAP_READ_BIT);
+    if (ptr) {
+        memcpy(values, ptr, sizeof(values));
+        api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    }
+    const GLenum read_error = api.glGetError();
+    const bool cleared = values[0] == 0 && values[1] == 0 && values[2] == 0;
+    r.ok = write_ok && read_ok && clear_error == GL_NO_ERROR && read_error == GL_NO_ERROR && cleared;
+    r.detail = "write=" + std::to_string(write_ok) + " read=" + std::to_string(read_ok) +
+               " clear_error=" + std::to_string(clear_error) + " read_error=" + std::to_string(read_error) +
+               " values=" + std::to_string(values[0]) + "," + std::to_string(values[1]) + "," +
+               std::to_string(values[2]);
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteProgram(write_program);
+    api.glDeleteProgram(read_program);
+    api.glDeleteShader(write_shader);
+    api.glDeleteShader(read_shader);
+    api.glDeleteTextures(1, &tex);
+    return r;
+}
+
+Result test_clear_bench() {
+    Result r;
+    GLuint tex = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_3D, tex);
+    api.glTexStorage3D(GL_TEXTURE_3D, 1, GL_R32UI, 128, 64, 128);
+    constexpr int kWarmup = 8;
+    constexpr int kIterations = 100;
+    for (int i = 0; i < kWarmup; ++i) api.glClearTexImage(tex, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+    api.glFinish();
+    auto start = std::chrono::steady_clock::now();
+    for (int i = 0; i < kIterations; ++i) api.glClearTexImage(tex, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+    api.glFinish();
+    auto end = std::chrono::steady_clock::now();
+    const double ns = std::chrono::duration<double, std::nano>(end - start).count() / kIterations;
+    const GLenum error = api.glGetError();
+    r.ok = error == GL_NO_ERROR;
+    r.detail = "iterations=" + std::to_string(kIterations) + " ns_per_128x64x128_clear=" + std::to_string(ns) +
+               " error=" + std::to_string(error);
+    api.glDeleteTextures(1, &tex);
+    return r;
+}
+
 Result test_patch_default_levels() {
     Result r;
     // ES has no default tessellation-level entry point. The frontend must say
@@ -3467,6 +3569,8 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "tessellation_stage")) run("tessellation_stage", test_tessellation_stage);
     if (!strcmp(mode, "all") || !strcmp(mode, "patch_defaults")) run("patch_default_levels", test_patch_default_levels);
     if (!strcmp(mode, "all") || !strcmp(mode, "clear_tex_level")) run("clear_tex_level", test_clear_tex_level);
+    if (!strcmp(mode, "all") || !strcmp(mode, "clear_tex_volume")) run("clear_tex_volume", test_clear_tex_volume);
+    if (!strcmp(mode, "clear_bench")) run("clear_bench", test_clear_bench);
     if (!strcmp(mode, "all") || !strcmp(mode, "translated_image_decl")) run("translated_image_decl", test_translated_image_decl);
     if (!strcmp(mode, "all") || !strcmp(mode, "metadata_image_format")) run("metadata_image_format", test_metadata_image_format);
     if (!strcmp(mode, "all") || !strcmp(mode, "vertex_ssbo_atomics")) run("vertex_ssbo_atomics", test_vertex_ssbo_atomics);
