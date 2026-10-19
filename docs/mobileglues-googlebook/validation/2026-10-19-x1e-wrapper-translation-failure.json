@@ -1,0 +1,4 @@
+{
+  "wrapper": {"library": "/data/local/tmp/libmobileglues.so", "renderer": "Adreno (TM)  X1-85 | ANGLE | Vulkan 1.4.295 | OpenGL ES 3.2", "version": "4.0.0 MobileGlues 2.0.0", "shading": "4.60 MobileGlues with glslang and SPIRV-Cross"},
+  "translation_failure_not_stale": {"pass": true, "detail": "good_status=1 bad_status=0 backend_source_length=0"}
+}

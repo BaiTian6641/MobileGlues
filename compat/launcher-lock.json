@@ -29,8 +29,8 @@
       "package": "com.fcl.plugin.mobileglues",
       "installed_version": "2.0.0",
       "installed_apk_sha256": "a7e1eb29731fdece7ab3af7fb00692b856f1808a7544436e7b3eb6c08355581a",
-      "test_apk_sha256": "e2c702c791693a509e5baee0ab078af0f352698c909dc66334ffbf313f1b112b",
-      "test_packaged_library_sha256": "ac6c321cf83873b4e4d8bbbc6a3b7390c2ec332f58a33433baf8812c6bdb6f0c",
+      "test_apk_sha256": "ceeb8bc1b30e31d5175dbc131b7343435d2b30a3dd410398e0d58963587e9afc",
+      "test_packaged_library_sha256": "1161b63d598acf9d0c556be7bbccb9df152fcf9b849a4acca2e1be3384b0b793",
       "status": "TEST BUILD INSTALLED; NOT RELEASE-SIGNED"
     },
     "observed_game_process": {

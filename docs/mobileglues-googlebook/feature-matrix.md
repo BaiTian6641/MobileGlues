@@ -133,7 +133,10 @@ fidelity reference.
 | `glShaderSource` multi-string / explicit-length regression | pass | host `tests/run.sh`; X1E `wrapper_probe source_multi`, `source_multi_implicit` |
 | RGB8_SNORM render-target backing | pass | X1E `wrapper_probe rgb8_snorm_attachment`: both TexImage2D and TexStorage2D FBOs complete |
 | Desktop GLSL version normalization | pass for simple shaders | X1E `wrapper_probe desktop_glsl_120/150/330/400/460` |
-| Full wrapper contract suite | pass (25/25 historical; 50/50 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-playerops.json` |
+| Full wrapper contract suite | pass (25/25 historical; 53/53 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-translation53.json` |
+| Failed translation replaces backend source | pass | X1E `translation_failure_not_stale`: valid source compiles, then rejected desktop source leaves backend source length 0 and compile status false |
+| Shared fragment shader program ownership | pass | X1E `frag_data_shared_shader`: program A patches location 5; program B links the restored original with no location 5 |
+| Initialized uniform array suffix | pass | X1E `initialized_uniform_array`: `uniform float weights[4] = float[4](...)` becomes `uniform highp float weights[4];` |
 | Vertex-stage SSBO atomics on binding 3 | pass | X1E `vertex_ssbo_atomics`: six `atomicMin/Max` on the 5,376-byte block, `min=-10,-10,-10 max=10,10,10`, fence valid |
 | 2D RGBA8 vertex image store | pass | X1E `vertex_image2d_store`: `imageStore` from the vertex stage reads back `64,128,191`, fence valid |
 | Translated image qualifier order | pass | X1E `translated_image_decl`: desktop `layout(binding=0,r32ui) ... uimage3D` + `uniform writeonly image2D` translated to explicit bindings 0/1 with `writeonly highp` preserved |

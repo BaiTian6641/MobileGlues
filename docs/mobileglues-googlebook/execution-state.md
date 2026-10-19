@@ -202,6 +202,13 @@ game process.
     device" explanation is therefore incomplete; the declaration/format contract was the
     source-visible defect. A pack run with the fixed bridge remains the gate, so player reflections
     stay unverified/unsupported.
+  - Translation failure now replaces the backend source with an empty string, so re-sourcing a
+    shader cannot leave a previous valid compilation in place. Fragment output-location patches are
+    owned by the linking program: a shared fragment shader is restored before a different program
+    links it. Initialized uniform declarations drop only the initializer, preserving array bounds
+    (`uniform highp float weights[4];`). X1E probes `translation_failure_not_stale`,
+    `frag_data_shared_shader` and `initialized_uniform_array` pass; full suite **53/53**
+    (`validation/2026-10-19-x1e-wrapper-all-translation53.json`).
   - Named deviations remain: `glTextureBarrier`/NV and `glTextureView` have no legal/available ES
     implementation; backing-format copy substitutions remain backlog.
 

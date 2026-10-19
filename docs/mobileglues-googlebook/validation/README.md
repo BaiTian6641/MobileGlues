@@ -40,6 +40,10 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-vertex-ssbo-atomics.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 vertex_ssbo_atomics` | PASS: six binding-3 vertex atomics, `min=-10` / `max=10`, fence valid |
 | `2026-10-19-x1e-wrapper-vertex-image2d.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 vertex_image2d` | PASS: 2D RGBA8 vertex image store, readback `64,128,191`, fence valid |
 | `2026-10-19-x1e-wrapper-all-playerops.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `7c4c2a57…6650` | 50/50 PASS including separate player-reflection operation probes |
+| `2026-10-19-x1e-wrapper-translation-failure.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 translation_failure` | PASS: rejected source replaces backend text; compile status false |
+| `2026-10-19-x1e-wrapper-uniform-initializer.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 uniform_initializer` | PASS: array suffix preserved, initializer removed |
+| `2026-10-19-x1e-wrapper-frag-data-shared.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 frag_data_shared` | PASS: second program links restored source without program A's location 5 |
+| `2026-10-19-x1e-wrapper-all-translation53.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `aeb6861d…5aee` | 53/53 PASS including translation-failure, shared-shader and uniform-initializer probes |
 
 ## Game-process captures and logs
 

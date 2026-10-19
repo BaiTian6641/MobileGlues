@@ -1,0 +1,4 @@
+{
+  "wrapper": {"library": "/data/local/tmp/libmobileglues.so", "renderer": "Adreno (TM)  X1-85 | ANGLE | Vulkan 1.4.295 | OpenGL ES 3.2", "version": "4.0.0 MobileGlues 2.0.0", "shading": "4.60 MobileGlues with glslang and SPIRV-Cross"},
+  "frag_data_shared_shader": {"pass": true, "detail": "link_a=1 link_b=1 a_patched=yes b_restored=yes restored_prefix=#version 300 es\nprecision mediump float;\nout vec4 sharedOut;\nvoid main() { sharedOut = vec4(1.0); }\n"}
+}
