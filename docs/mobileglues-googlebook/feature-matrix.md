@@ -133,7 +133,8 @@ fidelity reference.
 | `glShaderSource` multi-string / explicit-length regression | pass | host `tests/run.sh`; X1E `wrapper_probe source_multi`, `source_multi_implicit` |
 | RGB8_SNORM render-target backing | pass | X1E `wrapper_probe rgb8_snorm_attachment`: both TexImage2D and TexStorage2D FBOs complete |
 | Desktop GLSL version normalization | pass for simple shaders | X1E `wrapper_probe desktop_glsl_120/150/330/400/460` |
-| Full wrapper contract suite | pass (25/25 historical; 37/37 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-invalidate.json` |
+| Full wrapper contract suite | pass (25/25 historical; 38/38 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-resolve.json` |
+| Multisample framebuffer resolve | pass | X1E `wrapper_probe blit_multisample_resolve`: 4x MSAA RGBA8 cleared RGB `0.25/0.5/0.75`, blitted to single-sample texture, sampled `0.251/0.502/0.749` |
 | Logical attachment invalidation after draw-buffer shuffle | pass | Host `framebuffer_shuffle_test` scenario 5b: invalidating logical COLOR1 reaches physical COLOR0; `glInvalidateFramebuffer`/`SubFramebuffer` wrappers |
 | Depth texture filter completeness | pass | X1E `wrapper_probe depth_filter_complete`: D32F app filters read back 9986/9729, sampled `0.5`; host `depth_filter_test` 31 checks |
 | 64-bit timestamp queries | pass | X1E `wrapper_probe timer_query64`: two increasing 64-bit timestamps; EXT entry points loaded and timer extension advertised only when they exist |

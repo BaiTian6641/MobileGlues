@@ -123,7 +123,7 @@
   },
   "pins": {
     "runtime_lock": "compat/runtime-lock.json",
-    "runtime_lock_sha256": "51bdc6e3a02c8e66402c62c4a8c005f8e5a7ce36542140b8bfde932ccae0a982",
+    "runtime_lock_sha256": "085fb7b2f1041d77d3b9928b66d086493db8cf5f0717f3b857e6c62f8cdb6d36",
     "shaderpack_lock": "compat/shaderpacks.json",
     "shaderpack_lock_sha256": "81ad5c395baa94c8880900dcba26c3323550184d0e2942ff18f2e71f978caa24",
     "launcher_lock": "compat/launcher-lock.json",
@@ -135,12 +135,13 @@
     "renderer_test_library_sha256": "ca869795b867fca34b50a4c0f981cf18ba8b7dabe856e5295d2cbd291b3cf893",
     "standalone_so_sha256": "b554ce81b0e08221f170cb4f232c6604549e44272cfa6657e8c1e6f32f0f4b87",
     "note": "Runtime and shaderpack lock hashes match the current lock files. The remaining hashes identify the evidence tuple; they are not a release lock.",
-    "wrapper_suite_final_sha256": "fe4ef0b2897b36ac5f4916e909ec63b1cacbbf949f915c3dd34039bea193dbdf",
+    "wrapper_suite_final_sha256": "569d397f70c6b3d04a50f916ca5842727d9ae0af83e4fbbee34aadb512a94f11",
     "wrapper_duplicate_sha256": "a77681fbf4c3a4484e90df591ca209dfa0c976225c7731529e2d85c915ed3304",
     "wrapper_depth_sha256": "136870c81ca87b7e36b777855747a26f72939640597d21678ddc317efe43aafe",
     "wrapper_timer_sha256": "f2ebbdbdfb12f936c25e8666460c1f8fe38e917a45581b859ad5a4621272c000",
     "wrapper_copy_sha256": "8b3af6ae21b115ec60f06741c9ec6cacc353bcae9f868d706c4fbde1c11f510b",
     "wrapper_group_parity_sha256": "fe4ef0b2897b36ac5f4916e909ec63b1cacbbf949f915c3dd34039bea193dbdf",
+    "wrapper_resolve_sha256": "74f513b1e4c8e9a96bc730d2f6416649edf9ed655560a1e9fc5307aa9c6fadd2",
     "wrapper_final_build_sha256": "b554ce81b0e08221f170cb4f232c6604549e44272cfa6657e8c1e6f32f0f4b87"
   },
   "evidence": [

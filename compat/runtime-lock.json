@@ -29,7 +29,8 @@
       "64-bit timestamp queries through GL_EXT_disjoint_timer_query, advertised only with loaded entry points",
       "same-format D32F glCopyImageSubData",
       "program and array image-uniform routing through per-program logical->physical maps",
-      "logical attachment invalidation through the draw-buffer shuffle"
+      "logical attachment invalidation through the draw-buffer shuffle",
+      "multisample framebuffer resolve through glBlitFramebuffer"
     ],
     "named_deviations": {
       "glTextureBarrier": "No legal GLES equivalent; not advertised. Pinned Iris uses BufferFlipper alternate textures.",

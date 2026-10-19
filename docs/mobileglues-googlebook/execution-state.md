@@ -166,6 +166,8 @@ game process.
   - `glInvalidateFramebuffer`/`SubFramebuffer` now map logical colour attachments through the
     draw-buffer shuffle. Host `framebuffer_shuffle_test` scenario 5b proves logical COLOR1 reaches
     physical COLOR0 after a shuffle.
+  - Multisample resolve through `glBlitFramebuffer` passes on X1E: 4x MSAA RGBA8 resolved to
+    `0.251/0.502/0.749`; full wrapper suite is **38/38** (`validation/2026-10-19-x1e-wrapper-all-resolve.json`).
   - Named deviations remain: `glTextureBarrier`/NV and `glTextureView` have no legal/available ES
     implementation; backing-format copy substitutions remain backlog.
 

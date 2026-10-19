@@ -21,6 +21,8 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-copy-image-depth.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 copy_image_depth` | PASS: same-format D32F `glCopyImageSubData`, sampled `0.5` |
 | `2026-10-19-x1e-wrapper-all-final2.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `59a9b230…f699` | 37/37 PASS including depth filtering, timer queries and depth image copy |
 | `2026-10-19-x1e-wrapper-all-invalidate.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `b554ce81…4b87` | 37/37 PASS after logical attachment invalidation mapping; host shuffle scenario 5b passes |
+| `2026-10-19-x1e-wrapper-blit-resolve.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 blit_resolve` | PASS: 4x MSAA renderbuffer resolved to RGB `0.251,0.502,0.749` |
+| `2026-10-19-x1e-wrapper-all-resolve.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `b554ce81…4b87` | 38/38 PASS including multisample resolve |
 
 ## Game-process captures and logs
 
