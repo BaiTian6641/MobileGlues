@@ -40,12 +40,16 @@ extern "C"
                                                            GLsizei width, GLsizei height);
     GLAPI GLAPIENTRY void glGetTexLevelParameterfv(GLenum target, GLint level, GLenum pname, GLfloat* params);
     GLAPI GLAPIENTRY void glGetTexLevelParameteriv(GLenum target, GLint level, GLenum pname, GLint* params);
+    GLAPI GLAPIENTRY void glGetTexParameterIiv(GLenum target, GLenum pname, GLint* params);
+    GLAPI GLAPIENTRY void glGetTexParameterIuiv(GLenum target, GLenum pname, GLuint* params);
     GLAPI GLAPIENTRY void glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width,
                                           GLsizei height, GLenum format, GLenum type, const void* pixels);
     GLAPI GLAPIENTRY void glTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
                                           GLint zoffset, GLsizei width, GLsizei height, GLsizei depth,
                                           GLenum format, GLenum type, const void* pixels);
     GLAPI GLAPIENTRY void glTexParameteriv(GLenum target, GLenum pname, const GLint* params);
+    GLAPI GLAPIENTRY void glTexParameterIiv(GLenum target, GLenum pname, const GLint* params);
+    GLAPI GLAPIENTRY void glTexParameterIuiv(GLenum target, GLenum pname, const GLuint* params);
     GLAPI GLAPIENTRY void glGenerateTextureMipmap(GLuint texture);
     GLAPI GLAPIENTRY void glBindTexture(GLenum target, GLuint texture);
     GLAPI GLAPIENTRY void glDeleteTextures(GLsizei n, const GLuint* textures);
@@ -97,14 +101,26 @@ TextureTarget ConvertGLEnumToTextureTarget(GLenum target);
 
 class TextureObject { // TODO: Make this a more standard class
 public:
-    TextureTarget target;
-    GLuint texture;
-    GLenum internal_format;
-    GLenum format;
-    GLint swizzle_param[4];
-    GLsizei width;
-    GLsizei height;
-    GLsizei depth;
+    // Every member has a value before any allocation touches the object:
+    // glBindTexture creates a record for the default texture 0, and the
+    // sampling-state code below asks about its format on a glTexParameter*
+    // call that may never be preceded by an allocation.
+    TextureTarget target = TextureTarget::UNKNWON;
+    GLuint texture = 0;
+    GLenum internal_format = 0;
+    GLenum format = 0;
+    GLint swizzle_param[4] = {GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA};
+    GLsizei width = 0;
+    GLsizei height = 0;
+    GLsizei depth = 0;
+    // Sampling state as the application set it, GL defaults (ES 3.2 table
+    // 8.19): min NEAREST_MIPMAP_LINEAR, mag LINEAR, compare NONE. The
+    // driver holds the depth-legal view of these three on a sized depth
+    // texture with comparison off (gl/texture.cpp push_depth_sampling_state),
+    // so glGetTexParameter* answers from here rather than the driver.
+    GLint min_filter = GL_NEAREST_MIPMAP_LINEAR;
+    GLint mag_filter = GL_LINEAR;
+    GLenum compare_mode = GL_NONE;
 };
 
 // How many texture units this layer can actually track. Anything the driver
