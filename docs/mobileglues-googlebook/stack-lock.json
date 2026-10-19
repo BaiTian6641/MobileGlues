@@ -225,11 +225,28 @@
         "reload": "shader reload works",
         "log_url": "https://mclo.gs/hH2OIs5",
         "qualification": "pipeline active; not effect-by-effect qualified"
+      },
+      "act192": {
+        "pack": "ComplementaryReimagined_r5.9.2.zip, Very High",
+        "colored_lighting": "sea lantern cyan vs glowstone warm, stable 8 s",
+        "fps": "12 FPS at 2880x1585",
+        "bridge": "mgirisbridge-1.0.0",
+        "log_url": "https://mclo.gs/Dz8wXmm",
+        "status": "staged pass; one emissive scene, not full effect matrix"
       }
     },
     "available_emulators": [
       "emulator-5580 x86_64 sdk_gphone64_x86_64 API 36 page_size 4096",
       "emulator-5582 x86_64 sdk_gphone64_x86_64 API 37 page_size 4096"
-    ]
+    ],
+    "iris_image_bridge": {
+      "source": "MobileGlues-plugin/iris-image-bridge",
+      "artifact": "/home/polar/MobileGlues-fixtures/mgirisbridge-1.0.0.jar",
+      "sha256": "ac4f209312db9819010daa23c17ed8b9314c3946dc3845bad00a642acef01830",
+      "installed_mod": "/storage/emulated/10/Android/data/com.tungsten.fcl/files/.minecraft/mods/mgirisbridge-1.0.0.jar",
+      "target": "iris-neoforge-1.8.14-beta.1+mc1.21.1.jar",
+      "scope": "Iris compute shaders with declared custom images; explicit binding + pack format",
+      "evidence": "log mclo.gs/Dz8wXmm shows floodfill_img=0, floodfill_img_copy=1 and stable ACT"
+    }
   }
 }

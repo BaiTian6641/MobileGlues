@@ -55,3 +55,30 @@
   acquisition metadata are committed. No loader/translator edits are made to the archives.
 - If a fixture is unavailable at test time, the row stays `not tested`; a synthetic shader is labelled
   synthetic and cannot close a pack gate.
+
+## D7. Compute image bindings are supplied by a narrow Iris bridge
+
+- Evidence: wrapper probe `act_pingpong` creates two RGBA16F images, sets image
+  uniforms with `glUniform1i` to units 0 and 1, and writes 11/22. Both image
+  loads return 22. `glGetUniformiv` still reports units 0/1, and
+  `glProgramUniform1i` does not change the result. Adding
+  `layout(binding = 0/1, rgba16f)` to the two compute declarations returns
+  11/22. The same two-declaration fix on the unmodified pack makes
+  Complementary's ACT colored light steady.
+- Decision: ship `mgirisbridge-1.0.0.jar`, a NeoForge Mixin on
+  `Iris/GlShader.createShader`. It only rewrites **compute** shaders, adding
+  `layout(binding = N, <pack format>)` to each declared custom image in source
+  order. Iris's `ProgramImages` already assigns sequential units to the active
+  images, so this closes the ping-pong alias without changing pack archives.
+- Why not vertex/graphics stages: the pack's shadow **vertex** stage also
+  declares `voxel_img`/`puddle_img`. Adding an explicit layout there makes the
+  provider reject the shader (`shadow_terrain_cutout.vsh: ERROR: 1:1`). Those
+  stages currently compile formatless with warnings and are left unchanged.
+- Why not a MobileGlues-only fix: the provider ignores dynamic image-unit
+  assignment; the binding must be present at shader link time. The wrapper's
+  `glBindImageTexture` already widens R16UI/R8UI backing and accepts the
+  textures.
+- Consequence: ACT 192 passes the staged emissive scene on the original
+  r5.9.2 archive. The bridge is a distribution component, not a shaderpack
+  edit; the archive remains byte-identical. Graphics-stage multi-image
+  programs and formatless vertex images remain open.

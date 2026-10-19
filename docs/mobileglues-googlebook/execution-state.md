@@ -156,7 +156,17 @@ Still open in these stages:
   Installed on the device.
 - The installed test plugin packages core `a524755` (extension admission and
   image bridge); the Iris runtime still does not call the metadata begin/add
-  hook, so formatless target-pack image shaders remain blocked in-game.
+  hook. The companion Iris bridge `mgirisbridge-1.0.0` now supplies explicit
+  bindings/formats for **compute** image declarations. This is required because
+  dynamic image-unit assignment through `glUniform1i` is not honoured on this
+  ANGLE path: two floodfill images aliased and produced the flashing ACT mask.
+- Wrapper probe `act_volume` passes full 192×96×192 RGBA16F dispatch and sampler
+  readback. `act_pingpong` fails with dynamic units (`values=22,22`) and passes
+  with explicit bindings (`values=11,22`).
+- Original Complementary Reimagined r5.9.2 at **Very High** now runs with
+  stable colored lighting: sea lantern cyan, glowstone warm, visible diffusion
+  process, no flashing over an 8 s sample. Log `mclo.gs/Dz8wXmm`, F3 and clip
+  archived. This closes the staged ACT 192 scene, not the full Stage 4 matrix.
 
 ## Blockers
 
@@ -190,10 +200,11 @@ performed.
 
 ## Exact next action
 
-Run the independent Stage 4 feasibility check on Reimagined r5.9.2 **Very High**
-(ACT 192, WSR disabled) in the same Forge 21.1.262 instance. Record whether
-the pack initializes or falls back, and if it fails, upload the log to identify
-the formatless-image/Iris metadata blocker. Keep the effect-by-effect Stage 3
-matrix (PBR, shadow edges, bloom, TAA/history) as a separate open gate. The
-custom-uniform warnings are a pack/Iris tuple limitation and must be recorded,
-not masked. WSR 256 remains blocked by the provider's 128 MiB SSBO limit.
+Test **WSR 128** on the original Reimagined r5.9.2 pack by setting the two
+profile values to `COLORED_LIGHTING=128` and `WORLD_SPACE_REFLECTIONS=1`
+(WSR image 128×64×128, main SSBO 50,855,936 B). Verify the water/terrain
+reflection computes initialize, the bridge logs distinct `wsr_img`/`wsr_lod_img`
+bindings, and a controlled reflection scene is stable. Do not use the default
+Ultra profile for this gate: it requests WSR 256 (202,899,456 B), which remains
+blocked by the provider's 128 MiB SSBO limit. Keep effect-by-effect Stage 3
+fidelity and the vertex-image formatless warnings as separate open items.

@@ -32,6 +32,12 @@ pack screen; the saved copies are evidence snapshots.
 | `2026-10-19-unbound-r592-high-f3.png` | `0c5c17b9dd30fbe7e33b338936417224b6aca2518174a7958435361b1f3c6980` | Unbound r5.9.2 High, no fallback, 20 FPS |
 | `2026-10-19-unbound-r592-high-shaders-off.png` | `0a3e47ffc6805d707f47e012a67cf5eff254f93766ec6392f8b30f9bd4ae2891` | Unbound paired reference, 574 FPS |
 | `2026-10-19-game-unbound-r592-high-active.log` | `a25ee3661516d86b5c3d1ea7cb8482ab3c03f392eb7ba12cf4c18233f7fab34c` | Unbound High game log (`mclo.gs/hH2OIs5`) |
+| `2026-10-19-wrapper-act-volume.json` | `0c69688498ffe5045b4d262de35e9529fee1deb8e90645ce7f68b734d368796c` | full ACT volume + sampler pass |
+| `2026-10-19-wrapper-act-pingpong-dynamic.json` | `fbdfcac4920ca6cefae31048befdb4bae5aada9d4def27a50a490f6e36640219` | dynamic image units alias (22,22) |
+| `2026-10-19-wrapper-act-pingpong-binding.json` | `213145c23133ff2f460e6a12f4bfbfda71c725d98d6d8efc581fac7a4f93aeb4` | explicit bindings separate (11,22) |
+| `2026-10-19-r592-act192-bridge-f3.png` | `0c2c95d3596fe67aa6e869034eaaeacfbe4454a3464aad15f520b29a99cda648` | ACT 192 stable scene with bridge |
+| `2026-10-19-r592-act192-bridge-motion.mp4` | `291d3e217f10a14e42b768230d60c9f9508e0ed57d87444815a5f5bdc8b68465` | 8 s ACT stability sample |
+| `2026-10-19-game-r592-act192-bridge.log` | `3c924b33f27c44618d1af8f078f930540ae69c96cb4fd776601210e54656b4fa` | bridge log (`mclo.gs/Dz8wXmm`) |
 | `2026-10-18-game-main-menu-old-plugin.png` | `0258b18ccaecd64433880e1463c0a1d329feda7fa17f45201f51d3224571c85e` | installed 2.0.0 renderer smoke before test plugin |
 
 ## Wrapper harness reproduction
