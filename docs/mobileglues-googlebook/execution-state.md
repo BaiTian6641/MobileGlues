@@ -137,11 +137,14 @@ Still open in these stages:
   image-metadata bridge.
 - Latest standalone ARM64 artifact SHA-256:
   `ef515913cd2abb9fb62f5d708d012136cb939d6d9e6957f94098d1d053648fda`.
-- The plugin APK (debug) SHA-256 is
-  `ed3f3c9d5f7b010e2d92d2313ad1e85f2a81f6f651a869f3bea8d313ec5a32ba`; it
-  predates the extension/image bridge, so rebuild before the next in-game test.
-  Its packaged `libmobileglues.so` SHA-256 is
-  `bc23304770683b167fc5ebe328dee4e12e668f39bcbd034d66551a37c9178cac`.
+- Final test plugin: core `a524755`, plugin commit `59de4b5`, APK SHA-256
+  `e728b6e9bd0d290df4059a401aed3aa7bd48c6f55d1d3bccb7cb0af4fbd72162`,
+  packaged library SHA-256
+  `85f6dcf2d29ac6e7bbe82fe70f660daaba44f6018f1849a86118991ced3cd3a0`.
+  Installed on the device.
+- The installed test plugin packages core `a524755` (extension admission and
+  image bridge); the Iris runtime still does not call the metadata begin/add
+  hook, so formatless target-pack image shaders remain blocked in-game.
 
 ## Blockers
 
@@ -166,8 +169,8 @@ Still open in these stages:
 ## Handoff artifacts
 
 Recoverable patches are in `/home/polar/MobileGlues-fixtures/handoff/`:
-`core-patches/0001..0007` from base `97558a6` to `d22b187`, and
-`plugin-patches/0001` from `f5105e4` to `e796e12`. Hashes are in
+`core-patches/0001..0011` from base `97558a6` to `a524755`, and
+`plugin-patches/0001..0002` from `f5105e4` to `59de4b5`. Hashes are in
 `handoff/hashes.txt`. The core submodule commit `0557189` is present in the
 local core repository and in the plugin's local submodule clone; upstream does
 not contain it, so the patches are the portable handoff. No push or PR was

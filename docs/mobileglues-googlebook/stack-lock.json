@@ -24,12 +24,13 @@
     "recorded_core_gitlink": "f56af31d3e490d95808b3adc4ace20234249a37a",
     "integration_status": "clone only; submodule not initialized; no edits",
     "test_build": {
-      "core_commit": "0557189d018f80514bcc4238f005e4ff715ba736",
+      "core_commit": "a524755b5681bbf6b7259d68ea341cabfa0623c6",
+      "plugin_commit": "59de4b5",
       "apk_path": "/home/polar/MobileGlues-plugin/app/build/outputs/apk/debug/app-debug.apk",
-      "apk_sha256": "ed3f3c9d5f7b010e2d92d2313ad1e85f2a81f6f651a869f3bea8d313ec5a32ba",
-      "lib_sha256": "bc23304770683b167fc5ebe328dee4e12e668f39bcbd034d66551a37c9178cac",
+      "apk_sha256": "e728b6e9bd0d290df4059a401aed3aa7bd48c6f55d1d3bccb7cb0af4fbd72162",
+      "lib_sha256": "85f6dcf2d29ac6e7bbe82fe70f660daaba44f6018f1849a86118991ced3cd3a0",
       "ndk": "27.3.13750724",
-      "status": "installed on C1L63708PZ for game-process testing; debug signed"
+      "status": "installed on C1L63708PZ; includes extension admission and image-format bridge; Iris begin/add hook still absent"
     }
   },
   "submodules": {
