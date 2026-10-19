@@ -179,8 +179,18 @@ game process.
     tessellation-level entry point, so valid calls report `GL_INVALID_OPERATION`; a TCS must write
     `gl_TessLevel*`.
   - Depth/stencil format mismatches are rejected before ANGLE: `glBlitFramebuffer` reports
-    `GL_INVALID_OPERATION` and `glCopyTexSubImage2D` skips the undefined copy. Both probes keep a
-    valid fence afterward, proving the Vulkan device was not lost.
+    `GL_INVALID_OPERATION` and both `glCopyTexSubImage2D` and `glCopyTexImage2D` skip the undefined
+    copy. Matching D24S8→D24S8 blits still pass. The guard queries default-framebuffer and
+    combined/separate attachment tokens correctly and keeps a valid fence afterward, proving the
+    Vulkan device was not lost.
+  - The 3D image-store clear now queries the named texture's level extents, binds the requested
+    level, and keys its cached program by share group. X1E `clear_tex_level`: clearing level 1 of a
+    2×2×2 R32UI texture leaves level 0 at `7` and reads level 1 as `0`.
+  - `glDispatchCompute`/`glDispatchComputeIndirect` now run the depth-sampler guard. The sampler
+    mutators (`glBindSampler`, `glSamplerParameter*`, `glDeleteSamplers`) were compiled without a
+    visible declaration and were hidden, so callers bypassed the wrapper shadow; they are exported
+    now. X1E `depth_filter` samples `0.5` through a bound LINEAR sampler and restores its binding.
+    Full wrapper suite: **46/46** (`validation/2026-10-19-x1e-wrapper-all-audit.json`).
   - Named deviations remain: `glTextureBarrier`/NV and `glTextureView` have no legal/available ES
     implementation; backing-format copy substitutions remain backlog.
 

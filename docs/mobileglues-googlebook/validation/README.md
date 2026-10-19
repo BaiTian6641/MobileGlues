@@ -29,6 +29,11 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-geometry-stage.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 geometry_stage` | PASS: desktop `#version 400 core` geometry program compiled/linked/drew `pixel=255,0,0` |
 | `2026-10-19-x1e-wrapper-tessellation-stage.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 tessellation_stage` | PASS: VS/TCS/TES/FS compiled/linked/drew `pixel=255,0,0`; `GL_ARB_tessellation_shader` advertised; default-level calls report `GL_INVALID_OPERATION` |
 | `2026-10-19-x1e-wrapper-all-stages.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `7f0a052d…2284` | 43/43 PASS including geometry, tessellation, depth-copy and blit-mismatch guards |
+| `2026-10-19-x1e-wrapper-blit-depth-match.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 blit_depth_match` against ARM64 build `7286bd47…5aff` | PASS: matching D24S8→D24S8 depth+stencil blit, no error, fence valid |
+| `2026-10-19-x1e-wrapper-copy-image-depth-mismatch.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 copy_image_depth_mismatch` | PASS: D24S8→D24 copy skipped, no device loss, fence valid |
+| `2026-10-19-x1e-wrapper-clear-tex-level.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 clear_tex_level` | PASS: level 1 cleared, level 0 remains `7` |
+| `2026-10-19-x1e-wrapper-depth-sampler-compute.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 depth_filter` | PASS: compute samples depth `0.5` with a LINEAR sampler object bound; sampler restored |
+| `2026-10-19-x1e-wrapper-all-audit.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `7286bd47…5aff` | 46/46 PASS including legal/mismatched depth blits, copy-image guard, clear level and compute sampler guard |
 
 ## Game-process captures and logs
 

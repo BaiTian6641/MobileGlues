@@ -133,7 +133,11 @@ fidelity reference.
 | `glShaderSource` multi-string / explicit-length regression | pass | host `tests/run.sh`; X1E `wrapper_probe source_multi`, `source_multi_implicit` |
 | RGB8_SNORM render-target backing | pass | X1E `wrapper_probe rgb8_snorm_attachment`: both TexImage2D and TexStorage2D FBOs complete |
 | Desktop GLSL version normalization | pass for simple shaders | X1E `wrapper_probe desktop_glsl_120/150/330/400/460` |
-| Full wrapper contract suite | pass (25/25 historical; 43/43 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-stages.json` |
+| Full wrapper contract suite | pass (25/25 historical; 46/46 current) | `validation/2026-10-19-x1e-wrapper-image-bridge.json`; `validation/2026-10-19-x1e-wrapper-all-audit.json` |
+| Legal matching depth blit | pass | X1E `blit_depth_match`: D24S8→D24S8 depth+stencil blit, `blit_error=0`, fence valid |
+| `glCopyTexImage2D` depth mismatch | pass (no device loss) | X1E `copy_image_depth_mismatch`: D24S8 source / D24 level skipped, `copy_error=0`, fence valid |
+| 3D image-store clear level isolation | pass | X1E `clear_tex_level`: 2×2×2 R32UI, level 0 remains `7`, cleared level 1 reads `0` |
+| Compute depth sampler override | pass | X1E `depth_filter`: LINEAR sampler object bound to unit 0; dispatch samples `0.5` and restores the sampler binding |
 | Geometry shader stage | pass | X1E `wrapper_probe geometry_stage`: desktop `#version 400 core` vertex/geometry/fragment compiled, linked, drew `pixel=255,0,0` through ANGLE ES 3.2 |
 | Tessellation control/evaluation stages | pass with TCS-written levels | X1E `wrapper_probe tessellation_stage`: `#version 400 core` VS/TCS/TES/FS, `GL_PATCHES`, `pixel=255,0,0`; `GL_ARB_tessellation_shader` advertised. Default tessellation levels are a named deviation |
 | Depth-copy format mismatch | pass (no device loss) | X1E `depth_copy_mismatch`: D24S8 source to D24 destination skipped, `copy_error=0`, fence valid; `blit_depth_mismatch`: `GL_INVALID_OPERATION` (1282), fence valid |
@@ -219,6 +223,7 @@ claims, not future compatibility work.
   arrays/cubes/3D get depth-legal texture filters at set/allocation but a sampler override on those
   targets is not rewritten. Stencil-index mode is not modelled. One-level textures with a
   mip-requiring min filter remain mip-incomplete, matching desktop.
+- **Mutable multi-level 3D image textures:** the level-0 `glTexImage3D` image-format allocation is converted to one-level immutable `glTexStorage3D` storage to keep ANGLE image load/store usable. A later level > 0 upload therefore cannot extend that texture; a caller that supplies a mutable mip chain level by level is not yet supported. One-level Iris custom images are the tested path.
 - **Copy format substitutions:** same-format D32F copy passes; R16UI→R32UI / RGB8_SNORM→RGBA8_SNORM
   compatibility-class changes are not yet validated for `glCopyImageSubData`.
 
