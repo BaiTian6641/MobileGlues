@@ -14,7 +14,7 @@ Last updated: 2026-10-18.
 
 | Root | Branch | HEAD | Remote | State |
 | --- | --- | --- | --- | --- |
-| `/home/polar/MobileGlues` | `googlebook/x1e-stage1-3` | `d22b187` (base `97558a6`) | `origin` = `git@github.com:BaiTian6641/MobileGlues.git` (preserved); `upstream` = `https://github.com/MobileGL-Dev/MobileGlues.git` (read baseline) | Task branch; clean except user `.vscode/` |
+| `/home/polar/MobileGlues` | `googlebook/x1e-stage1-3` | `dcc67e8` (base `97558a6`) | `origin` = `git@github.com:BaiTian6641/MobileGlues.git` (preserved); `upstream` = `https://github.com/MobileGL-Dev/MobileGlues.git` (read baseline) | Task branch; clean except user `.vscode/` |
 | `/home/polar/MobileGlues-plugin` | `googlebook/test-renderer` | `e796e12` | `origin` = `https://github.com/MobileGL-Dev/MobileGlues-plugin.git` | Parent commit updates the test core gitlink; core submodule detached at `0557189` |
 
 Core submodules initialized at the gitlinks recorded by `97558a6`:
@@ -130,8 +130,10 @@ Still open in these stages:
 - The installed test plugin APK (core `0557189`, debug signing) is the renderer
   named in the game log's `SDL_OPENGL_LIBRARY` and `LD_LIBRARY_PATH`. The original
   installed 2.0.0 APK is preserved for rollback.
-- Latest commits: `d9789fa` shader source/per-object state, `9a91ede` compiler
-  limits/SSBO binding, `0557189` RGB8_SNORM backing, `468c4bb` records.
+- Latest commits on `googlebook/x1e-stage1-3`: `d9789fa` shader source/per-object
+  state, `9a91ede` compiler limits/SSBO binding, `0557189` RGB8_SNORM backing,
+  `468c4bb` game evidence, `e3b2661` artifact hashes, `d22b187` wrapper version
+  fixtures, `dcc67e8` branch/handoff records.
 - Latest standalone ARM64 artifact SHA-256:
   `fd37ab2f71801b6619b937af1895234c318dab9e3dcf29f8f41993d4577d73a8`.
 - The plugin APK (debug) SHA-256 is
