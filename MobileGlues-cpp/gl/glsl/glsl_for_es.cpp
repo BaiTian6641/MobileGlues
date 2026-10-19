@@ -133,14 +133,17 @@ static TBuiltInResource InitResources() {
 
     if (GLES.glGetIntegerv) {
         auto q = [](GLenum pname, int fallback) {
+            // glGetIntegerv leaves the value untouched on error. Returning the
+            // queried value directly keeps negative limits such as
+            // GL_MIN_PROGRAM_TEXEL_OFFSET and legitimate zero limits truthful.
             GLint value = fallback;
             GLES.glGetIntegerv(pname, &value);
-            return value > 0 ? value : fallback;
+            return value;
         };
         auto qi = [](GLenum pname, GLuint index, int fallback) {
             GLint value = fallback;
             if (GLES.glGetIntegeri_v) GLES.glGetIntegeri_v(pname, index, &value);
-            return value > 0 ? value : fallback;
+            return value;
         };
         Resources.maxTextureUnits = q(GL_MAX_TEXTURE_IMAGE_UNITS, Resources.maxTextureUnits);
         Resources.maxTextureImageUnits = Resources.maxTextureUnits;
@@ -636,14 +639,28 @@ static size_t find_insertion_point(const std::string& glsl) {
 }
 
 void process_sampler_buffer(std::string& source) { // a simplized version, should be rewritten in the future
-    if (source.find("isamplerBuffer") == std::string::npos) {
+    if (source.find("samplerBuffer") == std::string::npos) {
         return;
     }
 
+    // Replace the most specific names first so the suffix of isamplerBuffer/
+    // usamplerBuffer cannot be rewritten twice. The emulation trigger in
+    // gl/shader.cpp already uses the generic substring; float sampling must
+    // take the same 2D path as integer sampling.
     size_t pos = 0;
     while ((pos = source.find("isamplerBuffer", pos)) != std::string::npos) {
         source.replace(pos, 14, "isampler2D");
         pos += 11;
+    }
+    pos = 0;
+    while ((pos = source.find("usamplerBuffer", pos)) != std::string::npos) {
+        source.replace(pos, 14, "usampler2D");
+        pos += 11;
+    }
+    pos = 0;
+    while ((pos = source.find("samplerBuffer", pos)) != std::string::npos) {
+        source.replace(pos, 13, "sampler2D");
+        pos += 10;
     }
 
     std::regex pattern(R"(texelFetch\s*\(\s*(\w+)\s*,\s*([^)]+?)\s*\))");

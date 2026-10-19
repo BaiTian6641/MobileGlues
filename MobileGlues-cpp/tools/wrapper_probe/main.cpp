@@ -2499,6 +2499,68 @@ Result test_frag_data_shared_shader() {
     return r;
 }
 
+Result test_frag_data_linked_location() {
+    Result r;
+    const char* vs = "#version 420 core\nvoid main() { gl_Position = vec4(0.0); }\n";
+    const char* fs = "#version 420 core\nlayout(location = 3) out vec4 explicitOut;\nvoid main() { explicitOut = vec4(1.0); }\n";
+    GLuint vshader = api.glCreateShader(GL_VERTEX_SHADER);
+    api.glShaderSource(vshader, 1, &vs, nullptr);
+    api.glCompileShader(vshader);
+    GLuint fshader = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(fshader, 1, &fs, nullptr);
+    api.glCompileShader(fshader);
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, vshader);
+    api.glAttachShader(program, fshader);
+    api.glLinkProgram(program);
+    GLint linked = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    const GLint location = api.glGetFragDataLocation(program, "explicitOut");
+    r.ok = linked == GL_TRUE && location == 3;
+    r.detail = "link=" + std::to_string(linked) + " location=" + std::to_string(location) +
+               " source=" + shader_source_text(fshader).substr(0, std::min<size_t>(shader_source_text(fshader).size(), 300));
+    api.glDeleteProgram(program);
+    api.glDeleteShader(vshader);
+    api.glDeleteShader(fshader);
+    return r;
+}
+
+Result test_ssbo_qualifier_preserved() {
+    Result r;
+    const char* vs = "#version 430 core\nvoid main() { gl_Position = vec4(0.0); }\n";
+    const char* fs = R"(#version 430 core
+layout(std430, binding = 0) readonly buffer Block { float value; } blockData;
+out vec4 color;
+void main() { color = vec4(blockData.value); }
+)";
+    GLuint vshader = api.glCreateShader(GL_VERTEX_SHADER);
+    api.glShaderSource(vshader, 1, &vs, nullptr);
+    api.glCompileShader(vshader);
+    GLuint fshader = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(fshader, 1, &fs, nullptr);
+    api.glCompileShader(fshader);
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, vshader);
+    api.glAttachShader(program, fshader);
+    api.glLinkProgram(program);
+    GLint linked = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    while (api.glGetError() != GL_NO_ERROR) {}
+    api.glShaderStorageBlockBinding(program, 0, 2);
+    const GLenum binding_error = api.glGetError();
+    const std::string source = shader_source_text(fshader);
+    const bool readonly_kept = source.find("readonly buffer") != std::string::npos;
+    const bool rebound = source.find("binding = 2") != std::string::npos;
+    r.ok = linked == GL_TRUE && binding_error == GL_NO_ERROR && readonly_kept && rebound;
+    r.detail = "link=" + std::to_string(linked) + " binding_error=" + std::to_string(binding_error) +
+               " readonly=" + (readonly_kept ? "yes" : "no") + " rebound=" + (rebound ? "yes" : "no") +
+               " source=" + source.substr(0, std::min<size_t>(source.size(), 400));
+    api.glDeleteProgram(program);
+    api.glDeleteShader(vshader);
+    api.glDeleteShader(fshader);
+    return r;
+}
+
 Result test_patch_default_levels() {
     Result r;
     // ES has no default tessellation-level entry point. The frontend must say
@@ -3257,6 +3319,8 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "translation_failure")) run("translation_failure_not_stale", test_translation_failure_not_stale);
     if (!strcmp(mode, "all") || !strcmp(mode, "uniform_initializer")) run("initialized_uniform_array", test_initialized_uniform_array);
     if (!strcmp(mode, "all") || !strcmp(mode, "frag_data_shared")) run("frag_data_shared_shader", test_frag_data_shared_shader);
+    if (!strcmp(mode, "all") || !strcmp(mode, "frag_data_linked")) run("frag_data_linked_location", test_frag_data_linked_location);
+    if (!strcmp(mode, "all") || !strcmp(mode, "ssbo_qualifier")) run("ssbo_qualifier_preserved", test_ssbo_qualifier_preserved);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
     if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);

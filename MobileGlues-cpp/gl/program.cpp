@@ -194,8 +194,12 @@ void glLinkProgram(GLuint program) {
     GLint link_status = GL_FALSE;
     GLES.glGetProgramiv(program, GL_LINK_STATUS, &link_status);
     if (link_status == GL_TRUE) {
+        // A relink can change every reflected uniform location. The sampler-
+        // buffer cache is filled after a previous link and must not survive.
+        g_samplerCacheForSamplerBuffer.erase(program);
         mg_reflect_image_uniforms(program);
         mg_resolve_duplicate_image_bindings(program);
+        g_samplerCacheForSamplerBuffer.erase(program);
         // A relink can change the physical image-unit plan while the program
         // is already current.
         if (gl_state->current_program == program) mg_materialize_image_bindings();
@@ -306,7 +310,7 @@ void glDeleteProgram(GLuint program) {
 namespace {
 
 bool rewrite_storage_block_binding(std::string& source, const std::string& block, GLuint binding) {
-    const std::string block_pattern = R"((?:\w+\s+)*buffer\s+)";
+    const std::string block_pattern = R"(((?:\w+\s+)*)buffer\s+)";
     // Three shapes the translated ESSL can have for a storage block:
     //   layout(std430, binding = 0) buffer Name { ... };
     //   layout(std430) buffer Name { ... };
@@ -323,7 +327,7 @@ bool rewrite_storage_block_binding(std::string& source, const std::string& block
         } else {
             qualifiers += ", binding = " + std::to_string(binding);
         }
-        const std::string replacement = "layout(" + qualifiers + ") buffer " + block;
+        const std::string replacement = "layout(" + qualifiers + ") " + match[2].str() + "buffer " + block;
         source.replace(match.position(), match.length(), replacement);
         return true;
     }
@@ -393,6 +397,13 @@ GLint glGetFragDataLocation(GLuint program, const GLchar* name) {
     if (name == nullptr) return -1;
     MgProgramObject* program_state = mg_find_program(program);
     if (!program_state) return -1;
+    // The link-assigned location is authoritative, including layout(location)
+    // and automatic assignment. glBindFragDataLocation is only the fallback
+    // when the backend does not expose the query.
+    if (GLES.glGetFragDataLocation) {
+        const GLint driver_location = GLES.glGetFragDataLocation(program, name);
+        if (driver_location >= 0) return driver_location;
+    }
     auto it = program_state->frag_data_locations.find(name);
     return it == program_state->frag_data_locations.end() ? -1 : static_cast<GLint>(it->second);
 }
