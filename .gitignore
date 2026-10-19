@@ -6,3 +6,5 @@ src/main/cpp/out
 src/main/cpp/CMakeSettings.json
 MobileGlues-cpp/tools/capability_probe/capability_probe_arm64
 MobileGlues-cpp/tools/wrapper_probe/wrapper_probe_arm64
+
+.gradle/

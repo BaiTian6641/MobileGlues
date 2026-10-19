@@ -130,6 +130,14 @@ Still open in these stages:
 - The installed test plugin APK (core `0557189`, debug signing) is the renderer
   named in the game log's `SDL_OPENGL_LIBRARY` and `LD_LIBRARY_PATH`. The original
   installed 2.0.0 APK is preserved for rollback.
+- Latest commits: `d9789fa` shader source/per-object state, `9a91ede` compiler
+  limits/SSBO binding, `0557189` RGB8_SNORM backing, `468c4bb` records.
+- Latest standalone ARM64 artifact SHA-256:
+  `fd37ab2f71801b6619b937af1895234c318dab9e3dcf29f8f41993d4577d73a8`.
+- The plugin APK (debug) SHA-256 is
+  `ed3f3c9d5f7b010e2d92d2313ad1e85f2a81f6f651a869f3bea8d313ec5a32ba`; its
+  packaged `libmobileglues.so` SHA-256 is
+  `bc23304770683b167fc5ebe328dee4e12e668f39bcbd034d66551a37c9178cac`.
 
 ## Blockers
 
