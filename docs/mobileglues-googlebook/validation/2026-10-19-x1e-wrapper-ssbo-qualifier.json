@@ -1,0 +1,4 @@
+{
+  "wrapper": {"library": "/data/local/tmp/libmobileglues.so", "renderer": "Adreno (TM)  X1-85 | ANGLE | Vulkan 1.4.295 | OpenGL ES 3.2", "version": "4.0.0 MobileGlues 2.0.0", "shading": "4.60 MobileGlues with glslang and SPIRV-Cross"},
+  "ssbo_qualifier_preserved": {"pass": true, "detail": "link=1 binding_error=0 readonly=yes rebound=yes source=#version 320 es\nprecision highp float;\nprecision highp int;\n\nlayout(binding = 2, std430) readonly buffer Block\n{\n    highp float value;\n} blockData;\n\nout highp vec4 color;\n\nvoid main()\n{\n    color = vec4(blockData.value);\n}\n"}
+}

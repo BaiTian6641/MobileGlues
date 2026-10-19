@@ -44,6 +44,9 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-uniform-initializer.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 uniform_initializer` | PASS: array suffix preserved, initializer removed |
 | `2026-10-19-x1e-wrapper-frag-data-shared.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 frag_data_shared` | PASS: second program links restored source without program A's location 5 |
 | `2026-10-19-x1e-wrapper-all-translation53.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `aeb6861d…5aee` | 53/53 PASS including translation-failure, shared-shader and uniform-initializer probes |
+| `2026-10-19-x1e-wrapper-frag-data-linked.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 frag_data_linked` | PASS: `layout(location = 3)` queried as 3 |
+| `2026-10-19-x1e-wrapper-ssbo-qualifier.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 ssbo_qualifier` | PASS: `readonly buffer` preserved on rebinding to 2 |
+| `2026-10-19-x1e-wrapper-all-translation55.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `7c4c7ad2…e052` | 55/55 PASS including linked-location and SSBO-qualifier probes |
 
 ## Game-process captures and logs
 

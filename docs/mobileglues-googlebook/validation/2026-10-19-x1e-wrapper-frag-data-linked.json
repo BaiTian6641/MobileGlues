@@ -1,0 +1,4 @@
+{
+  "wrapper": {"library": "/data/local/tmp/libmobileglues.so", "renderer": "Adreno (TM)  X1-85 | ANGLE | Vulkan 1.4.295 | OpenGL ES 3.2", "version": "4.0.0 MobileGlues 2.0.0", "shading": "4.60 MobileGlues with glslang and SPIRV-Cross"},
+  "frag_data_linked_location": {"pass": true, "detail": "link=1 location=3 source=#version 320 es\nprecision highp float;\nprecision highp int;\n\nlayout(location = 3) out highp vec4 explicitOut;\n\nvoid main()\n{\n    explicitOut = vec4(1.0);\n}\n"}
+}

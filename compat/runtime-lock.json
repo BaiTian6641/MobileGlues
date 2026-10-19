@@ -45,7 +45,12 @@
       "2D RGBA8 vertex-stage image stores executable on X1E",
       "failed translation replaces the backend source so a re-sourced shader cannot compile stale text",
       "fragment output-location patches are owned by the linking program and restored before another program links the shader",
-      "desktop uniform initializers are removed while preserving the declarator suffix, including array bounds"
+      "desktop uniform initializers are removed while preserving the declarator suffix, including array bounds",
+      "negative and zero backend limits are reported truthfully to glslang",
+      "glGetFragDataLocation reports link-assigned locations, including layout(location=)",
+      "relink invalidates the sampler-buffer uniform cache",
+      "storage-block rebinding preserves readonly/writeonly/coherent/volatile qualifiers",
+      "samplerBuffer emulation covers float, uint and int sampler types"
     ],
     "named_deviations": {
       "glTextureBarrier": "No legal GLES equivalent; not advertised. Pinned Iris uses BufferFlipper alternate textures.",
@@ -369,9 +374,9 @@
       "status": "REPRODUCED"
     },
     "artifacts": {
-      "standalone_so_sha256": "aeb6861dbc5b59f0ded127fd6765defc6d5f119291168e8370d9f8b1a6375aee",
-      "test_apk_sha256": "ceeb8bc1b30e31d5175dbc131b7343435d2b30a3dd410398e0d58963587e9afc",
-      "test_packaged_library_sha256": "1161b63d598acf9d0c556be7bbccb9df152fcf9b849a4acca2e1be3384b0b793",
+      "standalone_so_sha256": "7c4c7ad2954b76ea095d58391f689a43ae63557607939e578d87085ed08ee052",
+      "test_apk_sha256": "7767091dd8c753f9477bc80e6030b4c7365d232026fb670a418cdcd4c10a33d3",
+      "test_packaged_library_sha256": "e7795ad54fb379a489ac21ab2ef5db45f633f78979522f716b4bf2536716c54b",
       "installed_release_apk_sha256": "a7e1eb29731fdece7ab3af7fb00692b856f1808a7544436e7b3eb6c08355581a",
       "note": "These build hashes are evidence for the historical tuple, not a release lock for either runtime lane."
     },

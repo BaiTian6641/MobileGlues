@@ -207,8 +207,11 @@ game process.
     owned by the linking program: a shared fragment shader is restored before a different program
     links it. Initialized uniform declarations drop only the initializer, preserving array bounds
     (`uniform highp float weights[4];`). X1E probes `translation_failure_not_stale`,
-    `frag_data_shared_shader` and `initialized_uniform_array` pass; full suite **53/53**
-    (`validation/2026-10-19-x1e-wrapper-all-translation53.json`).
+    `frag_data_shared_shader` and `initialized_uniform_array` pass. glslang now receives negative
+    and zero backend limits truthfully; `glGetFragDataLocation` merges link-assigned locations;
+    relinks invalidate the sampler-buffer uniform cache; storage-block rebinding preserves
+    read/write/coherence qualifiers; samplerBuffer emulation covers float/uint/int types. Full
+    suite **55/55** (`validation/2026-10-19-x1e-wrapper-all-translation55.json`).
   - Named deviations remain: `glTextureBarrier`/NV and `glTextureView` have no legal/available ES
     implementation; backing-format copy substitutions remain backlog.
 
