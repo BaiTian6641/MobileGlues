@@ -1031,6 +1031,87 @@ void glBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const void
     CHECK_GL_ERROR
 }
 
+static bool mg_clear_value_is_zero(GLenum format, GLenum type, const void* data) {
+    if (data == nullptr) return true;
+    // Iris clears with a single RED/RED_INTEGER scalar (typically zero).
+    // A non-zero scalar needs format conversion; refuse it rather than write
+    // bytes whose meaning does not match the requested internal format.
+    if (format != GL_RED && format != GL_RED_INTEGER) return false;
+    switch (type) {
+    case GL_BYTE:
+        return *static_cast<const GLbyte*>(data) == 0;
+    case GL_UNSIGNED_BYTE:
+        return *static_cast<const GLubyte*>(data) == 0;
+    case GL_SHORT:
+        return *static_cast<const GLshort*>(data) == 0;
+    case GL_UNSIGNED_SHORT:
+        return *static_cast<const GLushort*>(data) == 0;
+    case GL_INT:
+        return *static_cast<const GLint*>(data) == 0;
+    case GL_UNSIGNED_INT:
+        return *static_cast<const GLuint*>(data) == 0;
+    case GL_FLOAT:
+        return *static_cast<const GLfloat*>(data) == 0.0f;
+    default:
+        return false;
+    }
+}
+
+void glClearBufferSubData(GLenum target, GLenum internalformat, GLintptr offset, GLsizeiptr size, GLenum format,
+                          GLenum type, const void* data) {
+    LOG()
+    LOG_D("glClearBufferSubData, target=%s internalformat=%s offset=%lld size=%lld format=%s type=%s",
+          glEnumToString(target), glEnumToString(internalformat), (long long)offset, (long long)size,
+          glEnumToString(format), glEnumToString(type))
+    const GLuint buffer = find_bound_buffer_by_target(target);
+    if (buffer == 0) {
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        return;
+    }
+    if (offset < 0 || size < 0) {
+        mg_set_gl_error(GL_INVALID_VALUE);
+        return;
+    }
+    if (size == 0) return;
+
+    size_t buffer_size = get_buffer_data_size(buffer);
+    if (buffer_size == 0) {
+        GLint queried = 0;
+        glGetBufferParameteriv(target, GL_BUFFER_SIZE, &queried);
+        if (queried > 0) buffer_size = static_cast<size_t>(queried);
+    }
+    if (buffer_size == 0 || static_cast<size_t>(offset) + static_cast<size_t>(size) > buffer_size) {
+        mg_set_gl_error(GL_INVALID_VALUE);
+        return;
+    }
+    if (!mg_clear_value_is_zero(format, type, data)) {
+        // Do not silently substitute zeros for a value conversion this layer
+        // does not implement.
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        LOG_E("glClearBufferSubData: unsupported non-zero clear conversion format=%s type=%s",
+              glEnumToString(format), glEnumToString(type))
+        return;
+    }
+
+    static thread_local std::vector<unsigned char> zeros(1u << 20, 0);
+    size_t written = 0;
+    while (written < static_cast<size_t>(size)) {
+        const size_t chunk = std::min(zeros.size(), static_cast<size_t>(size) - written);
+        glBufferSubData(target, offset + static_cast<GLintptr>(written), static_cast<GLsizeiptr>(chunk), zeros.data());
+        written += chunk;
+    }
+}
+
+void glClearBufferData(GLenum target, GLenum internalformat, GLenum format, GLenum type, const void* data) {
+    GLint buffer_size = 0;
+    glGetBufferParameteriv(target, GL_BUFFER_SIZE, &buffer_size);
+    if (buffer_size <= 0) {
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        return;
+    }
+    glClearBufferSubData(target, internalformat, 0, buffer_size, format, type, data);
+}
+
 void glGetBufferParameteriv(GLenum target, GLenum pname, GLint* params) {
     LOG()
     LOG_D("glGetBufferParameteriv, target = %s, pname = %s", glEnumToString(target), glEnumToString(pname))

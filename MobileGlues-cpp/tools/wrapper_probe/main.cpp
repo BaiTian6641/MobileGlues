@@ -83,6 +83,7 @@ struct Api {
     PFNGLDELETEBUFFERSPROC glDeleteBuffers;
     PFNGLBUFFERDATAPROC glBufferData;
     PFNGLBINDBUFFERBASEPROC glBindBufferBase;
+    void (*glClearBufferSubData)(GLenum, GLenum, GLintptr, GLsizeiptr, GLenum, GLenum, const void*);
     PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation;
     PFNGLUNIFORM1UIPROC glUniform1ui;
     PFNGLUNIFORM1IPROC glUniform1i;
@@ -1490,6 +1491,31 @@ void main() { outb.value = imageLoad(img, ivec3(63, 31, 63)).r; }
     return r;
 }
 
+Result test_clear_buffer_subdata() {
+    Result r;
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    std::vector<unsigned char> ones(64, 0xff);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 64, ones.data(), GL_DYNAMIC_DRAW);
+    int zero = 0;
+    if (api.glClearBufferSubData) {
+        api.glClearBufferSubData(GL_SHADER_STORAGE_BUFFER, GL_R8, 0, 64, GL_RED, GL_BYTE, &zero);
+    }
+    const GLenum clear_error = api.glGetError();
+    api.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    unsigned char got[64] = {};
+    void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, 64, GL_MAP_READ_BIT);
+    if (ptr) { memcpy(got, ptr, 64); api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER); }
+    bool all_zero = true;
+    for (unsigned char v : got) all_zero &= (v == 0);
+    r.ok = api.glClearBufferSubData != nullptr && clear_error == GL_NO_ERROR && all_zero;
+    r.detail = "entry=" + std::string(api.glClearBufferSubData ? "yes" : "no") +
+               " error=" + std::to_string(clear_error) + " all_zero=" + std::to_string(all_zero);
+    api.glDeleteBuffers(1, &buffer);
+    return r;
+}
+
 Result test_integer_image_binding() {
     Result r;
     // ESSL 3.10 cannot name an r16ui image on this provider. The frontend must
@@ -1593,6 +1619,7 @@ int main(int argc, char** argv) {
     api.glDeleteBuffers = sym<PFNGLDELETEBUFFERSPROC>("glDeleteBuffers");
     api.glBufferData = sym<PFNGLBUFFERDATAPROC>("glBufferData");
     api.glBindBufferBase = sym<PFNGLBINDBUFFERBASEPROC>("glBindBufferBase");
+    api.glClearBufferSubData = sym<void (*)(GLenum, GLenum, GLintptr, GLsizeiptr, GLenum, GLenum, const void*)>("glClearBufferSubData");
     api.glGetUniformLocation = sym<PFNGLGETUNIFORMLOCATIONPROC>("glGetUniformLocation");
     api.glUniform1ui = sym<PFNGLUNIFORM1UIPROC>("glUniform1ui");
     api.glUniform1i = sym<PFNGLUNIFORM1IPROC>("glUniform1i");
@@ -1676,6 +1703,7 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "act_pingpong")) run("act_pingpong", test_act_pingpong);
     if (!strcmp(mode, "all") || !strcmp(mode, "act_pingpong_binding")) run("act_pingpong_binding", test_act_pingpong_binding);
     if (!strcmp(mode, "all") || !strcmp(mode, "r32ui_volume")) run("r32ui_volume", test_r32ui_volume);
+    if (!strcmp(mode, "all") || !strcmp(mode, "clear_buffer")) run("clear_buffer_subdata", test_clear_buffer_subdata);
     fprintf(g_out, "\n}\n");
 
     destroy_context();
