@@ -2637,6 +2637,85 @@ Result test_image_rebind_bench() {
     return r;
 }
 
+Result test_iteration_caps() {
+    Result r;
+    auto compile_compute = [&](const char* label, const char* src, std::string& log) {
+        GLuint shader = api.glCreateShader(GL_COMPUTE_SHADER);
+        api.glShaderSource(shader, 1, &src, nullptr);
+        api.glCompileShader(shader);
+        GLint status = GL_FALSE;
+        api.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+        log = shader_log(shader);
+        api.glDeleteShader(shader);
+        return std::string(label) + "=" + (status == GL_TRUE ? "yes" : "no");
+    };
+    std::string log_quad, log_arith, log_ballot, log_rgba16, log_rg16, log_rg16f;
+    const char* quad = R"(#version 320 es
+#extension GL_KHR_shader_subgroup_quad : require
+layout(local_size_x = 4) in;
+layout(std430, binding = 0) buffer Out { vec4 v; } o;
+void main() { o.v = subgroupQuadSwapHorizontal(vec4(1.0)); }
+)";
+    const char* arith = R"(#version 320 es
+#extension GL_KHR_shader_subgroup_arithmetic : require
+layout(local_size_x = 4) in;
+layout(std430, binding = 0) buffer Out { float v; } o;
+void main() { o.v = subgroupInclusiveAdd(1.0); }
+)";
+    const char* ballot = R"(#version 320 es
+#extension GL_KHR_shader_subgroup_ballot : require
+layout(local_size_x = 4) in;
+layout(std430, binding = 0) buffer Out { uint v; } o;
+void main() { o.v = subgroupBallot(true).x; }
+)";
+    const char* rgba16 = R"(#version 320 es
+layout(local_size_x = 1) in;
+layout(rgba16, binding = 0) writeonly uniform highp image2D img;
+void main() { imageStore(img, ivec2(0), vec4(1.0)); }
+)";
+    const char* rg16 = R"(#version 320 es
+layout(local_size_x = 1) in;
+layout(rg16, binding = 0) writeonly uniform highp image2D img;
+void main() { imageStore(img, ivec2(0), vec4(1.0)); }
+)";
+    const char* rg16f = R"(#version 320 es
+layout(local_size_x = 1) in;
+layout(rg16f, binding = 0) writeonly uniform highp image2D img;
+void main() { imageStore(img, ivec2(0), vec4(1.0)); }
+)";
+    const std::string quad_res = compile_compute("quad", quad, log_quad);
+    const std::string arith_res = compile_compute("arith", arith, log_arith);
+    const std::string ballot_res = compile_compute("ballot", ballot, log_ballot);
+    const std::string rgba16_res = compile_compute("rgba16", rgba16, log_rgba16);
+    const std::string rg16_res = compile_compute("rg16", rg16, log_rg16);
+    const std::string rg16f_res = compile_compute("rg16f", rg16f, log_rg16f);
+
+    auto bind_test = [&](const char* label, GLenum internal, GLenum image_format) {
+        GLuint tex = 0;
+        api.glGenTextures(1, &tex);
+        api.glBindTexture(GL_TEXTURE_2D, tex);
+        api.glTexStorage2D(GL_TEXTURE_2D, 1, internal, 1, 1);
+        while (api.glGetError() != GL_NO_ERROR) {}
+        api.glBindImageTexture(0, tex, 0, GL_FALSE, 0, GL_WRITE_ONLY, image_format);
+        const GLenum error = api.glGetError();
+        api.glDeleteTextures(1, &tex);
+        return std::string(label) + "=" + std::to_string(error);
+    };
+    const std::string rgba16_bind = bind_test("rgba16_bind", 0x805B, 0x805B);
+    const std::string rg16_bind = bind_test("rg16_bind", 0x822B, 0x822B);
+    const std::string rg16f_bind = bind_test("rg16f_bind", 0x822F, 0x822F);
+    r.ok = true;
+    r.detail = quad_res + " " + arith_res + " " + ballot_res + " " + rgba16_res + " " + rg16_res + " " + rg16f_res +
+               " " + rgba16_bind + " " + rg16_bind + " " + rg16f_bind +
+               (log_quad.empty() ? "" : " quad_log=" + log_quad) +
+               (log_arith.empty() ? "" : " arith_log=" + log_arith) +
+               (log_ballot.empty() ? "" : " ballot_log=" + log_ballot) +
+               (log_rgba16.empty() ? "" : " rgba16_log=" + log_rgba16) +
+               (log_rg16.empty() ? "" : " rg16_log=" + log_rg16) +
+               (log_rg16f.empty() ? "" : " rg16f_log=" + log_rg16f);
+    return r;
+}
+
 Result test_patch_default_levels() {
     Result r;
     // ES has no default tessellation-level entry point. The frontend must say
@@ -3399,6 +3478,7 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "ssbo_qualifier")) run("ssbo_qualifier_preserved", test_ssbo_qualifier_preserved);
     if (!strcmp(mode, "guard_bench")) run("guard_scan_bench", test_guard_scan_bench);
     if (!strcmp(mode, "image_rebind_bench")) run("image_rebind_bench", test_image_rebind_bench);
+    if (!strcmp(mode, "iteration_caps")) run("iteration_caps", test_iteration_caps);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
     if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);
