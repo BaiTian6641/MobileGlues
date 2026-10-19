@@ -66,6 +66,9 @@ extern "C"
     GLAPI GLAPIENTRY void glDeleteFramebuffers(GLsizei n, const GLuint* names);
     GLAPI GLAPIENTRY void glBlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0,
                                             GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
+    GLAPI GLAPIENTRY void glInvalidateFramebuffer(GLenum target, GLsizei numAttachments, const GLenum* attachments);
+    GLAPI GLAPIENTRY void glInvalidateSubFramebuffer(GLenum target, GLsizei numAttachments, const GLenum* attachments,
+                                                     GLint x, GLint y, GLsizei width, GLsizei height);
     GLAPI GLAPIENTRY void glFramebufferTexture2D(GLenum target, GLenum attachment, GLenum textarget, GLuint texture,
                                                  GLint level);
     GLAPI GLAPIENTRY void glFramebufferTexture(GLenum target, GLenum attachment, GLuint texture, GLint level);

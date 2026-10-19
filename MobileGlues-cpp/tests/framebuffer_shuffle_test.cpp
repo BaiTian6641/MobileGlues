@@ -25,6 +25,7 @@ thread_local gl_state_t gl_state = &g_default_gl_state;
 // --- fake driver ----------------------------------------------------------
 static std::map<int, GLuint> physical;   // attachment index -> texture name
 static std::vector<GLenum>   draw_list;  // what the driver was last told
+static std::vector<GLenum>   invalidated;
 static GLuint bound_draw_fb = 0;
 
 static void fake_bind_fb(GLenum, GLuint fb) { bound_draw_fb = fb; }
@@ -49,6 +50,10 @@ static void fake_readbuffer(GLenum) {}
 static GLenum fake_checkfb(GLenum) { return GL_FRAMEBUFFER_COMPLETE; }
 static GLenum fake_geterror() { return GL_NO_ERROR; }
 static void fake_blit(GLint,GLint,GLint,GLint,GLint,GLint,GLint,GLint,GLbitfield,GLenum) {}
+static void fake_invalidate(GLenum, GLsizei n, const GLenum* a) { invalidated.assign(a, a + n); }
+static void fake_invalidate_sub(GLenum, GLsizei n, const GLenum* a, GLint, GLint, GLsizei, GLsizei) {
+    invalidated.assign(a, a + n);
+}
 
 static int fails = 0;
 static void expect(const char* what, GLuint got, GLuint want) {
@@ -68,6 +73,8 @@ int main() {
     GLES.glCheckFramebufferStatus= fake_checkfb;
     GLES.glGetError              = fake_geterror;
     GLES.glBlitFramebuffer       = fake_blit;
+    GLES.glInvalidateFramebuffer = fake_invalidate;
+    GLES.glInvalidateSubFramebuffer = fake_invalidate_sub;
 
     glBindFramebuffer(GL_FRAMEBUFFER, 7);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 100, 0); // colortex0
@@ -102,6 +109,16 @@ int main() {
     { GLenum b[] = {GL_COLOR_ATTACHMENT1}; glDrawBuffers(1, b); }
     expect("slot0 holds colortex1", physical[0], 101);
     expect("slot2 back to colortex2", physical[2], 102);
+
+    printf("5b. invalidation follows the logical attachment through a shuffle\n");
+    invalidated.clear();
+    { GLenum a[] = {GL_COLOR_ATTACHMENT1}; glInvalidateFramebuffer(GL_DRAW_FRAMEBUFFER, 1, a); }
+    expect("invalidate logical COLOR1 reaches physical COLOR0",
+           invalidated.empty() ? 0xffffu : static_cast<GLuint>(invalidated[0] - GL_COLOR_ATTACHMENT0), 0);
+    invalidated.clear();
+    { GLenum a[] = {GL_COLOR_ATTACHMENT1}; glInvalidateSubFramebuffer(GL_DRAW_FRAMEBUFFER, 1, a, 0, 0, 1, 1); }
+    expect("sub-invalidate logical COLOR1 reaches physical COLOR0",
+           invalidated.empty() ? 0xffffu : static_cast<GLuint>(invalidated[0] - GL_COLOR_ATTACHMENT0), 0);
 
     printf("6. a renderbuffer attachment survives a call that must not move it\n");
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, 900);

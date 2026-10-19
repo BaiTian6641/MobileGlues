@@ -253,8 +253,10 @@ NATIVE_FUNCTION_HEAD(void, glResumeTransformFeedback) NATIVE_FUNCTION_END_NO_RET
 NATIVE_FUNCTION_HEAD(void, glGetProgramBinary, GLuint program, GLsizei bufSize, GLsizei *length, GLenum *binaryFormat, void *binary) NATIVE_FUNCTION_END_NO_RETURN(void, glGetProgramBinary, program,bufSize,length,binaryFormat,binary)
 NATIVE_FUNCTION_HEAD(void, glProgramBinary, GLuint program, GLenum binaryFormat, const void *binary, GLsizei length) NATIVE_FUNCTION_END_NO_RETURN(void, glProgramBinary, program,binaryFormat,binary,length)
 NATIVE_FUNCTION_HEAD(void, glProgramParameteri, GLuint program, GLenum pname, GLint value) NATIVE_FUNCTION_END_NO_RETURN(void, glProgramParameteri, program,pname,value)
-NATIVE_FUNCTION_HEAD(void, glInvalidateFramebuffer, GLenum target, GLsizei numAttachments, const GLenum *attachments) NATIVE_FUNCTION_END_NO_RETURN(void, glInvalidateFramebuffer, target,numAttachments,attachments)
-NATIVE_FUNCTION_HEAD(void, glInvalidateSubFramebuffer, GLenum target, GLsizei numAttachments, const GLenum *attachments, GLint x, GLint y, GLsizei width, GLsizei height) NATIVE_FUNCTION_END_NO_RETURN(void, glInvalidateSubFramebuffer, target,numAttachments,attachments,x,y,width,height)
+// glInvalidateFramebuffer/SubFramebuffer implemented in gl/framebuffer.cpp: logical
+// colour attachments are mapped through the draw-buffer shuffle.
+//NATIVE_FUNCTION_HEAD(void, glInvalidateFramebuffer, GLenum target, GLsizei numAttachments, const GLenum *attachments) NATIVE_FUNCTION_END_NO_RETURN(void, glInvalidateFramebuffer, target,numAttachments,attachments)
+//NATIVE_FUNCTION_HEAD(void, glInvalidateSubFramebuffer, GLenum target, GLsizei numAttachments, const GLenum *attachments, GLint x, GLint y, GLsizei width, GLsizei height) NATIVE_FUNCTION_END_NO_RETURN(void, glInvalidateSubFramebuffer, target,numAttachments,attachments,x,y,width,height)
 //NATIVE_FUNCTION_HEAD(void, glTexStorage2D, GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height) NATIVE_FUNCTION_END_NO_RETURN(void, glTexStorage2D, target,levels,internalformat,width,height)
 //NATIVE_FUNCTION_HEAD(void, glTexStorage3D, GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth) NATIVE_FUNCTION_END_NO_RETURN(void, glTexStorage3D, target,levels,internalformat,width,height,depth)
 NATIVE_FUNCTION_HEAD(void, glGetInternalformativ, GLenum target, GLenum internalformat, GLenum pname, GLsizei bufSize, GLint *params) NATIVE_FUNCTION_END_NO_RETURN(void, glGetInternalformativ, target,internalformat,pname,bufSize,params)

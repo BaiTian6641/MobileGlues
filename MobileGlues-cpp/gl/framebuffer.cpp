@@ -369,6 +369,105 @@ void glBlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint
     CHECK_GL_ERROR
 }
 
+namespace {
+// The application names logical colour attachments. After glDrawBuffers moved
+// them, the driver holds each logical attachment at a different physical point;
+// invalidating the logical name without mapping it would discard the wrong
+// target. Depth/stencil and non-colour attachments are unchanged.
+void map_invalidate_attachments(GLuint fbo_name, GLsizei count, const GLenum* attachments,
+                                std::vector<GLenum>& mapped) {
+    mapped.assign(attachments, attachments + count);
+    const auto it = framebuffers.find(fbo_name);
+    if (it == framebuffers.end() || !it->second || it->second->draw_buffer_map.empty()) return;
+    const std::vector<GLenum>& map = it->second->draw_buffer_map;
+    for (GLsizei i = 0; i < count; ++i) {
+        if (attachments[i] < GL_COLOR_ATTACHMENT0) continue;
+        const size_t index = static_cast<size_t>(attachments[i] - GL_COLOR_ATTACHMENT0);
+        if (index < map.size() && map[index] != 0) mapped[static_cast<size_t>(i)] = map[index];
+    }
+}
+} // namespace
+
+void glInvalidateFramebuffer(GLenum target, GLsizei numAttachments, const GLenum* attachments) {
+    LOG()
+    LOG_D("glInvalidateFramebuffer, target: %d, count: %d", target, numAttachments)
+    if (attachments == nullptr || numAttachments <= 0) {
+        if (GLES.glInvalidateFramebuffer) GLES.glInvalidateFramebuffer(target, numAttachments, attachments);
+        CHECK_GL_ERROR
+        return;
+    }
+    if (!GLES.glInvalidateFramebuffer) {
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        return;
+    }
+    std::vector<GLenum> mapped;
+    auto invoke = [&](GLenum driver_target, GLuint fbo) {
+        map_invalidate_attachments(fbo, numAttachments, attachments, mapped);
+        GLES.glInvalidateFramebuffer(driver_target, numAttachments, mapped.data());
+    };
+    switch (target) {
+    case GL_FRAMEBUFFER:
+        if (current_draw_fbo == current_read_fbo) {
+            invoke(GL_FRAMEBUFFER, current_draw_fbo);
+        } else {
+            invoke(GL_DRAW_FRAMEBUFFER, current_draw_fbo);
+            invoke(GL_READ_FRAMEBUFFER, current_read_fbo);
+        }
+        break;
+    case GL_DRAW_FRAMEBUFFER:
+        invoke(GL_DRAW_FRAMEBUFFER, current_draw_fbo);
+        break;
+    case GL_READ_FRAMEBUFFER:
+        invoke(GL_READ_FRAMEBUFFER, current_read_fbo);
+        break;
+    default:
+        GLES.glInvalidateFramebuffer(target, numAttachments, attachments);
+        break;
+    }
+    CHECK_GL_ERROR
+}
+
+void glInvalidateSubFramebuffer(GLenum target, GLsizei numAttachments, const GLenum* attachments, GLint x, GLint y,
+                                GLsizei width, GLsizei height) {
+    LOG()
+    LOG_D("glInvalidateSubFramebuffer, target: %d, count: %d", target, numAttachments)
+    if (attachments == nullptr || numAttachments <= 0) {
+        if (GLES.glInvalidateSubFramebuffer)
+            GLES.glInvalidateSubFramebuffer(target, numAttachments, attachments, x, y, width, height);
+        CHECK_GL_ERROR
+        return;
+    }
+    if (!GLES.glInvalidateSubFramebuffer) {
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        return;
+    }
+    std::vector<GLenum> mapped;
+    auto invoke = [&](GLenum driver_target, GLuint fbo) {
+        map_invalidate_attachments(fbo, numAttachments, attachments, mapped);
+        GLES.glInvalidateSubFramebuffer(driver_target, numAttachments, mapped.data(), x, y, width, height);
+    };
+    switch (target) {
+    case GL_FRAMEBUFFER:
+        if (current_draw_fbo == current_read_fbo) {
+            invoke(GL_FRAMEBUFFER, current_draw_fbo);
+        } else {
+            invoke(GL_DRAW_FRAMEBUFFER, current_draw_fbo);
+            invoke(GL_READ_FRAMEBUFFER, current_read_fbo);
+        }
+        break;
+    case GL_DRAW_FRAMEBUFFER:
+        invoke(GL_DRAW_FRAMEBUFFER, current_draw_fbo);
+        break;
+    case GL_READ_FRAMEBUFFER:
+        invoke(GL_READ_FRAMEBUFFER, current_read_fbo);
+        break;
+    default:
+        GLES.glInvalidateSubFramebuffer(target, numAttachments, attachments, x, y, width, height);
+        break;
+    }
+    CHECK_GL_ERROR
+}
+
 void glDeleteFramebuffers(GLsizei n, const GLuint* names) {
     // The record has to die with the name. Drivers hand deleted framebuffer names
     // straight back out of the next glGenFramebuffers, and this table never
