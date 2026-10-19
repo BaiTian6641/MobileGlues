@@ -70,6 +70,12 @@ extern "C"
     GLAPI GLAPIENTRY void glDispatchCompute(GLuint num_groups_x, GLuint num_groups_y, GLuint num_groups_z);
     GLAPI GLAPIENTRY void glMemoryBarrier(GLbitfield barriers);
     GLAPI GLAPIENTRY void glUniform1i(GLint location, GLint v0);
+    GLAPI GLAPIENTRY void glUniform1iv(GLint location, GLsizei count, const GLint* value);
+    // glProgramUniform* address a program explicitly; the image-unit remap uses
+    // that program's map, never the current program's. Bindings are replayed
+    // only when the written program is the one in use.
+    GLAPI GLAPIENTRY void glProgramUniform1i(GLuint program, GLint location, GLint v0);
+    GLAPI GLAPIENTRY void glProgramUniform1iv(GLuint program, GLint location, GLsizei count, const GLint* value);
 
 #ifdef __cplusplus
 }

@@ -36,6 +36,12 @@ GLuint mg_remap_image_unit(GLuint unit);
 // returns true when the location is an image uniform.
 bool mg_image_uniform_value(GLint location, GLint value, GLint* out_value);
 
+// Same as mg_image_uniform_value for an explicitly selected program.
+// glProgramUniform* must never resolve locations against the current program.
+// Array elements registered by mg_reflect_image_uniforms are looked up by
+// their own location, so a 1iv write can be remapped element by element.
+bool mg_image_uniform_value_for_program(GLuint program, GLint location, GLint value, GLint* out_value);
+
 bool mg_is_image_uniform_type(GLenum type);
 
 #endif // MOBILEGLUES_IMAGE_BINDINGS_H

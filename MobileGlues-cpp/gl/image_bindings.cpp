@@ -6,6 +6,7 @@
 #include "mg.h"
 #include "../egl/context.h"
 
+#include <cstdlib>
 #include <memory>
 #include <mutex>
 #include <regex>
@@ -203,27 +204,51 @@ void mg_resolve_duplicate_image_bindings(GLuint program) {
     MgProgramObject* state = mg_find_program(program);
     if (state == nullptr || state->image_uniform_units.size() < 2) return;
 
-    std::unordered_map<std::string, GLuint> assignment;
-    std::unordered_map<GLuint, std::string> unit_owner;
-    bool changed = false;
+    // One image array owns a run of consecutive units and consecutive uniform
+    // locations, so a name covers [lowest location, highest location] and
+    // occupies that many units starting at the unit of its first element.
+    struct name_span_t {
+        GLint base_location = 0;
+        GLint last_location = 0;
+        GLuint unit = 0;
+        bool have_unit = false;
+    };
+    std::unordered_map<std::string, name_span_t> spans;
     for (const auto& entry : state->image_uniform_units) {
         auto name_it = state->image_uniform_names.find(entry.first);
         if (name_it == state->image_uniform_names.end()) continue;
-        const std::string& name = name_it->second;
-        auto assigned = assignment.find(name);
-        if (assigned != assignment.end()) {
-            if (assigned->second != entry.second) changed = true;
-            continue;
+        name_span_t& span = spans[name_it->second];
+        if (!span.have_unit || entry.first < span.base_location) {
+            span.base_location = entry.first;
+            span.unit = entry.second;
+            span.have_unit = true;
         }
-        GLuint unit = entry.second;
-        auto owner = unit_owner.find(unit);
-        if (owner != unit_owner.end() && owner->second != name) {
+        if (entry.first > span.last_location) span.last_location = entry.first;
+    }
+
+    std::unordered_map<std::string, GLuint> assignment;
+    std::unordered_map<GLuint, std::string> unit_owner;
+    bool changed = false;
+    for (const auto& entry : spans) {
+        const std::string& name = entry.first;
+        const name_span_t& span = entry.second;
+        if (!span.have_unit) continue;
+        const GLuint elements = static_cast<GLuint>(span.last_location - span.base_location + 1);
+        auto overlaps_other = [&](GLuint candidate) {
+            for (GLuint offset = 0; offset < elements; ++offset) {
+                auto owner = unit_owner.find(candidate + offset);
+                if (owner != unit_owner.end() && owner->second != name) return true;
+            }
+            return false;
+        };
+        GLuint unit = span.unit;
+        if (overlaps_other(unit)) {
             unit = 0;
-            while (unit_owner.find(unit) != unit_owner.end()) unit++;
+            while (overlaps_other(unit)) ++unit;
             changed = true;
         }
         assignment[name] = unit;
-        unit_owner[unit] = name;
+        for (GLuint offset = 0; offset < elements; ++offset) unit_owner[unit + offset] = name;
     }
     if (!changed) return;
 
@@ -280,9 +305,17 @@ void mg_reflect_image_uniforms(GLuint program) {
         GLES.glGetActiveUniform(program, i, sizeof(name) - 1, &written, &size, &type, name);
         if (!mg_is_image_uniform_type(type) || written <= 0) continue;
 
-        std::string base = strip_array_suffix(name);
+        std::string uniform_name(name, static_cast<size_t>(written));
+        std::string base = strip_array_suffix(uniform_name);
         const GLint location = GLES.glGetUniformLocation(program, base.c_str());
         if (location < 0) continue;
+
+        // Arrays are reported once as name[0] with the element count, but a
+        // provider that reports each element separately still names its index.
+        // Parsing the index keeps element locations correct in both shapes.
+        GLint array_index = 0;
+        const size_t bracket = uniform_name.find('[');
+        if (bracket != std::string::npos) array_index = std::atoi(uniform_name.c_str() + bracket + 1);
 
         GLuint unit = 0;
         bool found = false;
@@ -302,9 +335,18 @@ void mg_reflect_image_uniforms(GLuint program) {
             // assign a stable slot without growing a process-global table.
             unit = static_cast<GLuint>(state->image_unit_names.size());
         }
-        state->image_uniform_units[location] = unit;
-        state->image_uniform_names[location] = base;
-        state->image_unit_names[unit] = base;
+        // An image array's elements take consecutive units from the binding
+        // the transformer wrote on the declaration, and consecutive uniform
+        // locations from the array's base. Registering every element lets a
+        // 1iv write remap each one instead of only the first.
+        const GLint elements = size > 0 ? size : 1;
+        for (GLint element = array_index; element < array_index + elements; ++element) {
+            const GLint element_location = location + element;
+            const GLuint element_unit = unit + static_cast<GLuint>(element);
+            state->image_uniform_units[element_location] = element_unit;
+            state->image_uniform_names[element_location] = base;
+            state->image_unit_names[element_unit] = base;
+        }
     }
     if (!state->image_uniform_units.empty()) {
         LOG_W_FORCE("Image bindings: program %u has %zu active image uniforms", program,
@@ -313,21 +355,26 @@ void mg_reflect_image_uniforms(GLuint program) {
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-bool mg_image_uniform_value(GLint location, GLint value, GLint* out_value) {
+bool mg_image_uniform_value_for_program(GLuint program, GLint location, GLint value, GLint* out_value) {
     if (out_value) *out_value = value;
     if (value < 0) return false;
-    MgProgramObject* state = mg_find_program(gl_state->current_program);
+    MgProgramObject* state = mg_find_program(program);
     if (state == nullptr) return false;
     auto it = state->image_uniform_units.find(location);
     if (it == state->image_uniform_units.end()) return false;
     const GLuint app_unit = static_cast<GLuint>(value);
     if (state->image_unit_remap.find(app_unit) == state->image_unit_remap.end()) {
-        LOG_W_FORCE("Image bindings: program %u location %d app unit %u -> core unit %u", gl_state->current_program,
-                    location, app_unit, it->second)
+        LOG_W_FORCE("Image bindings: program %u location %d app unit %u -> core unit %u", program, location, app_unit,
+                    it->second)
     }
     state->image_unit_remap[app_unit] = it->second;
     if (out_value) *out_value = static_cast<GLint>(it->second);
     return true;
+}
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+bool mg_image_uniform_value(GLint location, GLint value, GLint* out_value) {
+    return mg_image_uniform_value_for_program(gl_state->current_program, location, value, out_value);
 }
 
 GLuint mg_remap_image_unit(GLuint unit) {
