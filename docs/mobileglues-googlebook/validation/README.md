@@ -24,6 +24,11 @@ pack screen; the saved copies are evidence snapshots.
 | `2026-10-19-game-postfix-rgb8snorm-active.log` | `8750088973994aa93536bef14d7a33407d70473574c7c4174a00118acf74f0c0` | pipeline initializes; shaderpack active at High |
 | `2026-10-19-complementary-r5.9.3-high-active.png` | `44e9ab2f5b7a822f2b49cf974a4fd5a603772914d7c9da28790059b2089a98b2` | active pack, water/fog/atmosphere |
 | `2026-10-19-complementary-r5.9.3-high-f3.png` | `6e479abea7a07b507140b0ebde51909289b83c00a676810dd3b42d54d9a249e4` | F3: pack name without fallback, High, 22 FPS, provider |
+| `2026-10-19-r592-high-f3.png` | `dcd335bdca10a08f3dc3ea48d60acd57f39c91c473938567c923f5f85ca55fb4` | r5.9.2 High, no fallback, 21 FPS, provider |
+| `2026-10-19-r592-high-shaders-off.png` | `a18a82f373ae959275ea1f5c7dbc57ddfb49c3ed66df87a741bc35f65a9661b7` | paired shaders-off reference, 569 FPS |
+| `2026-10-19-r592-high-motion.mp4` | `23fcabab75b7714cf3fff62eeff8fb275a69748af50cf3db261ede2650e8c223` | 12 s motion sample at 21 FPS |
+| `2026-10-19-r592-high-motion-frame.png` | `9b5bcdcf5c59497d08e3240cc5e7cb7750e3e586ec8aa54eb66688e3147f4feb` | representative motion frame |
+| `2026-10-19-game-r592-high-active.log` | `4c4051b7d4260a01ca2ffe0756d9e39d7531a8b907520fa308a7f5e138e6ba1f` | r5.9.2 High game log (`mclo.gs/z3qIi68`) |
 | `2026-10-18-game-main-menu-old-plugin.png` | `0258b18ccaecd64433880e1463c0a1d329feda7fa17f45201f51d3224571c85e` | installed 2.0.0 renderer smoke before test plugin |
 
 ## Wrapper harness reproduction

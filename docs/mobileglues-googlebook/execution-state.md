@@ -121,12 +121,20 @@ Still open in these stages:
   level.
 - R8UI/R16UI image lowering is not implemented. WSR 256 remains blocked by the
   provider's 128 MiB `GL_MAX_SHADER_STORAGE_BLOCK_SIZE`.
-- An original-looking Complementary Reimagined **r5.9.3** archive is now active in
-  the game process at High (not the plan's r5.9.2; r5.9.3 joins a new fixture row).
-  Iris no longer reports `(fallback)` after the RGB8_SNORM backing fix, and the
-  F3 overlay shows the pack name and High profile. The measured menu/world frame
-  rate was 22 FPS at 2880×1585, below the plan's 60 FPS target and not yet a
-  controlled performance run.
+- The plan fixture **Complementary Reimagined r5.9.2** is now installed in the
+  Forge 21.1.262 instance and active at **High, no fallback**. F3 confirms
+  `ComplementaryReimagined_r5.9.2.zip`, `Profile: HIGH (+0 options changed)`,
+  Adreno X1-85 / ANGLE / Vulkan, MobileGlues 2.0.0. The paired shaders-off
+  reference is 569 FPS; the shader pass is 21 FPS at 2880×1585. Water
+  reflections, fog and clouds are visible; a 12-second motion sample was
+  accepted as visually fine by the user. This is a visual spot-check, not an
+  effect-by-effect fidelity gate.
+- The earlier r5.9.3 High run also initialized without fallback (22 FPS). It
+  remains a separate fixture row.
+- The mobile-optimized `Reimagined_MobileGL_r5.9.3_ACT_WSR.zip` reported
+  `(fallback)` on Iris 1.8.14; the log shows custom-uniform failures and
+  `The shaderpack failed to load!`. That is a pack/Iris version mismatch, not a
+  renderer failure; it is not used as a reference.
 - The installed test plugin APK (core `0557189`, debug signing) is the renderer
   named in the game log's `SDL_OPENGL_LIBRARY` and `LD_LIBRARY_PATH`. The original
   installed 2.0.0 APK is preserved for rollback.
@@ -178,11 +186,11 @@ performed.
 
 ## Exact next action
 
-Run a controlled visual session on `C1L63708PZ` with the test plugin and the
-active Complementary r5.9.3 High pack: set a fixed time/weather, capture a still
-and a short pan, then toggle shaders off for a paired reference. Check water SSR,
-rough/specular PBR, shadow edges, clouds/fog, bloom, and TAA/history behavior;
-record each as pass/fail with the exact pack/settings. Then acquire/install the
-original r5.9.2 archive and repeat. Address the Iris custom-uniform warnings by
-selecting a compatible Iris/pack tuple. R8UI/R16UI lowering and WSR 256 remain
-separate gates; the latter is blocked by the provider's 128 MiB SSBO limit.
+Install the original **Complementary Unbound r5.9.2** archive (host fixture
+`2b4e9c71…21d2`) into the same Forge 21.1.262 instance and run the same High
+paired reference: F3 provenance, shaders-off frame, short motion, and log
+upload. Then isolate the remaining named effects on Reimagined r5.9.2 (PBR,
+shadow edges, bloom, TAA/history) with fixed time/weather and controlled
+materials. The custom-uniform warnings are a pack/Iris tuple limitation and
+must be recorded, not masked. R8UI/R16UI lowering and WSR 256 remain separate
+gates; the latter is blocked by the provider's 128 MiB SSBO limit.

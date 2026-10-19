@@ -47,18 +47,25 @@ present.
 | Pack | Preset | Result | Evidence |
 | --- | --- | --- | --- |
 | Complementary Reimagined r5.9.3 | High | pipeline initializes; no `(fallback)`; 22 FPS at 2880×1585; fog/atmosphere/water reflection visible | F3 capture, post-fix log |
+| Complementary Reimagined r5.9.2 (plan fixture) | High | **pipeline active, no fallback**, 21 FPS at 2880×1585; paired shaders-off reference 569 FPS; water reflections, fog, clouds visible; motion accepted by user | `2026-10-19-r592-high-f3.png`, `2026-10-19-r592-high-shaders-off.png`, log `mclo.gs/z3qIi68` |
+| Complementary Reimagined r5.9.2 | High | effect-by-effect fidelity (PBR, shadow edges, bloom, TAA/history isolation) | **not tested** |
 | Complementary Reimagined r5.9.3 | High | effect-by-effect fidelity (SSR, PBR, shadows, TAA, bloom, clouds) | **not tested** |
-| Complementary Reimagined r5.9.2 (plan fixture) | High | **not tested**; not installed on the device |
 | Complementary Unbound r5.9.2 | High | **not tested** |
 | BSL v10.1.8 | default | **not tested** |
 
 The first attempt (core `9a91ede`) failed at Iris `createColorFramebuffer` with
 `Draw buffers [0, 1] Status: 36054` (incomplete attachment) and disabled shaders.
-The RGB8_SNORM backing fix (core `0557189`) removed that failure. The post-fix log
-still contains Iris custom-uniform warnings (`BIOME_PALE_GARDEN`,
-`BIOME_SULFUR_CAVES`, `endFlashIntensity`) caused by the pack/Iris version pair;
-these are not renderer errors but they can suppress those effects and must be
-resolved by a compatible Iris/pack tuple.
+The RGB8_SNORM backing fix (core `0557189`) removed that failure. The post-fix
+logs for both r5.9.3 and r5.9.2 contain Iris custom-uniform warnings
+(`BIOME_PALE_GARDEN`, `BIOME_SULFUR_CAVES`, `endFlashIntensity`) caused by the
+pack/Iris version pair; these are not renderer errors but they can suppress
+those effects and must be resolved by a compatible Iris/pack tuple.
+
+The mobile-optimized `Reimagined_MobileGL_r5.9.3_ACT_WSR.zip` was selected for
+comparison and reported `(fallback)`. Its log shows the same custom-uniform
+failures and then `The shaderpack failed to load!`; this is a pack/Iris version
+mismatch, not evidence of a MobileGlues pipeline failure. It is not used as a
+fidelity reference.
 
 ## Shaderpack / effect rows
 

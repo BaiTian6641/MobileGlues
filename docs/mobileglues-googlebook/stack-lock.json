@@ -129,7 +129,8 @@
       "sha256": "7ae5f1d6a4237a5c8893578397e58c9d08b79d7403bc27242aef56957489a278",
       "modrinth_version_id": "vxxxESqv",
       "acquired": true,
-      "local_path": "/home/polar/MobileGlues-fixtures/ComplementaryReimagined_r5.9.2.zip"
+      "local_path": "/home/polar/MobileGlues-fixtures/ComplementaryReimagined_r5.9.2.zip",
+      "device_installed": true
     },
     "complementary_unbound_r5.9.2": {
       "sha256": "2b4e9c717758fd1ba1d6306f2e847096704196f0823c4d6941b3de6f423121d2",
@@ -190,13 +191,32 @@
         "sodium 0.8.13+mc1.21.1",
         "podium 1.1.1"
       ],
-      "renderer": "test plugin core 0557189, installed debug APK",
+      "renderer": "test plugin core a524755, installed debug APK",
       "provider_in_game": "Adreno X1-85 | ANGLE | Vulkan 1.4.295 | OpenGL ES 3.2",
-      "pack": "ComplementaryReimagined_r5.9.3.zip, High, active (no fallback)",
-      "frame_rate_observed": "22 FPS at 2880x1585 (uncontrolled menu/world sample)",
-      "pre_fix_failure": "Iris createColorFramebuffer: Draw buffers [0,1] Status 36054 (incomplete attachment)",
-      "post_fix_result": "pipeline initializes; effect-by-effect fidelity not yet tested",
-      "qualification": "not qualified"
+      "pack": "ComplementaryReimagined_r5.9.2.zip, High, active (no fallback)",
+      "pack_archive_sha256_host_fixture": "7ae5f1d6a4237a5c8893578397e58c9d08b79d7403bc27242aef56957489a278",
+      "pack_device_provenance": "downloaded on-device from official Modrinth URL; device archive hash not independently pulled",
+      "frame_rate_shaders_on": "21 FPS at 2880x1585 (F3; p50 22 fps, p95 18 fps)",
+      "frame_rate_shaders_off": "569 FPS at 2880x1585 (paired reference)",
+      "motion": "12 s screenrecord at 21 FPS; user accepted camera movement as visually fine",
+      "visual_spot_check": [
+        "water surface reflections",
+        "fog/haze",
+        "clouds"
+      ],
+      "not_yet_isolated": [
+        "rough/specular PBR",
+        "shadow edges",
+        "bloom",
+        "TAA/history artifacts"
+      ],
+      "iris_warnings": [
+        "BIOME_PALE_GARDEN unresolved",
+        "BIOME_SULFUR_CAVES unresolved",
+        "endFlashIntensity unresolved"
+      ],
+      "log_url": "https://mclo.gs/z3qIi68",
+      "qualification": "pipeline active; not effect-by-effect qualified"
     },
     "available_emulators": [
       "emulator-5580 x86_64 sdk_gphone64_x86_64 API 36 page_size 4096",
