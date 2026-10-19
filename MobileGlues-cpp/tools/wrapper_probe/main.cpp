@@ -74,6 +74,9 @@ struct Api {
     void (*glGetProgramResourceName)(GLuint, GLenum, GLuint, GLsizei, GLsizei*, GLchar*);
     void (*glGetProgramResourceiv)(GLuint, GLenum, GLuint, GLsizei, const GLenum*, GLsizei, GLsizei*, GLint*);
     void (*glShaderStorageBlockBinding)(GLuint, GLuint, GLuint);
+    void (*mg_image_metadata_begin)();
+    void (*mg_image_metadata_add)(const char*, GLenum);
+    void (*mg_image_metadata_end)();
     PFNGLUSEPROGRAMPROC glUseProgram;
     PFNGLBINDBUFFERPROC glBindBuffer;
     PFNGLGENBUFFERSPROC glGenBuffers;
@@ -857,6 +860,145 @@ Result test_rgb8_snorm_attachment() {
     return r;
 }
 
+Result test_extension_consistency() {
+    Result r;
+    const char* exts = reinterpret_cast<const char*>(api.glGetString(GL_EXTENSIONS));
+    const std::string list = exts ? exts : "";
+    auto has = [&](const char* name) {
+        const size_t n = strlen(name);
+        size_t pos = 0;
+        while ((pos = list.find(name, pos)) != std::string::npos) {
+            const bool left = pos == 0 || list[pos - 1] == ' ';
+            const bool right = pos + n == list.size() || list[pos + n] == ' ';
+            if (left && right) return true;
+            pos += n;
+        }
+        return false;
+    };
+    GLint ssbo_bindings = 0, image_units = 0, compute_invocations = 0;
+    if (has("GL_ARB_shader_storage_buffer_object")) {
+        api.glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &ssbo_bindings);
+    }
+    if (has("GL_ARB_shader_image_load_store")) {
+        api.glGetIntegerv(GL_MAX_IMAGE_UNITS, &image_units);
+    }
+    if (has("GL_ARB_compute_shader")) {
+        api.glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &compute_invocations);
+    }
+    const bool no_error_absent = !has("GL_KHR_no_error");
+    const bool separate_absent = !has("GL_ARB_separate_shader_objects");
+    r.ok = no_error_absent && separate_absent &&
+           (!has("GL_ARB_shader_storage_buffer_object") || ssbo_bindings > 0) &&
+           (!has("GL_ARB_shader_image_load_store") || image_units > 0) &&
+           (!has("GL_ARB_compute_shader") || compute_invocations > 0);
+    r.detail = "no_error_absent=" + std::string(no_error_absent ? "yes" : "no") +
+               " separate_shader_absent=" + std::string(separate_absent ? "yes" : "no") +
+               " ssbo=" + std::string(has("GL_ARB_shader_storage_buffer_object") ? "yes" : "no") +
+               "/" + std::to_string(ssbo_bindings) +
+               " image=" + std::string(has("GL_ARB_shader_image_load_store") ? "yes" : "no") +
+               "/" + std::to_string(image_units) +
+               " compute=" + std::string(has("GL_ARB_compute_shader") ? "yes" : "no") +
+               "/" + std::to_string(compute_invocations);
+    return r;
+}
+
+Result test_formatless_image_metadata() {
+    Result r;
+    const char* write_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+writeonly uniform uimage3D img;
+void main() { imageStore(img, ivec3(0), uvec4(12345u, 0u, 0u, 0u)); }
+)";
+    const char* read_cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+readonly uniform uimage3D img;
+layout(std430, binding = 1) buffer Out { uint value; } outb;
+void main() { outb.value = imageLoad(img, ivec3(0)).r; }
+)";
+    GLuint tex = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_3D, tex);
+    api.glTexStorage3D(GL_TEXTURE_3D, 1, GL_R16UI, 1, 1, 1);
+    GLenum storage_error = api.glGetError();
+    api.glBindImageTexture(0, tex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R16UI);
+    GLenum bind_error = api.glGetError();
+
+    auto compile_program = [&](const char* source, bool register_metadata, std::string* log_out) -> GLuint {
+        GLuint shader = api.glCreateShader(GL_COMPUTE_SHADER);
+        if (register_metadata) {
+            api.mg_image_metadata_begin();
+            api.mg_image_metadata_add("img", GL_R16UI);
+            api.mg_image_metadata_end();
+        }
+        api.glShaderSource(shader, 1, &source, nullptr);
+        api.glCompileShader(shader);
+        GLint status = GL_FALSE;
+        api.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+        GLint len = 0;
+        api.glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+        std::string log(static_cast<size_t>(len), '\0');
+        if (len > 0) api.glGetShaderInfoLog(shader, len, nullptr, log.data());
+        if (log_out) *log_out = log;
+        if (!status) {
+            api.glDeleteShader(shader);
+            return 0;
+        }
+        GLuint program = api.glCreateProgram();
+        api.glAttachShader(program, shader);
+        api.glLinkProgram(program);
+        GLint linked = GL_FALSE;
+        api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+        api.glDeleteShader(shader);
+        if (!linked) {
+            api.glDeleteProgram(program);
+            return 0;
+        }
+        return program;
+    };
+
+    std::string write_log, read_log, unregistered_log;
+    GLuint write_program = compile_program(write_cs, true, &write_log);
+    GLuint read_program = compile_program(read_cs, true, &read_log);
+    GLuint unregistered = compile_program(write_cs, false, &unregistered_log);
+
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 16, nullptr, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+    if (write_program) {
+        api.glUseProgram(write_program);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    }
+    if (read_program) {
+        api.glUseProgram(read_program);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    }
+    GLuint value = 0;
+    void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, 4, GL_MAP_READ_BIT);
+    if (ptr) {
+        memcpy(&value, ptr, 4);
+        api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    }
+    r.ok = (storage_error == GL_NO_ERROR && bind_error == GL_NO_ERROR && write_program != 0 &&
+            read_program != 0 && unregistered == 0 && value == 12345u);
+    r.detail = "storage_error=" + std::to_string(storage_error) + " bind_error=" + std::to_string(bind_error) +
+               " write_program=" + std::to_string(write_program) +
+               " read_program=" + std::to_string(read_program) +
+               " unregistered_program=" + std::to_string(unregistered) +
+               " value=" + std::to_string(value) +
+               (write_log.empty() ? "" : " write_log=" + write_log) +
+               (read_log.empty() ? "" : " read_log=" + read_log) +
+               (unregistered_log.empty() ? "" : " unregistered_log=" + unregistered_log);
+    if (write_program) api.glDeleteProgram(write_program);
+    if (read_program) api.glDeleteProgram(read_program);
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteTextures(1, &tex);
+    return r;
+}
+
 Result test_integer_image_binding() {
     Result r;
     // ESSL 3.10 cannot name an r16ui image on this provider. The frontend must
@@ -879,8 +1021,8 @@ Result test_integer_image_binding() {
     api.glBindImageTexture(1, tex32, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32UI);
     const GLenum e32 = api.glGetError();
 
-    r.ok = (e16 != GL_NO_ERROR && e32 == GL_NO_ERROR);
-    r.detail = "r16ui=" + std::string(e16 == GL_NO_ERROR ? "accepted (translation missing)" : "refused (visible)") +
+    r.ok = (e16 == GL_NO_ERROR && e32 == GL_NO_ERROR);
+    r.detail = "r16ui=" + std::string(e16 == GL_NO_ERROR ? "accepted via R32UI" : "refused") +
                " error=" + std::to_string(e16) +
                " r32ui=" + std::string(e32 == GL_NO_ERROR ? "accepted" : "refused") +
                " error=" + std::to_string(e32);
@@ -951,6 +1093,9 @@ int main(int argc, char** argv) {
     api.glGetProgramResourceiv =
         sym<void (*)(GLuint, GLenum, GLuint, GLsizei, const GLenum*, GLsizei, GLsizei*, GLint*)>("glGetProgramResourceiv");
     api.glShaderStorageBlockBinding = sym<void (*)(GLuint, GLuint, GLuint)>("glShaderStorageBlockBinding");
+    api.mg_image_metadata_begin = sym<void (*)()>("mg_image_metadata_begin");
+    api.mg_image_metadata_add = sym<void (*)(const char*, GLenum)>("mg_image_metadata_add");
+    api.mg_image_metadata_end = sym<void (*)()>("mg_image_metadata_end");
     api.glUseProgram = sym<PFNGLUSEPROGRAMPROC>("glUseProgram");
     api.glBindBuffer = sym<PFNGLBINDBUFFERPROC>("glBindBuffer");
     api.glGenBuffers = sym<PFNGLGENBUFFERSPROC>("glGenBuffers");
@@ -1028,6 +1173,8 @@ int main(int argc, char** argv) {
         run("desktop_glsl_460", [] { return test_desktop_glsl_version("460"); });
     }
     if (!strcmp(mode, "all") || !strcmp(mode, "rgb8_snorm")) run("rgb8_snorm_attachment", test_rgb8_snorm_attachment);
+    if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
+    if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
     if (!strcmp(mode, "all") || !strcmp(mode, "integer_image")) run("integer_image", test_integer_image_binding);
     fprintf(g_out, "\n}\n");
 

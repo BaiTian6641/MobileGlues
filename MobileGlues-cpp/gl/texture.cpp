@@ -718,20 +718,21 @@ void internal_convert(GLenum* internal_format, GLenum* type, GLenum* format, boo
         }
         break;
     case GL_R8UI:
+    case GL_R16UI:
+        // ESSL 3.10 has no r8ui/r16ui image qualifier on this provider. R32UI is
+        // the narrowest legal integer image format; the low 8/16 bits of the
+        // stored value are preserved. The texture and image binding use the
+        // same backing format, and the metadata bridge supplies the qualifier
+        // before compilation.
+        *internal_format = GL_R32UI;
         if (format) *format = GL_RED_INTEGER;
-        if (type) *type = GL_UNSIGNED_BYTE;
+        if (type) *type = GL_UNSIGNED_INT;
         break;
     case GL_R8I:
-        if (format) *format = GL_RED_INTEGER;
-        if (type) *type = GL_BYTE;
-        break;
-    case GL_R16UI:
-        if (format) *format = GL_RED_INTEGER;
-        if (type) *type = GL_UNSIGNED_SHORT;
-        break;
     case GL_R16I:
+        *internal_format = GL_R32I;
         if (format) *format = GL_RED_INTEGER;
-        if (type) *type = GL_SHORT;
+        if (type) *type = GL_INT;
         break;
     case GL_R32UI:
         if (format) *format = GL_RED_INTEGER;

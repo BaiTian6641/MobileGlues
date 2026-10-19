@@ -10,6 +10,7 @@
 #include "shader.h"
 #include "shader_source.h"
 #include "shader_state.h"
+#include "image_metadata.h"
 
 #include <GL/gl.h>
 #include "getter.h"
@@ -63,6 +64,12 @@ void glShaderSource(GLuint shader, GLsizei count, const GLchar* const* string, c
         return;
     }
 
+    // Consume the loader's image-format metadata for this source before any
+    // compile decision. The format qualifier must be part of the source that
+    // ESSL sees; glBindImageTexture happens after linking and cannot supply it.
+    const std::unordered_map<std::string, GLenum> image_formats = mg_image_metadata_take();
+    mg_normalize_image_qualifiers(glsl_src, image_formats);
+
     bool is_sampler_buffer_emulated = hardware->emulate_texture_buffer && check_if_sampler_buffer_used(glsl_src);
 
     if (is_direct_shader(glsl_src.c_str())) {
@@ -84,6 +91,7 @@ void glShaderSource(GLuint shader, GLsizei count, const GLchar* const* string, c
         }
         LOG_D("\n[INFO] [Shader] Converted Shader source: \n%s", essl_src.c_str())
     }
+    mg_normalize_image_qualifiers(essl_src, image_formats);
     if (!essl_src.empty()) {
         if (essl_src.size() > static_cast<size_t>(std::numeric_limits<GLint>::max())) {
             mg_set_gl_error(GL_OUT_OF_MEMORY);

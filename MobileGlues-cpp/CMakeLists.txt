@@ -97,6 +97,7 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
     gl/program.cpp
     gl/shader.cpp
     gl/shader_source.cpp
+    gl/image_metadata.cpp
     gl/shader_state.cpp
     gl/framebuffer.cpp
     gl/texture.cpp

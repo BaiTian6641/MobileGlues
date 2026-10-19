@@ -10,6 +10,7 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-stage1-stage2.json` | 2026-10-19 | target device, wrapper level | see below | shader-source, status, limit, frag-data and image-binding contract results |
 | `2026-10-19-x1e-wrapper-stage2.json` | 2026-10-19 | target device, wrapper level | same harness | full suite including SSBO binding, 512 compute, and vertex image store |
 | `2026-10-19-x1e-wrapper-final.json` | 2026-10-19 | target device, wrapper level | same harness | 23/23 contract cases, including RGB8_SNORM and desktop GLSL versions |
+| `2026-10-19-x1e-wrapper-image-bridge.json` | 2026-10-19 | target device, wrapper level | same harness | 25/25 cases including extension consistency and formatless-image metadata bridge |
 
 ## Game-process captures and logs
 
@@ -48,7 +49,8 @@ layer. It is a wrapper-level result: it does not prove a shaderpack's rendering,
 and it intentionally asserts the current r16ui refusal until that lowering is
 implemented. Stored result hashes:
 `385e8dab0120ad164b051e7608ea553d5dad9060a41df30a037deae467928964` (stage 1/2)
-and `b98d262594654c67f2942465d20c255432efdb7935c03cacd73c20f566d0b726` (final 23-case suite).
+`b98d262594654c67f2942465d20c255432efdb7935c03cacd73c20f566d0b726` (23-case suite),
+and `51b9ef67e5108114b5c7d693b1c94b281aa6d1d24499a839d107d8c5d5fb0ab5` (25-case image-bridge suite).
 
 ## Provider probe reproduction
 

@@ -11,6 +11,7 @@
 #include "framebuffer.h"
 #include "mg.h"
 #include "texture.h"
+#include "image_metadata.h"
 #include "../egl/context.h"
 
 #define DEBUG 0
@@ -230,6 +231,10 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
     LOG()
     LOG_D("glBindImageTexture, unit: %d, texture: %d, level: %d, layered: %d, layer: %d, access: %d, format: %d", unit,
           texture, level, layered, layer, access, format)
+    // The shader was compiled against the backing qualifier, not the desktop
+    // logical format. Bind the same backing format the texture was allocated
+    // with; R8UI/R16UI become R32UI.
+    format = mg_image_backing_format(format);
     GLES.glBindImageTexture(unit, texture, level, layered, layer, access, format);
     // The provider rejects formats that ESSL 3.10 cannot name, notably r8ui and
     // r16ui. Until the loader lowers those formats, the application must see the

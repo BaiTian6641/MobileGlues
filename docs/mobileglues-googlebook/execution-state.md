@@ -133,7 +133,8 @@ Still open in these stages:
 - Latest commits on `googlebook/x1e-stage1-3`: `d9789fa` shader source/per-object
   state, `9a91ede` compiler limits/SSBO binding, `0557189` RGB8_SNORM backing,
   `468c4bb` game evidence, `e3b2661` artifact hashes, `d22b187` wrapper version
-  fixtures, `dcc67e8` branch/handoff records.
+  fixtures, `dcc67e8` branch/handoff records, plus the extension-admission and
+  image-metadata bridge commit.
 - Latest standalone ARM64 artifact SHA-256:
   `fd37ab2f71801b6619b937af1895234c318dab9e3dcf29f8f41993d4577d73a8`.
 - The plugin APK (debug) SHA-256 is

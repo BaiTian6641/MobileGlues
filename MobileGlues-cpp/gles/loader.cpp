@@ -197,10 +197,12 @@ struct gles_caps_t g_gles_caps;
 void InitGLESCapabilities() {
     memset(&g_gles_caps, 0, sizeof(struct gles_caps_t));
 
-    InitGLESBaseExtensions();
-
     GLES.glGetIntegerv(GL_MAJOR_VERSION, &g_gles_caps.major);
     GLES.glGetIntegerv(GL_MINOR_VERSION, &g_gles_caps.minor);
+
+    // The base list is built after the backend version is known so feature
+    // admission can be derived from what this provider actually is.
+    InitGLESBaseExtensions();
 
     GLint num_es_extensions = 0;
     GLES.glGetIntegerv(GL_NUM_EXTENSIONS, &num_es_extensions);
@@ -275,7 +277,9 @@ void InitGLESCapabilities() {
         AppendExtension("GL_EXT_timer_query");
     }
 
-    if (global_settings.ext_compute_shader) {
+    if (global_settings.ext_compute_shader &&
+        (g_gles_caps.major > 3 || (g_gles_caps.major == 3 && g_gles_caps.minor >= 1)) &&
+        GLES.glDispatchCompute != nullptr) {
         AppendExtension("GL_ARB_compute_shader");
     }
 
@@ -291,7 +295,8 @@ void InitGLESCapabilities() {
         AppendExtension(("OpenGL" + std::to_string(ver)).c_str());
     }
 
-    if (g_gles_caps.major > 3 || (g_gles_caps.major == 3 && g_gles_caps.minor >= 1)) {
+    if ((g_gles_caps.major > 3 || (g_gles_caps.major == 3 && g_gles_caps.minor >= 1)) &&
+        GLES.glVertexAttribBinding != nullptr && GLES.glBindVertexBuffer != nullptr) {
         AppendExtension("GL_ARB_vertex_attrib_binding");
     }
 }

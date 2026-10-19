@@ -219,29 +219,44 @@ void InitGLESBaseExtensions() {
         extensions.push_back("GL_MG_settings_string_dump");
     }
 
-    const char* base_exts[] = {"GL_ARB_fragment_program",
-                               "GL_ARB_vertex_buffer_object",
-                               "GL_ARB_vertex_array_object",
-                               "GL_ARB_vertex_buffer",
-                               "GL_EXT_vertex_array",
-                               "GL_ARB_ES2_compatibility",
-                               "GL_ARB_ES3_compatibility",
-                               "GL_EXT_packed_depth_stencil",
-                               "GL_EXT_depth_texture",
-                               "GL_ARB_depth_texture",
-                               "GL_ARB_shading_language_100",
-                               "GL_ARB_imaging",
-                               "GL_ARB_draw_buffers_blend",
-                               "OpenGL15",
-                               "GL_ARB_shader_storage_buffer_object",
-                               "GL_ARB_shader_image_load_store",
-                               "GL_ARB_clear_texture",
-                               "GL_ARB_get_program_binary",
-                               "GL_ARB_separate_shader_objects",
-                               "GL_ARB_multi_bind",
-                               "GL_KHR_no_error"};
+    // Legacy desktop names the frontend genuinely presents. They are kept for
+    // compatibility; the substantial extensions below are admitted only when
+    // the backend has both the version and every entry point the advertised
+    // semantics require. A listed name is a promise, not a hint.
+    const char* legacy_exts[] = {"GL_ARB_fragment_program",
+                                 "GL_ARB_vertex_buffer_object",
+                                 "GL_ARB_vertex_array_object",
+                                 "GL_ARB_vertex_buffer",
+                                 "GL_EXT_vertex_array",
+                                 "GL_ARB_ES2_compatibility",
+                                 "GL_ARB_ES3_compatibility",
+                                 "GL_EXT_packed_depth_stencil",
+                                 "GL_EXT_depth_texture",
+                                 "GL_ARB_depth_texture",
+                                 "GL_ARB_shading_language_100",
+                                 "GL_ARB_imaging",
+                                 "OpenGL15"};
+    extensions.insert(extensions.end(), std::begin(legacy_exts), std::end(legacy_exts));
 
-    extensions.insert(extensions.end(), std::begin(base_exts), std::end(base_exts));
+    const bool es30 = g_gles_caps.major > 3 || (g_gles_caps.major == 3 && g_gles_caps.minor >= 0);
+    const bool es31 = g_gles_caps.major > 3 || (g_gles_caps.major == 3 && g_gles_caps.minor >= 1);
+    const bool es32 = g_gles_caps.major > 3 || (g_gles_caps.major == 3 && g_gles_caps.minor >= 2);
+
+    if (es30) extensions.push_back("GL_ARB_clear_texture");
+    if (es30 && GLES.glGetProgramBinary != nullptr && GLES.glProgramBinary != nullptr)
+        extensions.push_back("GL_ARB_get_program_binary");
+    if (es31 && GLES.glBindBufferBase != nullptr && GLES.glBindBufferRange != nullptr)
+        extensions.push_back("GL_ARB_shader_storage_buffer_object");
+    if (es31 && GLES.glBindImageTexture != nullptr && GLES.glDispatchCompute != nullptr)
+        extensions.push_back("GL_ARB_shader_image_load_store");
+    if (es32 && GLES.glBlendEquationSeparatei != nullptr && GLES.glBlendFuncSeparatei != nullptr)
+        extensions.push_back("GL_ARB_draw_buffers_blend");
+    // The multi-bind wrappers are implemented in this layer independent of the
+    // driver extension; they loop when the backend cannot batch.
+    extensions.push_back("GL_ARB_multi_bind");
+    // GL_ARB_separate_shader_objects and GL_KHR_no_error were listed here
+    // unconditionally with no corresponding context/program semantics. They are
+    // not advertised until those semantics exist.
 
     if (global_settings.hide_mg_env_level >= HideMGEnvLevel::Level1) {
         for (int i = extensions.size() - 1; i > 0; --i) {

@@ -117,10 +117,10 @@
     },
     "android_arm64_release": {
       "path": "build/android-arm64-release/libmobileglues.so",
-      "sha256": "fd37ab2f71801b6619b937af1895234c318dab9e3dcf29f8f41993d4577d73a8",
+      "sha256": "ef515913cd2abb9fb62f5d708d012136cb939d6d9e6957f94098d1d053648fda",
       "size": 64054560,
       "elf": "ELF64 AArch64, Android 26, NDK r28c, LOAD align 0x4000",
-      "status": "Stage 3 RGB8_SNORM build; wrapper_probe on C1L63708PZ; test plugin APK installed"
+      "status": "Stage 2 extension-admission/image-bridge build; wrapper_probe 25/25 on C1L63708PZ; test plugin install pending"
     }
   },
   "fixtures": {
