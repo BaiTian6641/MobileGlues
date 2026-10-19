@@ -796,7 +796,11 @@ Result test_desktop_glsl_version(const char* version) {
     Result r;
     std::string source = "#version ";
     source += version;
-    source += "\nprecision highp float;\nlayout(location = 0) out vec4 color;\nvoid main() { color = vec4(1.0); }\n";
+    if (std::string(version) == "120") {
+        source += "\nvoid main() { gl_FragColor = vec4(1.0); }\n";
+    } else {
+        source += "\nprecision highp float;\nout vec4 color;\nvoid main() { color = vec4(1.0); }\n";
+    }
     GLuint shader = api.glCreateShader(GL_FRAGMENT_SHADER);
     const char* src = source.c_str();
     api.glShaderSource(shader, 1, &src, nullptr);

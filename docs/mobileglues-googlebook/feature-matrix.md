@@ -84,6 +84,8 @@ resolved by a compatible Iris/pack tuple.
 | Existing framebuffer-shuffle tests | pass | `tests/run.sh` |
 | `glShaderSource` multi-string / explicit-length regression | pass | host `tests/run.sh`; X1E `wrapper_probe source_multi`, `source_multi_implicit` |
 | RGB8_SNORM render-target backing | pass | X1E `wrapper_probe rgb8_snorm_attachment`: both TexImage2D and TexStorage2D FBOs complete |
+| Desktop GLSL version normalization | pass for simple shaders | X1E `wrapper_probe desktop_glsl_120/150/330/400/460` |
+| Full wrapper contract suite | pass (23/23) | `validation/2026-10-19-x1e-wrapper-final.json` |
 | Failed compile/link status remains observable | pass | X1E `wrapper_probe compile_failure`, `link_failure` at `enableNoError=0/1/2` |
 | Per-program frag-data bindings / interleaving | pass | X1E `wrapper_probe frag_data_*`; `glGetFragDataLocation` round-trip |
 | Shader/program state keyed by share group | implemented, not multi-context tested | source + X1E single-context tests |

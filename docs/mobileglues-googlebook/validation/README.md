@@ -9,6 +9,7 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-18-x1e-device-identity.txt` | 2026-10-18 | target device | `adb -s C1L63708PZ shell 'getprop …'` | HP Googlebook 14, X1E80100, Android 17/API 37, 4096-byte pages |
 | `2026-10-19-x1e-wrapper-stage1-stage2.json` | 2026-10-19 | target device, wrapper level | see below | shader-source, status, limit, frag-data and image-binding contract results |
 | `2026-10-19-x1e-wrapper-stage2.json` | 2026-10-19 | target device, wrapper level | same harness | full suite including SSBO binding, 512 compute, and vertex image store |
+| `2026-10-19-x1e-wrapper-final.json` | 2026-10-19 | target device, wrapper level | same harness | 23/23 contract cases, including RGB8_SNORM and desktop GLSL versions |
 
 ## Game-process captures and logs
 
@@ -45,8 +46,9 @@ adb -s C1L63708PZ pull /data/local/tmp/wrapper-probe.json
 The harness loads the built renderer and creates a context through its own EGL
 layer. It is a wrapper-level result: it does not prove a shaderpack's rendering,
 and it intentionally asserts the current r16ui refusal until that lowering is
-implemented. Stored result hash:
-`385e8dab0120ad164b051e7608ea553d5dad9060a41df30a037deae467928964`.
+implemented. Stored result hashes:
+`385e8dab0120ad164b051e7608ea553d5dad9060a41df30a037deae467928964` (stage 1/2)
+and `b98d262594654c67f2942465d20c255432efdb7935c03cacd73c20f566d0b726` (final 23-case suite).
 
 ## Provider probe reproduction
 
