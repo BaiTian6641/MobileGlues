@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <sstream>
 #include "cache.h"
+#include "cache_key.h"
 #include "../../version.h"
 #include "../../gles/loader.h"
 
@@ -440,19 +441,15 @@ std::string processOutColorLocations(const std::string& glslCode) {
 
 std::string GLSLtoGLSLES(const char* glsl_code, GLenum glsl_type, uint essl_version, uint glsl_version,
                          int& return_code) {
-    // Translation output depends on more than the source and the version
-    // string: the stage selects different post-processing, and the backend
-    // profile selects the preprocessing branch. Bump the schema whenever a
-    // translation rule changes so old cache entries cannot be reused.
-    constexpr int kTranslationCacheSchema = 3;
-    std::string sha256_string(glsl_code);
-    sha256_string += "\n//schema=" + std::to_string(kTranslationCacheSchema) +
-                     "|" + std::to_string(MAJOR) + "." + std::to_string(MINOR) + "." + std::to_string(REVISION) +
-                     "|stage=" + std::to_string(glsl_type) + "|essl=" + std::to_string(essl_version) +
-                     "|backend=" + std::to_string(hardware->es_version) +
-                     "|compute=" + std::to_string(global_settings.ext_compute_shader ? 1 : 0) +
-                     "|dsa=" + std::to_string(global_settings.ext_direct_state_access ? 1 : 0) +
-                     "|hide=" + std::to_string(static_cast<int>(global_settings.hide_mg_env_level));
+    // The key builder is host-tested: source, stage, backend profile, version
+    // (including PATCH, which is injected into every shader), provider
+    // preprocessing branches and wrapper settings all change translation.
+    std::string sha256_string =
+        build_translation_cache_key(glsl_code, glsl_type, essl_version, hardware->es_version,
+                                    hardware->emulate_texture_buffer, g_gles_caps.GL_EXT_texture_query_lod != 0,
+                                    global_settings.ext_compute_shader, global_settings.ext_direct_state_access,
+                                    static_cast<int>(global_settings.hide_mg_env_level), MAJOR, MINOR, REVISION,
+                                    PATCH);
     const char* cachedESSL = Cache::get_instance().get(sha256_string.c_str());
     if (cachedESSL) {
         LOG_D("GLSL Hit Cache:\n%s\n-->\n%s", glsl_code, cachedESSL)

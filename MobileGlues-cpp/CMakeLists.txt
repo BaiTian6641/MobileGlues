@@ -119,6 +119,7 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
     gl/ExtWrappers/MultiBindWrapper.cpp
     gl/glsl/glsl_for_es.cpp
     gl/glsl/cache.cpp
+    gl/glsl/cache_key.cpp
     gl/FSR1/FSR1.cpp
 
     gl/vertexattrib.cpp
