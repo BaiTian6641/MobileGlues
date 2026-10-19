@@ -68,6 +68,7 @@ extern "C"
     // program's logical -> physical unit map.
     void mg_materialize_image_bindings();
     GLAPI GLAPIENTRY void glDispatchCompute(GLuint num_groups_x, GLuint num_groups_y, GLuint num_groups_z);
+    GLAPI GLAPIENTRY void glDispatchComputeIndirect(GLintptr indirect);
     GLAPI GLAPIENTRY void glMemoryBarrier(GLbitfield barriers);
     GLAPI GLAPIENTRY void glUniform1i(GLint location, GLint v0);
     GLAPI GLAPIENTRY void glUniform1iv(GLint location, GLsizei count, const GLint* value);

@@ -1375,11 +1375,27 @@ void glCopyTexImage2D(GLenum target, GLint level, GLenum internalFormat, GLint x
         }
         CHECK_GL_ERROR_NO_INIT
 
-        // Flush before reading depth through a blit -- see the note in
-        // glCopyTexSubImage2D for the Adreno measurement behind this.
-        if (GLES.glFlush != nullptr) GLES.glFlush();
-        GLES.glBlitFramebuffer(x, y, x + width, y + height, 0, 0, width, height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-        CHECK_GL_ERROR_NO_INIT
+        // The same complete-format check as glCopyTexSubImage2D. This sibling
+        // entry point reaches ANGLE's device-loss path too: it allocates the
+        // destination as D24/D32F, while the usual read attachment is D24S8.
+        const mg_depth_stencil_sizes_t src_sizes = mg_query_depth_stencil_sizes(GL_READ_FRAMEBUFFER);
+        GLint dstDepthSize = 0;
+        GLint dstStencilSize = 0;
+        glGetTexLevelParameteriv(target, level, GL_TEXTURE_DEPTH_SIZE, &dstDepthSize);
+        glGetTexLevelParameteriv(target, level, GL_TEXTURE_STENCIL_SIZE, &dstStencilSize);
+        const bool blit_ok = src_sizes.depth != 0 && dstDepthSize != 0 &&
+                             src_sizes.depth == dstDepthSize && src_sizes.stencil == dstStencilSize;
+        if (!blit_ok) {
+            TX_WARN_ONCE("glCopyTexImage2D: skipping depth blit with mismatched formats src=%d/%d dst=%d/%d",
+                         src_sizes.depth, src_sizes.stencil, dstDepthSize, dstStencilSize);
+        } else {
+            // Flush before reading depth through a blit -- see the note in
+            // glCopyTexSubImage2D for the Adreno measurement behind this.
+            if (GLES.glFlush != nullptr) GLES.glFlush();
+            GLES.glBlitFramebuffer(x, y, x + width, y + height, 0, 0, width, height, GL_DEPTH_BUFFER_BIT,
+                                   GL_NEAREST);
+            CHECK_GL_ERROR_NO_INIT
+        }
 
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, prevDrawFBO);
         CHECK_GL_ERROR_NO_INIT
@@ -1487,14 +1503,11 @@ void glCopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffse
         // no-op: ANGLE's Vulkan backend can lose the device. Compare the read
         // attachment's depth size with the destination level before submitting
         // it; unsized destinations are normalized to DEPTH24 at allocation.
-        GLint srcDepthSize = 0;
+        const mg_depth_stencil_sizes_t src_sizes = mg_query_depth_stencil_sizes(GL_READ_FRAMEBUFFER);
+        GLint srcDepthSize = src_sizes.depth;
+        GLint srcStencilSize = src_sizes.stencil;
         GLint dstDepthSize = 0;
-        GLint srcStencilSize = 0;
         GLint dstStencilSize = 0;
-        glGetFramebufferAttachmentParameteriv(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                              GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE, &srcDepthSize);
-        glGetFramebufferAttachmentParameteriv(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                              GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE, &srcStencilSize);
         glGetTexLevelParameteriv(target, level, GL_TEXTURE_DEPTH_SIZE, &dstDepthSize);
         glGetTexLevelParameteriv(target, level, GL_TEXTURE_STENCIL_SIZE, &dstStencilSize);
         // ANGLE requires the complete depth/stencil formats to match, not just
@@ -2432,16 +2445,29 @@ namespace {
         bool integer = false;
     };
 
-    std::unordered_map<GLenum, mg_clear_program_t> g_clear_programs;
+    // Program names are share-group state. Keying this cache by format alone
+    // reused a program name in a second context, where it named either nothing or
+    // a recycled application program.
+    std::unordered_map<unsigned long long, std::unordered_map<GLenum, mg_clear_program_t>> g_clear_programs;
 
     // Zero a 3D custom image with imageStore. This is the only path that is both
     // correct and safe on ANGLE: FBO clears crash for layered textures, and
     // glTexSubImage3D on a texture that has ever been image-bound faults.
-    bool mg_clear_image3d_zero(GLuint texture, TextureObject* tex) {
-        if (texture == 0 || tex == nullptr || tex->target != TextureTarget::TEXTURE_3D || tex->width <= 0 ||
-            tex->height <= 0 || tex->depth <= 0) {
-            fprintf(stderr, "[MG-CLEAR] reject texture=%u tex=%p target=%d size=%dx%dx%d\n", texture, (void*)tex,
-                    tex ? (int)tex->target : -1, tex ? tex->width : 0, tex ? tex->height : 0, tex ? tex->depth : 0);
+    bool mg_clear_image3d_zero(GLuint texture, TextureObject* tex, GLint level) {
+        GLint width = 0, height = 0, depth = 0;
+        GLint previous_bound_texture = 0;
+        GLES.glGetIntegerv(GL_TEXTURE_BINDING_3D, &previous_bound_texture);
+        glBindTexture(GL_TEXTURE_3D, texture);
+        if (level >= 0) {
+            GLES.glGetTexLevelParameteriv(GL_TEXTURE_3D, level, GL_TEXTURE_WIDTH, &width);
+            GLES.glGetTexLevelParameteriv(GL_TEXTURE_3D, level, GL_TEXTURE_HEIGHT, &height);
+            GLES.glGetTexLevelParameteriv(GL_TEXTURE_3D, level, GL_TEXTURE_DEPTH, &depth);
+        }
+        glBindTexture(GL_TEXTURE_3D, static_cast<GLuint>(previous_bound_texture));
+        if (texture == 0 || tex == nullptr || tex->target != TextureTarget::TEXTURE_3D || level < 0 || width <= 0 ||
+            height <= 0 || depth <= 0) {
+            fprintf(stderr, "[MG-CLEAR] reject texture=%u tex=%p level=%d target=%d size=%dx%dx%d\n", texture,
+                    (void*)tex, level, tex ? (int)tex->target : -1, width, height, depth);
             fflush(stderr);
             return false;
         }
@@ -2483,7 +2509,7 @@ namespace {
             return false;
         }
 
-        mg_clear_program_t& clear = g_clear_programs[backing];
+        mg_clear_program_t& clear = g_clear_programs[mg_current_share_group_id()][backing];
         if (clear.program == 0) {
             std::string source = "#version 310 es\n";
             source += "layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;\n";
@@ -2546,11 +2572,11 @@ namespace {
         GLint previous_program = 0;
         GLES.glGetIntegerv(GL_CURRENT_PROGRAM, &previous_program);
 
-        GLES.glBindImageTexture(0, texture, 0, GL_TRUE, 0, GL_READ_WRITE, backing);
+        GLES.glBindImageTexture(0, texture, level, GL_TRUE, 0, GL_READ_WRITE, backing);
         GLES.glUseProgram(clear.program);
-        GLES.glUniform3i(clear.size_location, tex->width, tex->height, tex->depth);
-        GLES.glDispatchCompute((GLuint)((tex->width + 7) / 8), (GLuint)((tex->height + 7) / 8),
-                               (GLuint)((tex->depth + 7) / 8));
+        GLES.glUniform3i(clear.size_location, width, height, depth);
+        GLES.glDispatchCompute((GLuint)((width + 7) / 8), (GLuint)((height + 7) / 8),
+                               (GLuint)((depth + 7) / 8));
         GLES.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT |
                              GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -2616,7 +2642,7 @@ void glClearTexImage(GLuint texture, GLint level, GLenum format, GLenum type, co
     if (layered_target) {
         const bool zero = data == nullptr || (rgba[0] == 0.0f && rgba[1] == 0.0f && rgba[2] == 0.0f &&
                                               rgba[3] == 0.0f && depth == 0.0f && stencil == 0);
-        if (zero && textureTarget == TextureTarget::TEXTURE_3D && mg_clear_image3d_zero(texture, tex)) return;
+        if (zero && textureTarget == TextureTarget::TEXTURE_3D && mg_clear_image3d_zero(texture, tex, level)) return;
         TX_WARN_ONCE("glClearTexImage: layered texture %u target=%d clear not supported without an image-store path",
                      texture, (int)textureTarget);
         return;

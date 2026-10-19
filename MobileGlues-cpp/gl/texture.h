@@ -59,6 +59,17 @@ extern "C"
     GLAPI GLAPIENTRY void glTexParameteri(GLenum target, GLenum pname, GLint param);
     GLAPI GLAPIENTRY void glClearTexImage(GLuint texture, GLint level, GLenum format, GLenum type, const void* data);
     GLAPI GLAPIENTRY void glPixelStorei(GLenum pname, GLint param);
+    // These were defined without a visible declaration, so the linker kept them
+    // local and every caller resolved the backend symbol instead. The depth
+    // sampler guard therefore never saw a sampler object.
+    GLAPI GLAPIENTRY void glBindSampler(GLuint unit, GLuint sampler);
+    GLAPI GLAPIENTRY void glDeleteSamplers(GLsizei count, const GLuint* samplers);
+    GLAPI GLAPIENTRY void glSamplerParameterf(GLuint sampler, GLenum pname, GLfloat param);
+    GLAPI GLAPIENTRY void glSamplerParameterfv(GLuint sampler, GLenum pname, const GLfloat* param);
+    GLAPI GLAPIENTRY void glSamplerParameteri(GLuint sampler, GLenum pname, GLint param);
+    GLAPI GLAPIENTRY void glSamplerParameteriv(GLuint sampler, GLenum pname, const GLint* param);
+    GLAPI GLAPIENTRY void glSamplerParameterIiv(GLuint sampler, GLenum pname, const GLint* param);
+    GLAPI GLAPIENTRY void glSamplerParameterIuiv(GLuint sampler, GLenum pname, const GLuint* param);
 
 #ifdef __cplusplus
 }

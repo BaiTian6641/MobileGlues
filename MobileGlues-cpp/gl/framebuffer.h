@@ -85,6 +85,17 @@ extern "C"
 }
 #endif
 
+// Depth/stencil sizes of the framebuffer currently bound to `target`
+// (GL_READ_FRAMEBUFFER or GL_DRAW_FRAMEBUFFER). Handles framebuffer 0 with the
+// GL_DEPTH/GL_STENCIL tokens and FBO attachments with the depth, stencil and
+// combined attachment tokens, so a legal default-framebuffer or stencil-only
+// blit is not mistaken for a missing attachment. A missing attachment reports 0.
+struct mg_depth_stencil_sizes_t {
+    GLint depth = 0;
+    GLint stencil = 0;
+};
+mg_depth_stencil_sizes_t mg_query_depth_stencil_sizes(GLenum target);
+
 void InitFramebufferMap(size_t expectedSize);
 
 // The framebuffer table of the current context. It used to be a plain global

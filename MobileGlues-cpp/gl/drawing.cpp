@@ -362,7 +362,16 @@ void glDispatchCompute(GLuint num_groups_x, GLuint num_groups_y, GLuint num_grou
     LOG()
     LOG_D("glDispatchCompute, num_groups_x: %d, num_groups_y: %d, num_groups_z: %d", num_groups_x, num_groups_y,
           num_groups_z)
+    auto depth_guard = prepareForDraw();
     GLES.glDispatchCompute(num_groups_x, num_groups_y, num_groups_z);
+    CHECK_GL_ERROR
+}
+
+void glDispatchComputeIndirect(GLintptr indirect) {
+    LOG()
+    LOG_D("glDispatchComputeIndirect, indirect: %lld", (long long)indirect)
+    auto depth_guard = prepareForDraw();
+    GLES.glDispatchComputeIndirect(indirect);
     CHECK_GL_ERROR
 }
 

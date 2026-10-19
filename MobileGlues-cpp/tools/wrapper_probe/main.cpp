@@ -97,6 +97,12 @@ struct Api {
     PFNGLMAPBUFFERRANGEPROC glMapBufferRange;
     PFNGLUNMAPBUFFERPROC glUnmapBuffer;
     PFNGLBINDIMAGETEXTUREPROC glBindImageTexture;
+    PFNGLTEXSUBIMAGE3DPROC glTexSubImage3D;
+    void (*glClearTexImage)(GLuint, GLint, GLenum, GLenum, const void*);
+    PFNGLGENSAMPLERSPROC glGenSamplers;
+    PFNGLBINDSAMPLERPROC glBindSampler;
+    PFNGLSAMPLERPARAMETERIPROC glSamplerParameteri;
+    PFNGLDELETESAMPLERSPROC glDeleteSamplers;
     PFNGLTEXSTORAGE2DPROC glTexStorage2D;
     PFNGLTEXSTORAGE3DPROC glTexStorage3D;
     PFNGLTEXIMAGE3DPROC glTexImage3D;
@@ -124,6 +130,7 @@ struct Api {
     PFNGLFINISHPROC glFinish;
     PFNGLVIEWPORTPROC glViewport;
     PFNGLCOPYTEXSUBIMAGE2DPROC glCopyTexSubImage2D;
+    PFNGLCOPYTEXIMAGE2DPROC glCopyTexImage2D;
     PFNGLREADPIXELSPROC glReadPixels;
     void (*glPatchParameteri)(GLenum, GLint);
     void (*glPatchParameterfv)(GLenum, const GLfloat*);
@@ -1513,6 +1520,11 @@ void main() { outb.value = floatBitsToUint(texture(depthTex, vec2(0.5)).x); }
     api.glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, &read_mag);
     api.glActiveTexture(GL_TEXTURE0);
     api.glBindTexture(GL_TEXTURE_2D, tex);
+    GLuint sampler = 0;
+    api.glGenSamplers(1, &sampler);
+    api.glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    api.glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    api.glBindSampler(0, sampler);
 
     GLuint shader = api.glCreateShader(GL_COMPUTE_SHADER);
     api.glShaderSource(shader, 1, &cs, nullptr);
@@ -1551,13 +1563,84 @@ void main() { outb.value = floatBitsToUint(texture(depthTex, vec2(0.5)).x); }
     }
     float sampled = 0.0f;
     memcpy(&sampled, &bits, sizeof(sampled));
+    GLint sampler_binding = 0;
+    api.glGetIntegerv(GL_SAMPLER_BINDING, &sampler_binding);
     const bool truthful_filters = read_min == GL_NEAREST_MIPMAP_LINEAR && read_mag == GL_LINEAR;
     r.ok = image_error == GL_NO_ERROR && status == GL_TRUE && linked == GL_TRUE &&
-           truthful_filters && sampled > 0.49f && sampled < 0.51f;
+           truthful_filters && sampler_binding == static_cast<GLint>(sampler) && sampled > 0.49f && sampled < 0.51f;
     r.detail = "image_error=" + std::to_string(image_error) + " compile=" + std::to_string(status) +
                " link=" + std::to_string(linked) + " read_min=" + std::to_string(read_min) +
-               " read_mag=" + std::to_string(read_mag) + " sampled=" + std::to_string(sampled) +
+               " read_mag=" + std::to_string(read_mag) + " sampler_binding=" + std::to_string(sampler_binding) +
+               " sampler=" + std::to_string(sampler) + " sampled=" + std::to_string(sampled) +
                (log.empty() ? "" : " log=" + log);
+    api.glBindSampler(0, 0);
+    if (sampler) api.glDeleteSamplers(1, &sampler);
+    api.glDeleteProgram(program);
+    api.glDeleteBuffers(1, &buffer);
+    api.glDeleteTextures(1, &tex);
+    return r;
+}
+
+Result test_clear_tex_level() {
+    Result r;
+    const char* cs = R"(#version 310 es
+layout(local_size_x = 1) in;
+layout(r32ui, binding = 0) uniform highp uimage3D srcImg;
+layout(std430, binding = 1) buffer Out { uint value; } outb;
+void main() { outb.value = imageLoad(srcImg, ivec3(0)).r; }
+)";
+    GLuint tex = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_3D, tex);
+    api.glTexStorage3D(GL_TEXTURE_3D, 2, GL_R32UI, 2, 2, 2);
+    GLuint seven = 7, nine = 9;
+    api.glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, 1, 1, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, &seven);
+    api.glTexSubImage3D(GL_TEXTURE_3D, 1, 0, 0, 0, 1, 1, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, &nine);
+    const GLenum upload_error = api.glGetError();
+
+    GLuint shader = api.glCreateShader(GL_COMPUTE_SHADER);
+    api.glShaderSource(shader, 1, &cs, nullptr);
+    api.glCompileShader(shader);
+    GLint compiled = GL_FALSE;
+    api.glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, shader);
+    api.glLinkProgram(program);
+    GLint linked = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    api.glDeleteShader(shader);
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, 4, nullptr, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+
+    auto read_level = [&](GLint level, GLuint& value) {
+        api.glBindImageTexture(0, tex, level, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+        api.glUseProgram(program);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+        api.glFinish();
+        value = 0;
+        void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(value), GL_MAP_READ_BIT);
+        if (!ptr) return false;
+        memcpy(&value, ptr, sizeof(value));
+        api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+        return true;
+    };
+
+    api.glClearTexImage(tex, 1, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+    const GLenum clear_error = api.glGetError();
+    GLuint level0 = 0, level1 = 0;
+    const bool read0 = read_level(0, level0);
+    const bool read1 = read_level(1, level1);
+    const GLenum read_error = api.glGetError();
+    r.ok = upload_error == GL_NO_ERROR && compiled == GL_TRUE && linked == GL_TRUE && clear_error == GL_NO_ERROR &&
+           read0 && read1 && read_error == GL_NO_ERROR && level0 == 7 && level1 == 0;
+    r.detail = "upload_error=" + std::to_string(upload_error) + " compile=" + std::to_string(compiled) +
+               " link=" + std::to_string(linked) + " clear_error=" + std::to_string(clear_error) +
+               " level0=" + std::to_string(level0) + " level1=" + std::to_string(level1) +
+               " read_error=" + std::to_string(read_error);
     api.glDeleteProgram(program);
     api.glDeleteBuffers(1, &buffer);
     api.glDeleteTextures(1, &tex);
@@ -1963,6 +2046,77 @@ void main() { color = vec4(1.0, 0.0, 0.0, 1.0); }
         api.glCompileShader(shaders[i]);
     }
     return run_stage_draw(GL_PATCHES, shaders, 4, "tessellation_stage", true, nullptr, nullptr);
+}
+
+Result test_blit_depth_match() {
+    Result r;
+    // Matching D24S8 formats are legal and must not be rejected by the preflight.
+    GLuint src_rb = 0, dst_rb = 0, src_fbo = 0, dst_fbo = 0;
+    api.glGenRenderbuffers(1, &src_rb);
+    api.glBindRenderbuffer(GL_RENDERBUFFER, src_rb);
+    api.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1, 1);
+    api.glGenFramebuffers(1, &src_fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, src_fbo);
+    api.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, src_rb);
+    const GLenum src_status = api.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    api.glGenRenderbuffers(1, &dst_rb);
+    api.glBindRenderbuffer(GL_RENDERBUFFER, dst_rb);
+    api.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1, 1);
+    api.glGenFramebuffers(1, &dst_fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, dst_fbo);
+    api.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, dst_rb);
+    const GLenum dst_status = api.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    api.glBindFramebuffer(GL_READ_FRAMEBUFFER, src_fbo);
+    api.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_fbo);
+    while (api.glGetError() != GL_NO_ERROR) {}
+    api.glBlitFramebuffer(0, 0, 1, 1, 0, 0, 1, 1, GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+    const GLenum blit_error = api.glGetError();
+    GLsync fence = api.glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    const GLenum fence_error = api.glGetError();
+    r.ok = src_status == GL_FRAMEBUFFER_COMPLETE && dst_status == GL_FRAMEBUFFER_COMPLETE &&
+           blit_error == GL_NO_ERROR && fence != nullptr && fence_error == GL_NO_ERROR;
+    r.detail = "src_status=" + std::to_string(src_status) + " dst_status=" + std::to_string(dst_status) +
+               " blit_error=" + std::to_string(blit_error) + " fence=" + (fence ? "ok" : "null") +
+               " fence_error=" + std::to_string(fence_error);
+    if (fence && api.glDeleteSync) api.glDeleteSync(fence);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    api.glDeleteFramebuffers(1, &src_fbo);
+    api.glDeleteFramebuffers(1, &dst_fbo);
+    api.glDeleteRenderbuffers(1, &src_rb);
+    api.glDeleteRenderbuffers(1, &dst_rb);
+    return r;
+}
+
+Result test_copy_image_depth_mismatch() {
+    Result r;
+    // glCopyTexImage2D defines a D24 level from a D24S8 source. The wrapper must
+    // skip that blit rather than lose the ANGLE device before the fence.
+    GLuint rb = 0, src_fbo = 0, tex = 0;
+    api.glGenRenderbuffers(1, &rb);
+    api.glBindRenderbuffer(GL_RENDERBUFFER, rb);
+    api.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1, 1);
+    api.glGenFramebuffers(1, &src_fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, src_fbo);
+    api.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rb);
+    const GLenum src_status = api.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glBindFramebuffer(GL_READ_FRAMEBUFFER, src_fbo);
+    while (api.glGetError() != GL_NO_ERROR) {}
+    api.glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, 0, 0, 1, 1, 0);
+    const GLenum copy_error = api.glGetError();
+    GLsync fence = api.glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    const GLenum fence_error = api.glGetError();
+    r.ok = src_status == GL_FRAMEBUFFER_COMPLETE && copy_error == GL_NO_ERROR && fence != nullptr &&
+           fence_error == GL_NO_ERROR;
+    r.detail = "src_status=" + std::to_string(src_status) + " copy_error=" + std::to_string(copy_error) +
+               " fence=" + (fence ? "ok" : "null") + " fence_error=" + std::to_string(fence_error);
+    if (fence && api.glDeleteSync) api.glDeleteSync(fence);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    api.glDeleteFramebuffers(1, &src_fbo);
+    api.glDeleteRenderbuffers(1, &rb);
+    api.glDeleteTextures(1, &tex);
+    return r;
 }
 
 Result test_patch_default_levels() {
@@ -2608,6 +2762,12 @@ int main(int argc, char** argv) {
     api.glMapBufferRange = sym<PFNGLMAPBUFFERRANGEPROC>("glMapBufferRange");
     api.glUnmapBuffer = sym<PFNGLUNMAPBUFFERPROC>("glUnmapBuffer");
     api.glBindImageTexture = sym<PFNGLBINDIMAGETEXTUREPROC>("glBindImageTexture");
+    api.glTexSubImage3D = sym<PFNGLTEXSUBIMAGE3DPROC>("glTexSubImage3D");
+    api.glClearTexImage = sym<void (*)(GLuint, GLint, GLenum, GLenum, const void*)>("glClearTexImage");
+    api.glGenSamplers = sym<PFNGLGENSAMPLERSPROC>("glGenSamplers");
+    api.glBindSampler = sym<PFNGLBINDSAMPLERPROC>("glBindSampler");
+    api.glSamplerParameteri = sym<PFNGLSAMPLERPARAMETERIPROC>("glSamplerParameteri");
+    api.glDeleteSamplers = sym<PFNGLDELETESAMPLERSPROC>("glDeleteSamplers");
     api.glTexStorage2D = sym<PFNGLTEXSTORAGE2DPROC>("glTexStorage2D");
     api.glTexStorage3D = sym<PFNGLTEXSTORAGE3DPROC>("glTexStorage3D");
     api.glTexImage3D = sym<PFNGLTEXIMAGE3DPROC>("glTexImage3D");
@@ -2635,6 +2795,7 @@ int main(int argc, char** argv) {
     api.glFinish = sym<PFNGLFINISHPROC>("glFinish");
     api.glViewport = sym<PFNGLVIEWPORTPROC>("glViewport");
     api.glCopyTexSubImage2D = sym<PFNGLCOPYTEXSUBIMAGE2DPROC>("glCopyTexSubImage2D");
+    api.glCopyTexImage2D = sym<PFNGLCOPYTEXIMAGE2DPROC>("glCopyTexImage2D");
     api.glReadPixels = sym<PFNGLREADPIXELSPROC>("glReadPixels");
     api.glPatchParameteri = sym<void (*)(GLenum, GLint)>("glPatchParameteri");
     api.glPatchParameterfv = sym<void (*)(GLenum, const GLfloat*)>("glPatchParameterfv");
@@ -2703,9 +2864,12 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "blit_resolve")) run("blit_multisample_resolve", test_blit_resolve);
     if (!strcmp(mode, "all") || !strcmp(mode, "depth_copy_mismatch")) run("depth_copy_mismatch", test_depth_copy_mismatch);
     if (!strcmp(mode, "all") || !strcmp(mode, "blit_depth_mismatch")) run("blit_depth_mismatch", test_blit_depth_mismatch);
+    if (!strcmp(mode, "all") || !strcmp(mode, "blit_depth_match")) run("blit_depth_match", test_blit_depth_match);
+    if (!strcmp(mode, "all") || !strcmp(mode, "copy_image_depth_mismatch")) run("copy_image_depth_mismatch", test_copy_image_depth_mismatch);
     if (!strcmp(mode, "all") || !strcmp(mode, "geometry_stage")) run("geometry_stage", test_geometry_stage);
     if (!strcmp(mode, "all") || !strcmp(mode, "tessellation_stage")) run("tessellation_stage", test_tessellation_stage);
     if (!strcmp(mode, "all") || !strcmp(mode, "patch_defaults")) run("patch_default_levels", test_patch_default_levels);
+    if (!strcmp(mode, "all") || !strcmp(mode, "clear_tex_level")) run("clear_tex_level", test_clear_tex_level);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
     if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);

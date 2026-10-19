@@ -361,6 +361,47 @@ GLAPI GLAPIENTRY void glFramebufferTextureLayerARB(GLenum target, GLenum attachm
 // blitting from framebuffer 0 -- which is how most post-processing gets its
 // input, and the only way to reach the depth buffer that lives on the FSR target
 // and never on the surface -- still read the window.
+namespace {
+// One attachment query. Returns -1 when the backend rejects the attachment
+// token, so the caller can try the combined/separate spelling. The error is
+// drained so a rejected token does not become the application's next glGetError.
+GLint query_attachment_size(GLenum target, GLenum attachment, GLenum pname) {
+    while (GLES.glGetError() != GL_NO_ERROR) {}
+    GLint value = 0;
+    GLES.glGetFramebufferAttachmentParameteriv(target, attachment, pname, &value);
+    if (GLES.glGetError() != GL_NO_ERROR) return -1;
+    return value;
+}
+} // namespace
+
+mg_depth_stencil_sizes_t mg_query_depth_stencil_sizes(GLenum target) {
+    mg_depth_stencil_sizes_t sizes;
+    GLint fbo = 0;
+    const GLenum binding = target == GL_READ_FRAMEBUFFER ? GL_READ_FRAMEBUFFER_BINDING
+                                                         : GL_DRAW_FRAMEBUFFER_BINDING;
+    GLES.glGetIntegerv(binding, &fbo);
+    if (fbo == 0) {
+        // The default framebuffer accepts GL_DEPTH/GL_STENCIL, not the FBO
+        // attachment tokens. Leaving these at zero rejected legal depth blits.
+        sizes.depth = query_attachment_size(target, GL_DEPTH, GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE);
+        sizes.stencil = query_attachment_size(target, GL_STENCIL, GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE);
+    } else {
+        sizes.depth = query_attachment_size(target, GL_DEPTH_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE);
+        if (sizes.depth < 0) {
+            sizes.depth = query_attachment_size(target, GL_DEPTH_STENCIL_ATTACHMENT,
+                                                GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE);
+        }
+        sizes.stencil = query_attachment_size(target, GL_STENCIL_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE);
+        if (sizes.stencil < 0) {
+            sizes.stencil = query_attachment_size(target, GL_DEPTH_STENCIL_ATTACHMENT,
+                                                  GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE);
+        }
+    }
+    if (sizes.depth < 0) sizes.depth = 0;
+    if (sizes.stencil < 0) sizes.stencil = 0;
+    return sizes;
+}
+
 void glBlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1,
                        GLint dstY1, GLbitfield mask, GLenum filter) {
     LOG()
@@ -372,23 +413,16 @@ void glBlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint
     // FSR scope is active first: when the app reads framebuffer 0, the real
     // source is the FSR target and its depth attachment must be the one checked.
     if (mask & (GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)) {
-        GLint srcDepth = 0, srcStencil = 0, dstDepth = 0, dstStencil = 0;
-        GLES.glGetFramebufferAttachmentParameteriv(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                                   GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE, &srcDepth);
-        GLES.glGetFramebufferAttachmentParameteriv(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                                   GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE, &srcStencil);
-        GLES.glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                                   GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE, &dstDepth);
-        GLES.glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                                   GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE, &dstStencil);
+        const mg_depth_stencil_sizes_t src = mg_query_depth_stencil_sizes(GL_READ_FRAMEBUFFER);
+        const mg_depth_stencil_sizes_t dst = mg_query_depth_stencil_sizes(GL_DRAW_FRAMEBUFFER);
         const bool depth_missing =
-            (mask & GL_DEPTH_BUFFER_BIT) && (srcDepth == 0 || dstDepth == 0);
+            (mask & GL_DEPTH_BUFFER_BIT) && (src.depth == 0 || dst.depth == 0);
         const bool stencil_missing =
-            (mask & GL_STENCIL_BUFFER_BIT) && (srcStencil == 0 || dstStencil == 0);
-        if (depth_missing || stencil_missing || srcDepth != dstDepth || srcStencil != dstStencil) {
+            (mask & GL_STENCIL_BUFFER_BIT) && (src.stencil == 0 || dst.stencil == 0);
+        if (depth_missing || stencil_missing || src.depth != dst.depth || src.stencil != dst.stencil) {
             FB_WARN_ONCE("glBlitFramebuffer: depth/stencil formats do not match "
                          "(src=%d/%d dst=%d/%d mask=0x%x); reporting GL_INVALID_OPERATION",
-                         srcDepth, srcStencil, dstDepth, dstStencil, (unsigned)mask);
+                         src.depth, src.stencil, dst.depth, dst.stencil, (unsigned)mask);
             mg_set_gl_error(GL_INVALID_OPERATION);
             return;
         }
