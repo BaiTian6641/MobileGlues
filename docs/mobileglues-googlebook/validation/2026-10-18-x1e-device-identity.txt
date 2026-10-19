@@ -1,0 +1,8 @@
+HP
+HP Googlebook 14
+quartz
+HP/quartz/quartz:17/CL3B.260622.276.R2/16560795:user/release-keys
+Snapdragon X Elite - X1E80100 - Qualcomm Oryon CPU
+4096
+Physical size: 2880x1800
+Physical density: 260

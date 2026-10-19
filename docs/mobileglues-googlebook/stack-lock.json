@@ -1,0 +1,161 @@
+{
+  "schema": 1,
+  "updated": "2026-10-18",
+  "plan": {
+    "path": "docs/MobileGlues_Googlebook_X1E_Optimization_Plan.md",
+    "version": "1.0",
+    "research_cutoff": "2026-10-19T00:00:00Z"
+  },
+  "core": {
+    "path": "/home/polar/MobileGlues",
+    "repository": "https://github.com/MobileGL-Dev/MobileGlues",
+    "selected_commit": "97558a69157b033b890958b1e49258c5b51a80c6",
+    "selected_ref": "main",
+    "audit_commit": "97558a69157b033b890958b1e49258c5b51a80c6",
+    "upstream_main_at_lock": "97558a69157b033b890958b1e49258c5b51a80c6",
+    "post_audit_upstream_commits": [],
+    "origin_preserved": "git@github.com:BaiTian6641/MobileGlues.git"
+  },
+  "plugin": {
+    "path": "/home/polar/MobileGlues-plugin",
+    "repository": "https://github.com/MobileGL-Dev/MobileGlues-plugin",
+    "selected_commit": "f5105e4ddd1752cccdcc6421c402960d40ec3d9d",
+    "audit_commit": "f5105e4ddd1752cccdcc6421c402960d40ec3d9d",
+    "recorded_core_gitlink": "f56af31d3e490d95808b3adc4ace20234249a37a",
+    "integration_status": "clone only; submodule not initialized; no edits"
+  },
+  "submodules": {
+    "MobileGlues-cpp/3rdparty/SPIRV-Cross": "a0fba56c34a6700f1724bf9b751da5b488a3775c",
+    "MobileGlues-cpp/3rdparty/glslang": "f5f664dee8146676b04a332a7233959fc3ce9681",
+    "MobileGlues-cpp/3rdparty/perfetto": "40b529923598b739b2892a536a7692eedbed5685",
+    "MobileGlues-cpp/3rdparty/xxhash": "c2866db364b6ea3a11933e62235ddc166ba18565",
+    "MobileGlues-cpp/include/ska": "21c1cec95abee1beef827e4a7c95f692875d9594"
+  },
+  "game_tuple": {
+    "modern_lane": {
+      "minecraft": "26.1.2",
+      "loader": "fabric",
+      "loader_version": "unknown - resolve from launcher/install metadata before integration",
+      "iris": {
+        "version": "1.11.3+26.1-fabric",
+        "modrinth_version_id": "5H9TsVy4",
+        "sha512": "0c137cfe0dac2df2736dae0fb281dfb058e366822b17f5c0859f6a9da220f7751b4c6af477b6396e61772181a276835b31055b46e0d880e8e4e10916b19b46ed"
+      },
+      "sodium": {
+        "version": "mc26.1.2-0.9.1-fabric",
+        "modrinth_version_id": "vf7UgZpC",
+        "sha512": "bf7e242a4df5a70be567ad58e262eea7db54b92333994331b57dc13f2ed36e22d1cf6609e4e76582d3173d5ffdcde9534441164bc9b70560f3d764affcc16ad3"
+      },
+      "java": "unknown - must come from the qualified Android ARM64 launcher runtime",
+      "status": "artifacts pinned from Modrinth dependency metadata; launcher/JVM unsupported tuple"
+    },
+    "regression_lane": {
+      "minecraft": "1.20.1",
+      "loader": "fabric",
+      "loader_version": "unknown",
+      "iris": {
+        "version": "1.7.6+1.20.1",
+        "modrinth_version_id": "unknown at lock time"
+      },
+      "sodium": {
+        "version": "0.5.12",
+        "note": "Iris 1.7.6 release notes name Sodium 0.5.12 compatibility; verify exact artifact metadata"
+      },
+      "java": "unknown",
+      "status": "lane retained; exact artifact hashes not yet pinned"
+    }
+  },
+  "launcher_native_bridge": {
+    "product": "unknown",
+    "jvm": "unknown",
+    "lwjgl": "unknown",
+    "angle": "unknown",
+    "status": "not present in this workspace"
+  },
+  "toolchain": {
+    "host": "Linux x86_64, 32 threads",
+    "cmake": "4.2.3",
+    "generator": "Ninja",
+    "ndk": "28.2.13676358 (r28c)",
+    "ndk_gradle_pin": "27.3.13750724",
+    "android_host_abi": "arm64-v8a",
+    "android_platform": "android-26",
+    "stl": "c++_static",
+    "cxx_standard": "C++20",
+    "release_flags_verified": [
+      "-O3",
+      "-flto=thin",
+      "-Wl,-Bsymbolic-functions",
+      "-Wl,--gc-sections",
+      "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+    ],
+    "perfetto": "disabled (PROFILING=OFF)"
+  },
+  "artifacts": {
+    "capability_probe_arm64": {
+      "path": "MobileGlues-cpp/tools/capability_probe/capability_probe_arm64",
+      "build": "NDK r28c, API 26, static libc++, PIE",
+      "status": "runs on C1L63708PZ; below-wrapper provider probe"
+    },
+    "android_arm64_release": {
+      "path": "build/android-arm64-release/libmobileglues.so",
+      "sha256": "6e8e3c5f9c3e5b24f7785351260b6bd23293b2a590d4d734012ea4ead69082f6",
+      "size": 64054560,
+      "elf": "ELF64 AArch64, Android 26, NDK r28c, LOAD align 0x4000",
+      "status": "Stage 1/2 shader-lifecycle build; loaded by wrapper_probe on C1L63708PZ; not yet installed in a game process"
+    }
+  },
+  "fixtures": {
+    "complementary_reimagined_r5.9.2": {
+      "sha256": "7ae5f1d6a4237a5c8893578397e58c9d08b79d7403bc27242aef56957489a278",
+      "modrinth_version_id": "vxxxESqv",
+      "acquired": true,
+      "local_path": "/home/polar/MobileGlues-fixtures/ComplementaryReimagined_r5.9.2.zip"
+    },
+    "complementary_unbound_r5.9.2": {
+      "sha256": "2b4e9c717758fd1ba1d6306f2e847096704196f0823c4d6941b3de6f423121d2",
+      "modrinth_version_id": "nahkiiZN",
+      "acquired": true,
+      "local_path": "/home/polar/MobileGlues-fixtures/ComplementaryUnbound_r5.9.2.zip"
+    },
+    "bsl_v10.1.8": {
+      "sha256": "36b0a50ff7918bf10e9422c401d93779f9d0088a26acea975b435243f96930b5",
+      "modrinth_version_id": "Y68yiql9",
+      "acquired": true,
+      "local_path": "/home/polar/MobileGlues-fixtures/BSL_v10.1.8.zip"
+    }
+  },
+  "device": {
+    "target": "Snapdragon X1E-80-100 Googlebook (Adreno X1-85), native Android ARM64",
+    "connected": true,
+    "serial": "C1L63708PZ",
+    "product": "HP Googlebook 14 (quartz)",
+    "soc": "Snapdragon X Elite X1E80100",
+    "os": "Android 17 / API 37",
+    "build_fingerprint": "HP/quartz/quartz:17/CL3B.260622.276.R2/16560795:user/release-keys",
+    "security_patch": "2026-09-01",
+    "abi": "arm64-v8a",
+    "page_size": 4096,
+    "ram_bytes": 16186368,
+    "display": "2880 x 1800, 120.000175 Hz mode, density 260",
+    "provider": {
+      "selected": "system ANGLE",
+      "ro_hardware_egl": "angle",
+      "ro_hardware_vulkan": "adreno",
+      "egl_vendor": "Android",
+      "egl_version": "1.5 Android META-EGL",
+      "gles_vendor": "Google Inc. (Qualcomm)",
+      "gles_renderer": "ANGLE (Qualcomm, Vulkan 1.4.295 (Adreno (TM) X1-85 (0x43050C01)), Qualcomm Technologies Inc. Adreno Vulkan Driver-512.886.6)",
+      "gles_version": "OpenGL ES 3.2 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+      "gles_shading_language": "OpenGL ES GLSL ES 3.20"
+    },
+    "installed": {
+      "launcher": "com.tungsten.fcl 1.3.4.0",
+      "renderer_plugin": "com.fcl.plugin.mobileglues 2.0.0"
+    },
+    "available_emulators": [
+      "emulator-5580 x86_64 sdk_gphone64_x86_64 API 36 page_size 4096",
+      "emulator-5582 x86_64 sdk_gphone64_x86_64 API 37 page_size 4096"
+    ]
+  }
+}
