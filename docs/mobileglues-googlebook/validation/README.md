@@ -23,6 +23,7 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-all-invalidate.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `b554ce81…4b87` | 37/37 PASS after logical attachment invalidation mapping; host shuffle scenario 5b passes |
 | `2026-10-19-x1e-wrapper-blit-resolve.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 blit_resolve` | PASS: 4x MSAA renderbuffer resolved to RGB `0.251,0.502,0.749` |
 | `2026-10-19-x1e-wrapper-all-resolve.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `b554ce81…4b87` | 38/38 PASS including multisample resolve |
+| `2026-10-19-x1e-wrapper-all-cachekey.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `5a357904…158f` | 38/38 PASS after cache identity fix; host `cache_key_test` all identities distinct |
 
 ## Game-process captures and logs
 

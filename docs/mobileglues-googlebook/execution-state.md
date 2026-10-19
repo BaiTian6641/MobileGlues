@@ -168,6 +168,10 @@ game process.
     physical COLOR0 after a shuffle.
   - Multisample resolve through `glBlitFramebuffer` passes on X1E: 4x MSAA RGBA8 resolved to
     `0.251/0.502/0.749`; full wrapper suite is **38/38** (`validation/2026-10-19-x1e-wrapper-all-resolve.json`).
+  - GLSL cache identity now includes source, stage, ESSL and backend levels, provider texture-buffer
+    emulation and texture-query-LOD branches, wrapper version including PATCH, and the settings that
+    change generated GLSL. Host `cache_key_test` proves every input changes the key; device suite
+    remains **38/38** (`validation/2026-10-19-x1e-wrapper-all-cachekey.json`).
   - Named deviations remain: `glTextureBarrier`/NV and `glTextureView` have no legal/available ES
     implementation; backing-format copy substitutions remain backlog.
 

@@ -151,7 +151,7 @@ fidelity reference.
 | Vertex image store through wrapper | pass | X1E `wrapper_probe vertex_image_store`, `rgba16f` image value 42 |
 | glslang limits derived from backend | pass for tested limits | vertex image shaders compile; `maxVertexImageUniforms` no longer 0 |
 | SSBO/image binding round-trip | **partial** | r16ui refusal visible; r32ui accepted; no r8ui/r16ui lowering yet |
-| Cache identity invalidation | pending implementation | cache-key audit identifies stage/profile inputs as omitted |
+| Cache identity invalidation | pass | Host `cache_key_test`: distinct keys for source, stage, ESSL, backend, texture-buffer emulation, texture-query-LOD, compute, DSA, hide level and PATCH; device suite 38/38 |
 
 ## Game-process smoke (X1E, installed renderer 2.0.0)
 
