@@ -191,7 +191,10 @@ fidelity reference.
 | Version pair | UNVERIFIED | pack text requires Iris 1.7+ and names 1.21.6/1.21.10/26.x; no stated 1.21.1 support |
 | Compute/SSBO/MRT/geometry limits | pass/within limits | 1024 invocations, 32 KiB shared memory, 4 KiB SSBO, ≤5 MRT, R32UI 3D images pass existing probes |
 
-Adoption requires either a derived compatibility port (subgroup/format rewrites) or a different pack; the original ZIP is not modified.
+Adoption requires a derived compatibility port. A private port is built
+(`validation/2026-10-19-iterationrp-port.md`, ZIP `0cdd9259…f729`); it has no
+subgroup-extension tokens and uses provider-legal image formats. Device import,
+compilation and scene validation are pending. The original ZIP is unmodified.
 
 ## Game-process smoke (X1E, installed renderer 2.0.0)
 

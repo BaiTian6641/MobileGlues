@@ -394,7 +394,10 @@ The original archive is not adoptable on X1E without a pack port. Direct ESSL pr
 `GL_KHR_shader_subgroup_*`, `layout(rgba16)`, `layout(rg16)` and `layout(rg16f)`; the pack's default
 SPD includes hard-require the subgroup-quad extension. Storage-image binding for rgba16/rg16 is
 `GL_INVALID_VALUE`. See `validation/2026-10-19-x1e-iterationrp-caps.json` and the feature-matrix
-adoption table. The ZIP remains unmodified.
+adoption table. The ZIP remains unmodified. A private derived port (ZIP `0cdd9259…f729`) replaces
+the subgroup paths with workgroup scans/quad reduction and widens unsupported
+storage images; it is staged for import. Device compilation/validation is the
+next gate.
 
 ## Exact next action
 
