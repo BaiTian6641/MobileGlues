@@ -3,8 +3,9 @@
 Status vocabulary is the plan's: **not tested**, **fails to load**, **loads with missing effects**,
 **correct for this preset**, **correct but below the performance target**, **qualified for release**.
 
-No row is qualified: there is no X1E device and no game-process installation yet. All device rows are
-`not tested`; host/source evidence is labelled separately and does not certify rendering.
+No row is release-qualified. The X1E Googlebook (`C1L63708PZ`) and the FCL game process are available;
+staged rows below are device evidence, but named-effect coverage, performance, and lifecycle gates remain
+open.
 
 ## Renderer / build rows
 
@@ -85,6 +86,7 @@ fidelity reference.
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 128, WSR 1) | WSR 128 + ACT 128 | ARM64 / X1E / ANGLE | pass (staged) | original pack, bridge 1.0.5; log `mclo.gs/adG0NiA`; water/room captures |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Very High | ACT 192 colored lighting | ARM64 / X1E / ANGLE | pass (staged, one emissive scene) | F3 `2026-10-19-r592-act192-bridge-f3.png`, 8 s clip, log `mclo.gs/Dz8wXmm` |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 128, WSR 1) | WSR 128 | ARM64 / X1E / ANGLE | pass (staged) | original pack; WSR images 128×64×128; SSBO 50,855,936 B; log `mclo.gs/adG0NiA` |
+| Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | custom (ACT 192, WSR 1) | WSR 192 + ACT 192 | ARM64 / X1E / ANGLE | pass (staged, bridge 1.0.17) | original pack; distinct cyan/warm ACT; WSR stable in motion; bridge hash `2e1c083c…6397`; residual: visible half-rate floodfill circle on light placement/world entry |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | WSR 256 | ARM64 / X1E / ANGLE | blocked | provider `MAX_SHADER_STORAGE_BLOCK_SIZE=134,217,728`; request 202,899,456 B |
 | Complementary Reimagined r5.9.2 | `7ae5f1d6…a278` | Ultra | player reflections (binding 3) | ARM64 / X1E / unknown | not tested | — |
 | Complementary Unbound r5.9.2 | `2b4e9c71…21d2` | High | standard fidelity suite | ARM64 / X1E / unknown | not tested | — |

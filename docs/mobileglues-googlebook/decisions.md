@@ -117,3 +117,19 @@ archive, normalized for CRLF. Its changes are workarounds, not shader logic:
 
 Consequence: prefer core/bridge fixes over archive edits. The reconstructed
 archive remains a research fixture, not the release input.
+
+## 2026-10-19: fixed image-unit registry and voxel clear (bridge 1.0.15)
+
+- Evidence: Iris `ProgramImages.Builder.addTextureImage` assigns `nextImageUnit` sequentially over
+  used uniforms, while the transform assigned `layout(binding=...)` in declaration order. The two
+  orders did not match, producing one-color ACT and moving artifacts; a later attempt to override
+  units at mixin time failed because the registry was populated after compilation.
+- Decision: populate a fixed name→unit map from the pack's custom-image list inside the transformer
+  before rewriting any source; Iris is redirected to the same map via `ProgramImages.Builder`.
+  Unknown names fall back to sequential units.
+- Decision: keep Iris's original per-frame `voxel_img` clear. Disabling it preserved stale light IDs
+  and produced motion ghosting; re-enabling it removed ghosting without losing distinct colors once
+  image units were fixed.
+- Consequence: standard ACT/WSR behavior now matches the pack's temporal design. The remaining
+  visible floodfill propagation is the pack's half-rate spread at low FPS, not an image alias or
+  clear defect.

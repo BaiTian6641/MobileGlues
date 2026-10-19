@@ -42,6 +42,10 @@ pack screen; the saved copies are evidence snapshots.
 | `2026-10-19-r592-wsr128-water.mp4` | `c6367b4800683fca74e5a0ac2a62e151c9521fd4ca9c2f805787c8dac8ae8aab` | WSR 128 motion sample |
 | `2026-10-19-r592-wsr128-room.png` | `73386a36d9c1c29bfc592188a72649ee6258f8aa1b2eb9b77d9f649ed43b7389` | WSR 128 room scene |
 | `2026-10-19-game-r592-wsr128-final.log` | `0001298247d25cadd53218dc5a4f82a728feecc0734a970d45a46ec054d52e7c` | WSR 128 final log (`mclo.gs/adG0NiA`) |
+| `2026-10-19-r592-wsr192-water.png` | `f1bdcc210c17f2031fd61b4a1113596b14e10ca4dee8fe3b1d53f703fbd409b7` | WSR 192 water/terrain reflection |
+| `2026-10-19-r592-wsr192-water.mp4` | `3552b28ea06ad71facd180ffbc9ef56981afec80d3418291fdde669bc7eff948` | WSR 192 motion sample |
+| `2026-10-19-r592-wsr192-room.png` | `cc74efb895105222c15ffb31bd509b326e361c8a0f2cb7104a629469c5c6c745` | WSR 192/ACT 192 room frame |
+| `2026-10-19-game-r592-wsr192.log` | `315446f192f24c6f881437170cfe26a6c05510c22340c837099ccf5b8d3c44cd` | WSR 192 log (`mclo.gs/FMnnMkC`) |
 | `2026-10-18-game-main-menu-old-plugin.png` | `0258b18ccaecd64433880e1463c0a1d329feda7fa17f45201f51d3224571c85e` | installed 2.0.0 renderer smoke before test plugin |
 
 ## Wrapper harness reproduction

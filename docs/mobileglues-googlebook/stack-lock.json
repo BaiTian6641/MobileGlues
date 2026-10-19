@@ -242,6 +242,14 @@
         "result": "loads; water/room reflections visible; no crash",
         "log_url": "https://mclo.gs/adG0NiA",
         "status": "staged pass; one water/room scene, not release-qualified"
+      },
+      "wsr192": {
+        "pack": "ComplementaryReimagined_r5.9.2.zip, custom ACT 192 + WSR 1",
+        "ssbo_bytes": 114229248,
+        "images": "wsr_img 192x64x192 R32UI; wsr_lod_img 48x16x48 R32UI",
+        "result": "loads; water shows terrain/island reflections; no pipeline failure",
+        "log_url": "https://mclo.gs/FMnnMkC",
+        "status": "staged pass"
       }
     },
     "available_emulators": [

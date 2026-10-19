@@ -1,14 +1,21 @@
 # MobileGlues X1E Execution State
 
 Plan baseline: `docs/MobileGlues_Googlebook_X1E_Optimization_Plan.md` (canonical path in this workspace).
-Last updated: 2026-10-18.
+Last updated: 2026-10-19 (bridge 1.0.17).
 
 ## Current stage and active task
 
-- Stage 0 (lock/build/identify provider): in progress on host work; **X1E device gate pending**.
-- Stage 1 (observable failures and source-contract repairs): active implementation work.
-- Active task: fix the audited `glShaderSource` multi-string submission contract, then replace global
-  last-shader state and remove compile/link failure masking, with host regressions.
+- Stage 0/1/2: locked X1E tuple, reproducible ARM64 build, provider and wrapper probes complete for the
+  tested contracts; remaining capability/cache/ownership items stay open.
+- Stage 3: both original Complementary r5.9.2 styles initialize at High without fallback; named-effect
+  fidelity matrix remains open.
+- Stage 4: ACT 192 staged pass on the original pack.
+- Stage 5: WSR 128 and WSR 192 staged passes on the original pack; WSR 256 blocked by provider SSBO limit.
+- Active task: WSR 256 negative gate and optional player reflections, then return to named-effect fidelity.
+- Image binding / ACT repair (bridge 1.0.17): fixed name-to-unit registry shared by the transformer and
+  Iris ProgramImages; `voxel_img` per-frame clear restored. On X1E, ACT 192 colors are distinct, WSR 192
+  is stable in motion, and the earlier light ghosting/flicker is gone. Residual: the pack's half-rate
+  floodfill propagation is visible as a spreading circle on light placement/world entry at low FPS.
 
 ## Repository map
 
@@ -143,10 +150,19 @@ Still open in these stages:
   named in the game log's `SDL_OPENGL_LIBRARY` and `LD_LIBRARY_PATH`. The original
   installed 2.0.0 APK is preserved for rollback.
 - WSR 128 core/plugin commits: core `1deeef6`, plugin submodule `e5e0131`,
-  plugin parent `6e4b230` (`googlebook/test-renderer`). Final debug APK
+  plugin parent `6e4b230` (`googlebook/test-renderer`). Final test APK
   SHA-256 `771f2fd3aa51eb3b7982faaff8cc70b1633ed1c5fac28d8c93921fe47fe89593`;
   bridge 1.0.5 SHA-256
   `e7cedffca73153fc70799b8cc483506deeec33d9f9bd33ffc15c658684f0511b`.
+- **Bridge 1.0.17** (`2e1c083c841f795717569536591d91e10b83ac20a1ea68e9af29acb9bad86397`) fixes the image
+  unit contract: shader `layout(binding=N)` and Iris `ProgramImages` now consume one fixed
+  pack-order name → unit map, populated inside the transformer before layout rewriting. Disabling
+  `voxel_img` clear was the ghosting source; restoring Iris's per-frame clear removed it while the
+  fixed units kept colored lights distinct.
+- **WSR 192 passes on the original pack** with custom `COLORED_LIGHTING=192`,
+  `WORLD_SPACE_REFLECTIONS=1`. The bridge zero-filled the 114,229,248 B
+  buffer; water shows terrain/island reflections. Log `mclo.gs/FMnnMkC`;
+  captures `2026-10-19-r592-wsr192-water.{png,mp4}` and room frame.
 - Latest commits on `googlebook/x1e-stage1-3`: `d9789fa` shader source/per-object
   state, `9a91ede` compiler limits/SSBO binding, `0557189` RGB8_SNORM backing,
   `468c4bb` game evidence, `e3b2661` artifact hashes, `d22b187` wrapper version
@@ -187,15 +203,12 @@ Still open in these stages:
 
 ## Blockers
 
-1. **No X1E Googlebook connected.** `adb devices` exposes two x86_64 emulators (`sdk_gphone64_x86_64`,
-   API 36/37). No target-device/provider, visual, or performance gate can be closed. Do not relabel emulator
-   results as Googlebook results.
-2. **No launcher/JVM tuple in this workspace.** The plugin targets FCL/Zalith/Pojav-style launchers, but no
-   launcher checkout or Android ARM64 JRE is pinned here. Game-tuple rows remain pinned at artifact level;
-   launcher/JVM rows are explicitly unknown.
-3. **Plugin/core gitlink mismatch.** The audited plugin pins core `f56af31`; this workspace builds core
-   `97558a6` (the audit baseline, which contains `f56af31` plus the multidraw staging fix). The plugin
-   submodule must be updated in a separate reviewed parent/child change when integration begins.
+1. **WSR 256 provider limit.** `MAX_SHADER_STORAGE_BLOCK_SIZE` is 134,217,728 B; the pack requests
+   202,899,456 B. This is a provider boundary, not a wrapper regression. WSR 128/192 pass.
+2. **Named-effect fidelity is incomplete.** PBR, shadow edges, bloom, TAA/history isolation, and player
+   reflections are not yet effect-by-effect qualified on both original styles.
+3. **Performance/lifecycle gates pending.** Sustained 60 FPS at 1920×1200, 20-minute thermal run,
+   resize/focus/context recovery, packaging/release, and X2E onboarding remain open.
 
 ## Latest test evidence
 
@@ -221,11 +234,11 @@ performed.
 
 ## Exact next action
 
-Test **WSR 192** on the original Reimagined r5.9.2 pack with
-`COLORED_LIGHTING=192` and `WORLD_SPACE_REFLECTIONS=1`: WSR image
-192×64×192, WSR LOD 48×16×48, main SSBO 114,229,248 B (still below the
-provider's 134,217,728 B limit). Then test the default **Ultra WSR 256**
-(202,899,456 B) only as a negative gate. Keep the named-effect Stage 3 matrix
-and graphics-stage image-format warnings as separate open items. The clean
-core should also get a native `glClearBufferSubData` implementation so the Iris
-zero-fill bridge is no longer required.
+Run the **Ultra WSR 256** negative gate on the original pack: expect the
+provider's 134,217,728 B `MAX_SHADER_STORAGE_BLOCK_SIZE` to reject the
+202,899,456 B request; record the exact loader/pipeline behavior, not a
+shaderpack edit. In parallel, qualify **optional player reflections**
+(`WORLD_SPACE_PLAYER_REF=1`) at WSR 128/192, and add a native core
+`glClearBufferSubData` implementation so the Iris zero-fill bridge is no
+longer required. Keep named-effect Stage 3 fidelity, graphics-stage image
+formats, performance, and lifecycle gates separate.
