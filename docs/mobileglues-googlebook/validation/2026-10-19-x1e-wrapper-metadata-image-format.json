@@ -1,0 +1,4 @@
+{
+  "wrapper": {"library": "/data/local/tmp/libmobileglues.so", "renderer": "Adreno (TM)  X1-85 | ANGLE | Vulkan 1.4.295 | OpenGL ES 3.2", "version": "4.0.0 MobileGlues 2.0.0", "shading": "4.60 MobileGlues with glslang and SPIRV-Cross"},
+  "metadata_image_format": {"pass": true, "detail": "vstatus=1 link=1 rgba8=yes binding=yes translated=#version 320 es\nprecision highp float;\nprecision highp int;\n\nlayout(binding = 0, rgba8) uniform writeonly highp image2D playerAtlas_img;\n\nvoid main()\n{\n    imageStore(playerAtlas_img, ivec2(0), vec4(0.5, 0.25, 0.75, 1.0));\n    gl_Position = vec4(0.0);\n}\n\n"}
+}

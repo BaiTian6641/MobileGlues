@@ -34,6 +34,9 @@ images belong outside Git; record their path and checksum instead.
 | `2026-10-19-x1e-wrapper-clear-tex-level.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 clear_tex_level` | PASS: level 1 cleared, level 0 remains `7` |
 | `2026-10-19-x1e-wrapper-depth-sampler-compute.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 depth_filter` | PASS: compute samples depth `0.5` with a LINEAR sampler object bound; sampler restored |
 | `2026-10-19-x1e-wrapper-all-audit.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `7286bd47…5aff` | 46/46 PASS including legal/mismatched depth blits, copy-image guard, clear level and compute sampler guard |
+| `2026-10-19-x1e-wrapper-translated-image-decl.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 translated_image_decl` against ARM64 build `7c4c2a57…6650` | PASS: `uniform writeonly highp image2D` parsed and bound to unit 1 without aliasing explicit unit 0 |
+| `2026-10-19-x1e-wrapper-metadata-image-format.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 metadata_image_format` | PASS: `GL_RGBA8` metadata rewrites bare `playerAtlas_img` to `layout(binding = 0, rgba8)` |
+| `2026-10-19-x1e-wrapper-all-playerimage.json` | 2026-10-19 | target device, wrapper level | `./wrapper_probe_arm64 all` against ARM64 build `7c4c2a57…6650` | 48/48 PASS including both player-image declaration probes |
 
 ## Game-process captures and logs
 

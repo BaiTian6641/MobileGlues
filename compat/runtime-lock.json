@@ -38,7 +38,9 @@
       "default-framebuffer and combined/separate attachment queries in depth-blit guards",
       "glCopyTexImage2D depth-format guard",
       "level-aware 3D image-store clear with share-group program ownership",
-      "compute and indirect-compute depth-sampler guard, with sampler mutators exported through the wrapper"
+      "compute and indirect-compute depth-sampler guard, with sampler mutators exported through the wrapper",
+      "translated image declarations accept memory and precision qualifiers in either order",
+      "fallback image units never alias an explicit binding in the same program"
     ],
     "named_deviations": {
       "glTextureBarrier": "No legal GLES equivalent; not advertised. Pinned Iris uses BufferFlipper alternate textures.",
@@ -362,9 +364,9 @@
       "status": "REPRODUCED"
     },
     "artifacts": {
-      "standalone_so_sha256": "7286bd47fad8243c87ea61ca94baf30fbad125b6622d5f92424e0592f0375aff",
-      "test_apk_sha256": "ab667c6a97746d8979bdb6fb314517e37aa1313241d2cf5fdbc9b674687b92ab",
-      "test_packaged_library_sha256": "3b27fcd1f1709a69f44637495527622f6cfc0e1c769b087af662e19e4a05d750",
+      "standalone_so_sha256": "7c4c2a570fefd6c997cc38103b4a2296fa5a431b8346208a7a1d73af5e3c6650",
+      "test_apk_sha256": "e2c702c791693a509e5baee0ab078af0f352698c909dc66334ffbf313f1b112b",
+      "test_packaged_library_sha256": "ac6c321cf83873b4e4d8bbbc6a3b7390c2ec332f58a33433baf8812c6bdb6f0c",
       "installed_release_apk_sha256": "a7e1eb29731fdece7ab3af7fb00692b856f1808a7544436e7b3eb6c08355581a",
       "note": "These build hashes are evidence for the historical tuple, not a release lock for either runtime lane."
     },

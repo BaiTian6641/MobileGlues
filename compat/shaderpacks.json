@@ -100,8 +100,8 @@
       "optional_player_reflection": {
         "additional_ssbo_bytes": 5376,
         "atlas": "64 x 64 RGBA8",
-        "status": "NOT RUN",
-        "compatibility_note": "Enabled WS Player Reflections use vertex-stage atomics and an image store that lose the ANGLE Vulkan device on X1E. The wrapper does not silently rewrite or disable the pack option; it remains unsupported until the vertex path is implemented."
+        "status": "NOT RUN (source contract fixed; device isolation pending)",
+        "compatibility_note": "The core parser now accepts `uniform writeonly highp image2D` and fallback units never alias an explicit binding; bridge 1.0.22 adds the registry binding and rgba8 format to playerAtlas_img. The pack's six vertex-stage atomicMin/atomicMax calls remain the only new GPU operation without prior X1E coverage. Do not claim support until a device run isolates the atomics from the image store."
       }
     },
     "formats": {

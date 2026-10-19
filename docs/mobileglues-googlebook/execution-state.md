@@ -190,7 +190,14 @@ game process.
     mutators (`glBindSampler`, `glSamplerParameter*`, `glDeleteSamplers`) were compiled without a
     visible declaration and were hidden, so callers bypassed the wrapper shadow; they are exported
     now. X1E `depth_filter` samples `0.5` through a bound LINEAR sampler and restores its binding.
-    Full wrapper suite: **46/46** (`validation/2026-10-19-x1e-wrapper-all-audit.json`).
+  - Player-reflection image contract: the translated-source parser now accepts memory and precision
+    qualifiers in either order (`uniform writeonly highp image2D`), and fallback image units never
+    alias an explicit binding. The bridge regex accepts the same order and rewrites registered
+    images in every stage; built jar `iris-image-bridge/dist/mgirisbridge-1.0.22.jar`
+    (`0b862474…6f1f`). Device evidence: `translated_image_decl` and `metadata_image_format` pass;
+    full suite **48/48** (`validation/2026-10-19-x1e-wrapper-all-playerimage.json`). The bridge jar
+    is not yet deployed to the FCL instance, and the pack's six vertex-stage atomics still need a
+    device isolation run; player reflections remain unverified/unsupported.
   - Named deviations remain: `glTextureBarrier`/NV and `glTextureView` have no legal/available ES
     implementation; backing-format copy substitutions remain backlog.
 
