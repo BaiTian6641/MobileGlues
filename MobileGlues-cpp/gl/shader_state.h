@@ -49,6 +49,7 @@ struct MgProgramObject {
     std::unordered_map<std::string, GLuint> frag_data_locations;
     std::unordered_map<std::string, GLuint> storage_block_bindings;
     // Filled at link: image uniform location -> canonical unit and name.
+    bool has_image_uniforms = false;
     std::unordered_map<GLint, GLuint> image_uniform_units;
     std::unordered_map<GLint, std::string> image_uniform_names;
     // Filled when the application assigns image units: app unit -> canonical.

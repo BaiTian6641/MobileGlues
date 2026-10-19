@@ -357,7 +357,8 @@ void mg_reflect_image_uniforms(GLuint program) {
             state->image_unit_names[element_unit] = base;
         }
     }
-    if (!state->image_uniform_units.empty()) {
+    state->has_image_uniforms = !state->image_uniform_units.empty();
+    if (state->has_image_uniforms) {
         LOG_W_FORCE("Image bindings: program %u has %zu active image uniforms", program,
                     state->image_uniform_units.size())
     }
@@ -368,7 +369,7 @@ bool mg_image_uniform_value_for_program(GLuint program, GLint location, GLint va
     if (out_value) *out_value = value;
     if (value < 0) return false;
     MgProgramObject* state = mg_find_program(program);
-    if (state == nullptr) return false;
+    if (state == nullptr || !state->has_image_uniforms) return false;
     auto it = state->image_uniform_units.find(location);
     if (it == state->image_uniform_units.end()) return false;
     const GLuint app_unit = static_cast<GLuint>(value);
@@ -388,7 +389,7 @@ bool mg_image_uniform_value(GLint location, GLint value, GLint* out_value) {
 
 GLuint mg_remap_image_unit(GLuint unit) {
     MgProgramObject* state = mg_find_program(gl_state->current_program);
-    if (state == nullptr) return unit;
+    if (state == nullptr || !state->has_image_uniforms) return unit;
     auto it = state->image_unit_remap.find(unit);
     return it == state->image_unit_remap.end() ? unit : it->second;
 }

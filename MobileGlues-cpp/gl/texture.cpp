@@ -252,6 +252,9 @@ namespace {
         // texture bindings above; zero is GL's default of no sampler, which is
         // what a value-initialised array answers.
         std::array<GLuint, MAX_TEXTURE_IMAGE_UNITS> sampler_bindings{};
+        // Number of units with a non-zero sampler binding. The depth guard only
+        // has work when at least one sampler object overrides texture filters.
+        int sampler_binding_count = 0;
         // Which share group this context draws its texture objects from. Deleting an
         // object has to clear it out of every context in that group, not only the one
         // that happened to issue the glDeleteTextures.
@@ -1840,6 +1843,9 @@ void glDeleteTextures(GLsizei n, const GLuint* textures) {
     LOG()
     INIT_CHECK_GL_ERROR
     GLES.glDeleteTextures(n, textures);
+    // Deleting an image-bound texture unbinds it in the driver. The physical
+    // shadow cannot be trusted after that; the next materialization rebinds.
+    mg_invalidate_image_binding_shadow();
     CHECK_GL_ERROR_NO_INIT
 
     for (GLsizei i = 0; i < n; ++i) {
@@ -2180,7 +2186,10 @@ void glDeleteSamplers(GLsizei count, const GLuint* samplers) {
             // A deleted sampler unbinds from every unit, shadow side the
             // same way the driver does it.
             for (int unit = 0; unit < mg_max_texture_units(); ++unit) {
-                if (SamplerBindings[unit] == id) SamplerBindings[unit] = 0;
+                if (SamplerBindings[unit] == id) {
+                    SamplerBindings[unit] = 0;
+                    if (g_tc->sampler_binding_count > 0) --g_tc->sampler_binding_count;
+                }
             }
         }
     }
@@ -2191,7 +2200,12 @@ void glDeleteSamplers(GLsizei count, const GLuint* samplers) {
 void glBindSampler(GLuint unit, GLuint sampler) {
     LOG()
     LOG_D("glBindSampler, unit: %d, sampler: %u", unit, sampler)
-    if (unit < (GLuint)mg_max_texture_units()) SamplerBindings[unit] = sampler;
+    if (unit < (GLuint)mg_max_texture_units()) {
+        const GLuint previous = SamplerBindings[unit];
+        if (previous == 0 && sampler != 0) ++g_tc->sampler_binding_count;
+        if (previous != 0 && sampler == 0) --g_tc->sampler_binding_count;
+        SamplerBindings[unit] = sampler;
+    }
     GLES.glBindSampler(unit, sampler);
     CHECK_GL_ERROR
 }
@@ -2265,32 +2279,26 @@ void glSamplerParameterIuiv(GLuint sampler, GLenum pname, const GLuint* param) {
 // offending unit(s) hands the draw the texture object's already-legal
 // state; colour units sharing that sampler are not touched.
 mg_depth_draw_guard::mg_depth_draw_guard() {
+    // No sampler override, no incompleteness to repair. This is the common case
+    // for compute passes and for draws after the application unbinds samplers;
+    // skipping the 128-unit scan is exact, not a heuristic.
+    if (g_tc->sampler_binding_count == 0) return;
     const int max_units = mg_max_texture_units();
     int original_active = -1;
     for (int unit = 0; unit < max_units; ++unit) {
+        const GLuint sampler = SamplerBindings[unit];
+        if (sampler == 0) continue;
         TextureObject* tex = TextureUnits[unit].GetBindingSlot(TextureTarget::TEXTURE_2D).GetBoundObject();
         if (!tex || !mg_is_sized_depth_format(tex->internal_format)) continue;
-        const GLuint sampler = SamplerBindings[unit];
         GLint min_f = tex->min_filter;
         GLint mag_f = tex->mag_filter;
         GLenum compare = tex->compare_mode;
-        if (sampler != 0) {
-            const sampler_shadow_t shadow =
-                sampler < SamplerShadowTable.size() ? SamplerShadowTable[sampler] : sampler_shadow_t{};
-            min_f = shadow.min_filter;
-            mag_f = shadow.mag_filter;
-            compare = shadow.compare_mode;
-        }
+        const sampler_shadow_t shadow =
+            sampler < SamplerShadowTable.size() ? SamplerShadowTable[sampler] : sampler_shadow_t{};
+        min_f = shadow.min_filter;
+        mag_f = shadow.mag_filter;
+        compare = shadow.compare_mode;
         if (!mg_depth_pairing_incomplete(tex->internal_format, compare, min_f, mag_f)) continue;
-        if (sampler == 0) {
-            // Texture-object state is pushed legal at every transition
-            // this layer sees (classic and DSA both route through those
-            // paths), so an incomplete pairing with no sampler bound means
-            // a path that does not. Say so; the driver's own judgement is
-            // not something to second-guess blind.
-            LOG_W("depth texture %u on unit %d would draw incomplete with no sampler bound", tex->texture, unit)
-            continue;
-        }
         Moved& rec = moved[moved_count++];
         rec = {unit, sampler, -1};
         GLES.glBindSampler(unit, 0);
@@ -2629,6 +2637,10 @@ void glClearTexImage(GLuint texture, GLint level, GLenum format, GLenum type, co
 
     TextureObject* tex = mgGetTexObjectByID(texture);
     const TextureTarget textureTarget = tex ? tex->target : TextureTarget::TEXTURE_2D;
+    // The clear paths below bind image units directly and restore the previous
+    // driver binding. Forget the cached physical tuples; rebinding them is
+    // cheaper than reasoning about every internal save/restore.
+    mg_invalidate_image_binding_shadow();
 
     // Clearing through a temporary framebuffer attachment crashes inside
     // ANGLE's GL_Clear for layered/3D textures (observed on

@@ -67,6 +67,9 @@ extern "C"
     // Replays the context's logical image bindings through the current
     // program's logical -> physical unit map.
     void mg_materialize_image_bindings();
+    // Forget the physical image-unit shadow after a path changes image bindings
+    // through GLES directly. The next materialization re-binds what it needs.
+    void mg_invalidate_image_binding_shadow();
     GLAPI GLAPIENTRY void glDispatchCompute(GLuint num_groups_x, GLuint num_groups_y, GLuint num_groups_z);
     GLAPI GLAPIENTRY void glDispatchComputeIndirect(GLintptr indirect);
     GLAPI GLAPIENTRY void glMemoryBarrier(GLbitfield barriers);

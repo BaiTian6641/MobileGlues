@@ -202,7 +202,11 @@ void glLinkProgram(GLuint program) {
         g_samplerCacheForSamplerBuffer.erase(program);
         // A relink can change the physical image-unit plan while the program
         // is already current.
-        if (gl_state->current_program == program) mg_materialize_image_bindings();
+        if (gl_state->current_program == program) {
+            MgProgramObject* current_state = mg_find_program(program);
+            gl_state->current_program_has_image_uniforms = current_state && current_state->has_image_uniforms;
+            mg_materialize_image_bindings();
+        }
     }
 
     CHECK_GL_ERROR
@@ -226,6 +230,8 @@ void glUseProgram(GLuint program) {
     LOG_D("glUseProgram(%d)", program)
     if (program != gl_state->current_program) {
         gl_state->current_program = program;
+        MgProgramObject* program_state = mg_find_program(program);
+        gl_state->current_program_has_image_uniforms = program_state && program_state->has_image_uniforms;
         GLES.glUseProgram(program);
         // Image units are context state; the program's physical plan may map
         // them differently from the previous program.
@@ -303,6 +309,7 @@ void glDeleteProgram(GLuint program) {
     program_map_is_sampler_buffer_emulated.erase(program);
     program_map_should_generate_fs.erase(program);
     g_samplerCacheForSamplerBuffer.erase(program);
+    if (gl_state->current_program == program) gl_state->current_program_has_image_uniforms = false;
     GLES.glDeleteProgram(program);
     CHECK_GL_ERROR
 }

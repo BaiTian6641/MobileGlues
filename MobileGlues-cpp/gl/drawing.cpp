@@ -240,6 +240,17 @@ bool mg_image_texture_is_bound(GLuint texture) {
     return false;
 }
 
+namespace {
+bool image_binding_equal(const mg_image_binding_t& a, const mg_image_binding_t& b) {
+    return a.texture == b.texture && a.level == b.level && a.layered == b.layered && a.layer == b.layer &&
+           a.access == b.access && a.format == b.format;
+}
+} // namespace
+
+void mg_invalidate_image_binding_shadow() {
+    for (GLuint unit = 0; unit < MG_TRACKED_IMAGE_UNITS; ++unit) gl_state->image_unit_shadow_valid[unit] = false;
+}
+
 void mg_materialize_image_bindings() {
     MgProgramObject* state = mg_find_program(gl_state->current_program);
     if (state == nullptr || state->image_uniform_units.empty()) return;
@@ -249,11 +260,19 @@ void mg_materialize_image_bindings() {
         GLuint physical = logical;
         auto it = state->image_unit_remap.find(logical);
         if (it != state->image_unit_remap.end()) physical = it->second;
+        if (physical >= MG_TRACKED_IMAGE_UNITS) continue;
         // The shader was compiled against the backing qualifier, not the
         // desktop logical format.
-        const GLenum format = mg_image_backing_format(binding.format);
-        GLES.glBindImageTexture(physical, binding.texture, binding.level, binding.layered, binding.layer,
-                                binding.access, format);
+        mg_image_binding_t desired = binding;
+        desired.format = mg_image_backing_format(binding.format);
+        if (gl_state->image_unit_shadow_valid[physical] &&
+            image_binding_equal(gl_state->image_unit_shadow[physical], desired)) {
+            continue;
+        }
+        GLES.glBindImageTexture(physical, desired.texture, desired.level, desired.layered, desired.layer,
+                                desired.access, desired.format);
+        gl_state->image_unit_shadow[physical] = desired;
+        gl_state->image_unit_shadow_valid[physical] = true;
     }
 }
 
@@ -271,14 +290,28 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
     // The shader was compiled against the backing qualifier, not the desktop
     // logical format. Bind the same backing format the texture was allocated
     // with; R8UI/R16UI become R32UI.
+    const GLenum logical_format = format;
     format = mg_image_backing_format(format);
+    const bool probe_backend_error = format != logical_format || mg_image_qualifier(logical_format) == nullptr;
     unit = mg_remap_image_unit(unit);
-    GLES.glBindImageTexture(unit, texture, level, layered, layer, access, format);
-    // The provider rejects formats that ESSL 3.10 cannot name, notably r8ui and
-    // r16ui. Until the loader lowers those formats, the application must see the
-    // refusal rather than a silently unbound image unit.
-    const GLenum backend_error = GLES.glGetError();
-    if (backend_error != GL_NO_ERROR) mg_set_gl_error(backend_error);
+    if (unit < MG_TRACKED_IMAGE_UNITS) {
+        const mg_image_binding_t desired{texture, level, layered, layer, access, format};
+        if (gl_state->image_unit_shadow_valid[unit] && image_binding_equal(gl_state->image_unit_shadow[unit], desired)) {
+            return;
+        }
+        GLES.glBindImageTexture(unit, texture, level, layered, layer, access, format);
+        gl_state->image_unit_shadow[unit] = desired;
+        gl_state->image_unit_shadow_valid[unit] = true;
+    } else {
+        GLES.glBindImageTexture(unit, texture, level, layered, layer, access, format);
+    }
+    // A known backing format is accepted by this class of provider. Probe only
+    // when the wrapper lowered an ESSL-illegal format or the application named
+    // an unknown one; the common R32UI/RGBA path no longer pays a round trip.
+    if (probe_backend_error) {
+        const GLenum backend_error = GLES.glGetError();
+        if (backend_error != GL_NO_ERROR) mg_set_gl_error(backend_error);
+    }
     CHECK_GL_ERROR
 }
 
@@ -304,6 +337,11 @@ bool remap_image_uniforms_1iv(GLuint program, GLint location, GLsizei count, con
 
 void glUniform1i(GLint location, GLint v0) {
     LOG()
+    if (!gl_state->current_program_has_image_uniforms) {
+        GLES.glUniform1i(location, v0);
+        CHECK_GL_ERROR
+        return;
+    }
     GLint mapped = v0;
     const bool image_uniform = mg_image_uniform_value(location, v0, &mapped);
     LOG_D("glUniform1i, location: %d, v0: %d", location, mapped)
@@ -321,6 +359,11 @@ void glUniform1iv(GLint location, GLsizei count, const GLint* value) {
         CHECK_GL_ERROR
         return;
     }
+    if (!gl_state->current_program_has_image_uniforms) {
+        GLES.glUniform1iv(location, count, value);
+        CHECK_GL_ERROR
+        return;
+    }
     std::vector<GLint> remapped;
     const bool image_uniform =
         remap_image_uniforms_1iv(gl_state->current_program, location, count, value, remapped);
@@ -332,6 +375,11 @@ void glUniform1iv(GLint location, GLsizei count, const GLint* value) {
 
 void glProgramUniform1i(GLuint program, GLint location, GLint v0) {
     LOG()
+    if (program == gl_state->current_program && !gl_state->current_program_has_image_uniforms) {
+        GLES.glProgramUniform1i(program, location, v0);
+        CHECK_GL_ERROR
+        return;
+    }
     GLint mapped = v0;
     const bool image_uniform = mg_image_uniform_value_for_program(program, location, v0, &mapped);
     LOG_D("glProgramUniform1i, program: %u, location: %d, v0: %d", program, location, mapped)

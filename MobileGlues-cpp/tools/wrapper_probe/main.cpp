@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 #include <unistd.h>
+#include <chrono>
 
 namespace {
 
@@ -2561,6 +2562,84 @@ void main() { color = vec4(blockData.value); }
     return r;
 }
 
+Result test_guard_scan_bench() {
+    Result r;
+    const char* cs = "#version 310 es\nlayout(local_size_x = 1) in;\nvoid main() {}\n";
+    GLuint shader = api.glCreateShader(GL_COMPUTE_SHADER);
+    api.glShaderSource(shader, 1, &cs, nullptr);
+    api.glCompileShader(shader);
+    GLuint program = api.glCreateProgram();
+    api.glAttachShader(program, shader);
+    api.glLinkProgram(program);
+    GLint linked = GL_FALSE;
+    api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    api.glUseProgram(program);
+
+    constexpr int kIterations = 20000;
+    auto run = [&]() {
+        auto start = std::chrono::steady_clock::now();
+        for (int i = 0; i < kIterations; ++i) api.glDispatchCompute(1, 1, 1);
+        api.glFinish();
+        auto end = std::chrono::steady_clock::now();
+        return std::chrono::duration<double, std::nano>(end - start).count() / kIterations;
+    };
+
+    // Plain dispatch: no sampler object, so the guard has nothing to move.
+    api.glBindSampler(0, 0);
+    api.glActiveTexture(GL_TEXTURE0);
+    api.glBindTexture(GL_TEXTURE_2D, 0);
+    const double plain_ns = run();
+
+    GLuint tex = 0, sampler = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 1, 1);
+    api.glGenSamplers(1, &sampler);
+    api.glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    api.glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    api.glBindSampler(0, sampler);
+
+    // Depth texture with LINEAR sampler: guard must unbind and restore the
+    // sampler on every dispatch, exercising the full unit scan.
+    api.glDeleteTextures(1, &tex);
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, 1, 1);
+    api.glBindSampler(0, sampler);
+    const double guard_ns = run();
+
+    r.ok = linked == GL_TRUE;
+    r.detail = "linked=" + std::to_string(linked) + " iterations=" + std::to_string(kIterations) +
+               " plain_ns=" + std::to_string(plain_ns) + " guard_ns=" + std::to_string(guard_ns) +
+               " delta_ns=" + std::to_string(guard_ns - plain_ns);
+    api.glBindSampler(0, 0);
+    api.glDeleteSamplers(1, &sampler);
+    api.glDeleteTextures(1, &tex);
+    api.glDeleteProgram(program);
+    api.glDeleteShader(shader);
+    return r;
+}
+
+Result test_image_rebind_bench() {
+    Result r;
+    GLuint tex = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32UI, 1, 1);
+    constexpr int kIterations = 100000;
+    auto start = std::chrono::steady_clock::now();
+    for (int i = 0; i < kIterations; ++i) {
+        api.glBindImageTexture(0, tex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+    }
+    api.glFinish();
+    auto end = std::chrono::steady_clock::now();
+    const double ns = std::chrono::duration<double, std::nano>(end - start).count() / kIterations;
+    r.ok = ns >= 0.0;
+    r.detail = "iterations=" + std::to_string(kIterations) + " ns_per_same_bind=" + std::to_string(ns);
+    api.glDeleteTextures(1, &tex);
+    return r;
+}
+
 Result test_patch_default_levels() {
     Result r;
     // ES has no default tessellation-level entry point. The frontend must say
@@ -3321,6 +3400,8 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "frag_data_shared")) run("frag_data_shared_shader", test_frag_data_shared_shader);
     if (!strcmp(mode, "all") || !strcmp(mode, "frag_data_linked")) run("frag_data_linked_location", test_frag_data_linked_location);
     if (!strcmp(mode, "all") || !strcmp(mode, "ssbo_qualifier")) run("ssbo_qualifier_preserved", test_ssbo_qualifier_preserved);
+    if (!strcmp(mode, "guard_bench")) run("guard_scan_bench", test_guard_scan_bench);
+    if (!strcmp(mode, "image_rebind_bench")) run("image_rebind_bench", test_image_rebind_bench);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
     if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);

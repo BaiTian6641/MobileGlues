@@ -86,6 +86,7 @@ extern "C"
         GLenum proxy_intformat;
 
         GLuint current_program;
+        bool current_program_has_image_uniforms;
         GLuint current_tex_unit;
         GLuint current_draw_fbo;
 
@@ -114,6 +115,14 @@ extern "C"
         // unit is derived from the current program and replayed on program
         // switches; the application never observes the remap.
         mg_image_binding_t image_bindings[MG_TRACKED_IMAGE_UNITS];
+        // What this context last handed to GLES.glBindImageTexture for each
+        // physical unit, and whether that record is known to match the driver.
+        // The application's logical bindings are replayed through a per-program
+        // remap, so the same logical image can land on different physical units
+        // after a program switch; comparing the physical tuple avoids replaying
+        // identical binds while still applying changed ones.
+        mg_image_binding_t image_unit_shadow[MG_TRACKED_IMAGE_UNITS];
+        bool image_unit_shadow_valid[MG_TRACKED_IMAGE_UNITS];
     };
     typedef struct gl_state_s* gl_state_t;
     // Where gl_state points when no tracked context is current. Every member is a
@@ -173,7 +182,9 @@ struct mg_depth_draw_guard {
         // otherwise its GL_TEXTURE_COMPARE_MODE, restored on destruction.
         int saved_compare;
     };
-    Moved moved[kMaxUnits] = {};
+    // Only entries below moved_count are read; zero-filling the whole table on
+    // every draw/dispatch was pure overhead.
+    Moved moved[kMaxUnits];
     int moved_count = 0;
 
     mg_depth_draw_guard();
