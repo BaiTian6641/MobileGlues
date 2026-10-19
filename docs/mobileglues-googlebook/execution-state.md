@@ -14,8 +14,8 @@ Last updated: 2026-10-18.
 
 | Root | Branch | HEAD | Remote | State |
 | --- | --- | --- | --- | --- |
-| `/home/polar/MobileGlues` | `main` | `97558a69157b033b890958b1e49258c5b51a80c6` | `origin` = `git@github.com:BaiTian6641/MobileGlues.git` (preserved); `upstream` = `https://github.com/MobileGL-Dev/MobileGlues.git` (read baseline) | Task work; plan/records are untracked until committed |
-| `/home/polar/MobileGlues-plugin` | detached | `f5105e4ddd1752cccdcc6421c402960d40ec3d9d` | `origin` = `https://github.com/MobileGL-Dev/MobileGlues-plugin.git` | Clean clone; core submodule not initialized; no edits |
+| `/home/polar/MobileGlues` | `googlebook/x1e-stage1-3` | `d22b187` (base `97558a6`) | `origin` = `git@github.com:BaiTian6641/MobileGlues.git` (preserved); `upstream` = `https://github.com/MobileGL-Dev/MobileGlues.git` (read baseline) | Task branch; clean except user `.vscode/` |
+| `/home/polar/MobileGlues-plugin` | `googlebook/test-renderer` | `e796e12` | `origin` = `https://github.com/MobileGL-Dev/MobileGlues-plugin.git` | Parent commit updates the test core gitlink; core submodule detached at `0557189` |
 
 Core submodules initialized at the gitlinks recorded by `97558a6`:
 
@@ -158,6 +158,16 @@ Still open in these stages:
 - Artifact: `build/android-arm64-release/libmobileglues.so`,
   SHA-256 `884582a269a44bdab4641259bfa5b330335df13ca08ad8cfafd88ac59ab2501e`.
 - ELF: `ELF64 AArch64`, Android 26, NDK r28c, `LOAD` align `0x4000` (16 KB).
+
+## Handoff artifacts
+
+Recoverable patches are in `/home/polar/MobileGlues-fixtures/handoff/`:
+`core-patches/0001..0007` from base `97558a6` to `d22b187`, and
+`plugin-patches/0001` from `f5105e4` to `e796e12`. Hashes are in
+`handoff/hashes.txt`. The core submodule commit `0557189` is present in the
+local core repository and in the plugin's local submodule clone; upstream does
+not contain it, so the patches are the portable handoff. No push or PR was
+performed.
 
 ## Exact next action
 
