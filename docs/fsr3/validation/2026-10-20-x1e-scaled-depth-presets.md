@@ -8,9 +8,9 @@ Settings: shaders ON, FSR3 history absent, motion zero, RCAS 0.4.
 
 ## Tested pair
 
-- APK `9ca42b73…`
-- Core `6811d7f4…`
-- Bridge `2dd1d801…`
+- APK `e7d655bd…`
+- Core `af74d676…`
+- Bridge `4f50f10a…`
 
 Previous NativeAA rollback remains APK `538455b7…`, core `5733b7bb…`,
 bridge `1f759cfe…`.
@@ -51,10 +51,13 @@ night-scene observations, not matched benchmark or thermal evidence.
 
 ## Open
 
-- The final pass still receives `viewWidth=1694,viewHeight=932` in the trace
-  even though its output is 2880×1585. The attempted Java/core overrides did
-  not fire; this remains an open finishing-domain defect and must be fixed
-  before calling the scaled presets fully qualified.
+- The final program now receives `viewWidth=2880,viewHeight=1585` through the
+  native final-scope override; the earlier 1694×932 observation is fixed.
+- A black/garbled world was captured after the first scaled-depth build. The
+  trace showed the bridge-owned depth texture was not cleared each frame. A
+  depth-only clear at `beginLevelRendering` RETURN is implemented and committed;
+  it must be visually verified on the installed final pair before any preset is
+  called qualified.
 - UltraPerformance and a post-change NativeAA regression were not rerun.
 - Active pack archive SHA-256/option map remain missing.
 - No matched frame-time, star-rotation, resize, or shader-reload matrix in this
