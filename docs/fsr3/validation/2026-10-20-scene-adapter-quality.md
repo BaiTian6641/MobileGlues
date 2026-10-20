@@ -10,7 +10,7 @@ Status: **rendering PASS (single run); performance and temporal quality NOT RUN.
 - Shaderpack: `AuroraLumen-Mobile-v2.zip` (not Complementary).
 - FSR3 setting: enabled, quality **Quality**.
 - APK SHA-256: `858743c7012c80f3349dea9a2573ccd0d89096573f3e4907d10b796c10316707`.
-- Core SHA-256: `4a60051434ef1955a23680eb6a551967e985cf16f94206f295368e2401ce8471`.
+- Core SHA-256: `83372740ffceb7f2b0c95cc7daa42b2e9c73b8a02c393b42df40d8a3364c6a14`.
 - Bridge SHA-256: `a7b9263993208d33dba51fdc0809c35ec71f0bd3ec62fca6b9029f2295e836c8`.
 - Screenshot: `/home/polar/MobileGlues-fixtures/2026-10-20-fsr3-quality-camera-motion.png`
 - Log: `/home/polar/MobileGlues-fixtures/2026-10-20-fsr3-quality-camera-motion.log`
