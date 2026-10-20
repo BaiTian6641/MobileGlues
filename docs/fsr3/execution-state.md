@@ -50,7 +50,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | S2 contract | **PASS (frozen)** | `docs/fsr3/frame-contract.md` ABI v1 |
 | S2 backend feasibility | **PASS** | X1E RCAS exact vs CPU; 8-pass chain 2x/1.5x; independent X1E multi-frame evidence now present |
 | S2 game audit | **PASS (source)** | `docs/fsr3/audits/minecraft-iris-pass-input.md`: final TAA is `composite6`, jitter is partial, no velocity buffer in Iris 1.8.14 |
-| S3 native temporal backend | **PARTIAL** | X1E three-frame reset/history/reset probe deterministic (`cf71d4b5…`); R1 unsigned-sampler and R6 init-state defects fixed; per-pass timing NOT RUN |
+| S3 native temporal backend | **PARTIAL** | Deterministic reset/history/reset probe PASS; per-pass Quality GPU timing ~17–18 ms total (PrepareReactivity ~6, Accumulate ~4–5); flat synthetic probe, game integration not qualified |
 | S4 first game path | **PARTIAL: rendering PASS; performance NOT QUALIFIED** | Quality 1920x1057 -> 2880x1585, camera_motion=1, full world + native HUD; spot ~18 off/~20 Quality/~20 Performance, not frame-locked; R2/R3/R5 boundary/jitter defects remain; `validation/2026-10-20-scene-adapter-quality.md` |
 | S5 Complementary | **BLOCKED** | source boundary mapped; ACT/WSR/r5.9.2 device qualification NOT RUN |
 | S6 qualification | **NOT RUN** | no matched benchmark/thermal qualification |

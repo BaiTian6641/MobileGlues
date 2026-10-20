@@ -14,7 +14,10 @@
 #include "fsr3_shaders.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <sstream>
 
@@ -957,14 +960,54 @@ bool Backend::dispatch(const Inputs& in) {
     GLES.glBindBuffer(GL_UNIFORM_BUFFER, ubo_rcas_);
     GLES.glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(rcas), &rcas);
 
+    // Opt-in GPU timeline. GL_EXT_disjoint_timer_query timestamps do not
+    // serialize the passes; reading waits only at the end of the frame.
+    struct PassTiming {
+        const GLenum kTimestampExt = 0x8E28; // GL_TIMESTAMP_EXT
+        bool enabled = false;
+        GLuint queries[9]{};
+        int marked = 0;
+        PassTiming() {
+            enabled = std::getenv("MG_FSR3_TIMING") != nullptr && GLES.glGenQueries &&
+                      GLES.glDeleteQueries && GLES.glQueryCounterEXT &&
+                      GLES.glGetQueryObjectui64vEXT;
+            if (enabled) GLES.glGenQueries(9, queries);
+        }
+        void mark() {
+            if (!enabled || marked >= 9) return;
+            GLES.glQueryCounterEXT(queries[marked], kTimestampExt);
+            ++marked;
+        }
+        ~PassTiming() {
+            if (!enabled) return;
+            while (marked < 9) mark();
+            GLES.glFinish();
+            GLuint64 ts[9]{};
+            for (int i = 0; i < 9; ++i)
+                GLES.glGetQueryObjectui64vEXT(queries[i], GL_QUERY_RESULT, &ts[i]);
+            for (int i = 0; i < 8; ++i)
+                std::fprintf(stderr, "FSR3 GPU pass %d %.3f ms\n", i,
+                             static_cast<double>(ts[i + 1] - ts[i]) / 1000000.0);
+            GLES.glDeleteQueries(9, queries);
+        }
+    } timing;
+    timing.mark();
     if (!run_pass(0, render_width_, render_height_)) { first_frame_ = true; return false; }
+    timing.mark();
     if (!run_pass(1, render_width_, render_height_)) { first_frame_ = true; return false; }
+    timing.mark();
     if (!run_pass(2, render_width_, render_height_)) { first_frame_ = true; return false; }
+    timing.mark();
     if (!run_pass(3, std::max(1u, render_width_ / 2), std::max(1u, render_height_ / 2))) { first_frame_ = true; return false; }
+    timing.mark();
     if (!run_pass(4, render_width_, render_height_)) { first_frame_ = true; return false; }
+    timing.mark();
     if (!run_pass(5, render_width_, render_height_)) { first_frame_ = true; return false; }
+    timing.mark();
     if (!run_pass(6, output_width_, output_height_)) { first_frame_ = true; return false; }
+    timing.mark();
     if (!run_pass(7, output_width_, output_height_)) { first_frame_ = true; return false; }
+    timing.mark();
 
     previous_render_width_ = render_width_;
     previous_render_height_ = render_height_;

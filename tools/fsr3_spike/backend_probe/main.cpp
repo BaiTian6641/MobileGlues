@@ -140,6 +140,15 @@ void add_checks(std::string& out, const std::vector<std::pair<std::string, std::
 
 int main(int argc, char** argv) {
     const char* path = argc > 1 ? argv[1] : "/data/local/tmp/libmobileglues.so";
+    int rw = 160, rh = 90, ow = 320, oh = 180;
+    for (int i = 2; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--render") == 0 && i + 1 < argc) {
+            if (std::sscanf(argv[++i], "%dx%d", &rw, &rh) != 2) return 2;
+        } else if (std::strcmp(argv[i], "--output") == 0 && i + 1 < argc) {
+            if (std::sscanf(argv[++i], "%dx%d", &ow, &oh) != 2) return 2;
+        }
+    }
+    if (rw < 64 || rh < 64 || ow < rw || oh < rh || ow > 4096 || oh > 4096) return 2;
     if (!load(path)) return 2;
 
     std::fprintf(stderr, "probe: egl display\n");
@@ -173,7 +182,6 @@ int main(int argc, char** argv) {
     }
 
     std::fprintf(stderr, "probe: context current\n");
-    constexpr int rw = 160, rh = 90, ow = 320, oh = 180;
     std::vector<uint8_t> color(static_cast<size_t>(rw) * rh * 4);
     for (size_t i = 0; i < color.size(); i += 4) {
         color[i + 0] = 96;
@@ -216,8 +224,8 @@ int main(int argc, char** argv) {
     desc.render_height = rh;
     desc.output_width = ow;
     desc.output_height = oh;
-    desc.color_active = {0, 0, rw, rh};
-    desc.output_active = {0, 0, ow, oh};
+    desc.color_active = {0, 0, static_cast<uint32_t>(rw), static_cast<uint32_t>(rh)};
+    desc.output_active = {0, 0, static_cast<uint32_t>(ow), static_cast<uint32_t>(oh)};
     desc.color_space = MG_FSR_COLOR_LDR_PERCEPTUAL;
     desc.output_alpha_mode = 0;
     desc.pre_exposure = 1.0f;

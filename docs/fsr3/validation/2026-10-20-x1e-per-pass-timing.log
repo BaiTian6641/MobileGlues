@@ -1,0 +1,31 @@
+probe: egl display
+probe: context current
+probe: inputs created
+probe: session created
+probe: caps rc=0 mask=4
+probe: dispatch1 start
+FSR3 GPU pass 0 2.741 ms
+FSR3 GPU pass 1 0.705 ms
+FSR3 GPU pass 2 2.698 ms
+FSR3 GPU pass 3 0.234 ms
+FSR3 GPU pass 4 5.848 ms
+FSR3 GPU pass 5 0.815 ms
+FSR3 GPU pass 6 3.838 ms
+FSR3 GPU pass 7 0.788 ms
+probe: dispatch1 rc=0
+FSR3 GPU pass 0 2.671 ms
+FSR3 GPU pass 1 0.752 ms
+FSR3 GPU pass 2 6.818 ms
+FSR3 GPU pass 3 0.345 ms
+FSR3 GPU pass 4 6.314 ms
+FSR3 GPU pass 5 0.933 ms
+FSR3 GPU pass 6 4.965 ms
+FSR3 GPU pass 7 0.799 ms
+FSR3 GPU pass 0 2.277 ms
+FSR3 GPU pass 1 0.678 ms
+FSR3 GPU pass 2 2.943 ms
+FSR3 GPU pass 3 0.241 ms
+FSR3 GPU pass 4 6.061 ms
+FSR3 GPU pass 5 1.172 ms
+FSR3 GPU pass 6 4.347 ms
+FSR3 GPU pass 7 0.917 ms
