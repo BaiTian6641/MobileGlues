@@ -27,8 +27,6 @@ bool FSR3BridgeMode();
 
 void FSR3SetFinalScope(bool active);
 void FSR3SetBridgeDepthTexture(unsigned int texture);
-void FSR3SetBridgeColorTexture(unsigned int texture);
-unsigned int FSR3BridgeColorTexture();
 unsigned int FSR3BridgeDepthTexture();
 void FSR3ApplyFinalViewportUniforms(int currentProgram);
 

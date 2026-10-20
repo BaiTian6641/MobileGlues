@@ -57,7 +57,5 @@ public final class NativeBridge {
 
     public static native void setSceneDepth(int texture);
 
-    public static native void setSceneColor(int texture);
-
     static native String trace(int op, int role, int frame, int event);
 }
