@@ -9,12 +9,13 @@ dependency, below).
   functional commit is a guard-rationale comment only) on branch `googlebook/fsr-core-s1`,
   worktree `/tmp/mg-fsr-core`
 - Independent-review fix commit: `3314e39` on the same branch, on top of `72f2ad1`. Sections 2,
-  4, 5 and 6 below describe the tree at `cf0a068` (priming follow-up); the claims this document
+  4, 5 and 6 below describe the tree at `dbd60a9` (second re-review); the claims this document
   made before `3314e39` about viewport restoration, first-frame content and draw-FBO tracking
   were wrong and are corrected in place.
-- Follow-up priming fix: `cf0a068` ("make render-target priming persistent per object set"),
-  responding to the bind-once multi-frame defect found in `3314e39`. The commit containing this
-  documentation update is a child of `cf0a068`.
+- Follow-up priming fixes: `cf0a068` (persistent priming) and `dbd60a9` (remove the
+  post-rebuild present hold). Re-review found that a hold based on "no bind" discards a valid
+  frame drawn into the replacement without a redirect bind; it is gone. The commit containing
+  this documentation update is a child of `dbd60a9`.
 - Scope: `MobileGlues-cpp/gl/FSR1/`, plus `MobileGlues-cpp/tests/fsr1_core_test.cpp` and the
   single test-runner line in `MobileGlues-cpp/tests/run.sh`. The review fixes also touch
   `gl/framebuffer.cpp`/`gl/framebuffer.h` for one narrow republish entry point
@@ -42,10 +43,10 @@ All six findings were reproduced against `72f2ad1`. The fix commit is `3314e39`.
 
 | # | Severity | Finding in `72f2ad1` | Fix (post-`3314e39` file:line) | Evidence |
 | --- | --- | --- | --- | --- |
-| 1 | HIGH | `kResourceCreationState` had no `STATE_VIEWPORT`; `InitFSRResources` and `RecreateFSRTargets` set `GL_VIEWPORT` to the render extent after building, and the guard could not restore the application's viewport. The claim in the previous revision that "`RecreateFSRTargets` likewise restores it" was false. | `STATE_VIEWPORT` added to `kResourceCreationState` and to the new `kRecreateState` (`gl/FSR1/FSR1Plan.h:234-241`). The two post-build bind/viewport writes were removed because the guard always undid them anyway (`gl/FSR1/FSR1.cpp:603-611`, `:618-682`); a future body that sets a viewport is now covered by the mask. `ApplyFSR`'s per-frame guard is unchanged except for the sampler bit. | `test_state_mask` asserts `STATE_VIEWPORT` in both creation masks; `test_source_invariants` asserts the three masks are the ones the bodies construct guards with. |
-| 2 | MEDIUM | Init's render-FBO bind was undone by its own guard, and `ApplyFSR` upscaled unconditionally, so the first frame after resources were built sampled an unwritten render texture. **Follow-up (`cf0a068`):** the `3314e39` version cleared the flag after every present, which upscaled a bind-once application once and then skipped forever while the surface stayed stale. | `g_dirty` = "render target has been bound for drawing at least once" for the current object set. `gl/framebuffer.cpp:185-198` sets it only on a real redirect and drops any post-rebuild hold; `ApplyFSR` decides through `FSR1Plan::DecidePresent` (`FSR1.cpp:708`) and never clears it on present (`:782-784`), so every primed frame upscales. `g_skipNextPresent` holds exactly one present after a successful rebuild (`FSR1.cpp:677`, consumed at `:718-723`); priming survives the rebuild so no new bind is required. Build/failure/disable paths clear both (`:593-594`, `:601-602`, `:646-647`, `:816-817`); both are stored per context (`FSR1.h:63-77`, `FSR1.cpp:880-884`, `:920-921`, `:948-949`). An unprimed frame presents the surface as drawn and logs once that it is waiting. | Pure transitions in `test_priming_state` (`tests/fsr1_core_test.cpp:400-431`): never-primed waits, one bind then repeated presents upscales, a primed rebuild yields exactly one `SkipOne` then `Upscale`, an unprimed rebuild changes nothing, disable clears both. `framebuffer_shuffle_test` scenario 9 verifies a bind without a target does not prime and a redirect bind clears the post-rebuild hold. Source invariants forbid clearing `g_dirty` inside `ApplyFSR`. |
-| 3 | MEDIUM | `RecreateFSRTargets` updated `gl_state->current_draw_fbo` directly; `gl/framebuffer.cpp`'s per-context `current_draw_fbo` kept naming the deleted render FBO. | New narrow entry point `mg_framebuffer_republish_draw_binding` (`gl/framebuffer.cpp:233-236`, declared at `gl/framebuffer.h:110-118`) writes both trackers. `RecreateFSRTargets` calls it with the new render FBO on success and with 0 on failure (`gl/FSR1/FSR1.cpp:642`, `:665`), only when the tracked binding was the redirect. No direct `set_gl_state_current_draw_fbo` call remains in `gl/FSR1/`. | `framebuffer_shuffle_test` scenario 9 drives the real tracker: redirect to 42, mark record 42 all-NONE, republish to 43, then require `gl_state->current_draw_fbo == 43` **and** `mg_draw_framebuffer_all_none() == false` (a stale per-context tracker would still find record 42 and answer true); then republish 0 and require 0. `test_source_invariants` also forbids a direct field write in `FSR1.cpp`. |
-| 4 | MEDIUM | A sampler object bound on unit 0 overrides the FSR1 textures' min/mag filter, wrap and compare mode; EASU samples through it. | The guard saves unit 0's `GL_SAMPLER_BINDING` (`gl/FSR1/FSR1.cpp:116-122`), restores it (`:180-191`), and the internal passes bind sampler 0 (`:748`). `STATE_SAMPLER` (`gl/FSR1/FSR1Plan.h:214-219`) is in `kApplyFSRState` (`:224-227`). | `test_state_mask` requires `STATE_SAMPLER`; `test_source_invariants` requires the guard query and `GLES.glBindSampler(0, 0);` in `ApplyFSR`. Device behavior of a compare sampler is still unexercised (section 6). |
+| 1 | HIGH | `kResourceCreationState` had no `STATE_VIEWPORT`; `InitFSRResources` and `RecreateFSRTargets` set `GL_VIEWPORT` to the render extent after building, and the guard could not restore the application's viewport. The claim in the previous revision that "`RecreateFSRTargets` likewise restores it" was false. | `STATE_VIEWPORT` added to `kResourceCreationState` and to the new `kRecreateState` (`gl/FSR1/FSR1Plan.h:234-241`). The two post-build bind/viewport writes were removed because the guard always undid them anyway (`gl/FSR1/FSR1.cpp:602-611`, `:619-675`); a future body that sets a viewport is now covered by the mask. `ApplyFSR`'s per-frame guard is unchanged except for the sampler bit. | `test_state_mask` asserts `STATE_VIEWPORT` in both creation masks; `test_source_invariants` asserts the three masks are the ones the bodies construct guards with. |
+| 2 | MEDIUM | Init's render-FBO bind was undone by its own guard, and `ApplyFSR` upscaled unconditionally, so the first frame after resources were built sampled an unwritten render texture. **Follow-ups:** `3314e39` cleared the flag after every present (bind-once freeze); `cf0a068` added a post-rebuild one-present hold; re-review (`dbd60a9`) showed the hold could not observe "no draw" and discarded a valid frame drawn into the replacement without a bind, so it was removed. | `g_dirty` = "render target has been bound for drawing at least once" for the current object set. `gl/framebuffer.cpp:191` sets it only on a real redirect; `ApplyFSR` decides through `FSR1Plan::DecidePresent(bool)` (`FSR1.cpp:703`) and never clears it on present, so every primed frame upscales. Priming survives a successful rebuild with no held present (`FSR1.cpp:666-673`): after swap the guard restores the driver's draw binding to the replacement, so a bind-once application draws a complete next frame before presenting. Build/failure/latch paths clear it (`:592`, `:599`, `:643`, `:801`); it is stored per context (`FSR1.h:63-71`, `FSR1.cpp:864-866`, `:902`, `:929`). An unprimed frame presents the surface as drawn and logs once that it is waiting. | `test_priming_state` (`tests/fsr1_core_test.cpp:403-424`): never primed waits; one bind then repeated presents upscales; a primed rebuild also chooses `Upscale` immediately, proving no skipped present; an unprimed rebuild stays `Wait`. Source invariants forbid `g_skipNextPresent`/`SkipPresentAfterRebuild` and clearing `g_dirty` inside `ApplyFSR`. `framebuffer_shuffle_test` scenario 9 verifies a bind without a target does not prime and a redirect does. |
+| 3 | MEDIUM | `RecreateFSRTargets` updated `gl_state->current_draw_fbo` directly; `gl/framebuffer.cpp`'s per-context `current_draw_fbo` kept naming the deleted render FBO. | New narrow entry point `mg_framebuffer_republish_draw_binding` (`gl/framebuffer.cpp:227-230`, declared at `gl/framebuffer.h:110-118`) writes both trackers. `RecreateFSRTargets` calls it with the new render FBO on success and with 0 on failure (`gl/FSR1/FSR1.cpp:639`, `:661`), only when the tracked binding was the redirect. No direct `set_gl_state_current_draw_fbo` call remains in `gl/FSR1/`. | `framebuffer_shuffle_test` scenario 9 drives the real tracker: redirect to 42, mark record 42 all-NONE, republish to 43, then require `gl_state->current_draw_fbo == 43` **and** `mg_draw_framebuffer_all_none() == false` (a stale per-context tracker would still find record 42 and answer true); then republish 0 and require 0. `test_source_invariants` also forbids a direct field write in `FSR1.cpp`. |
+| 4 | MEDIUM | A sampler object bound on unit 0 overrides the FSR1 textures' min/mag filter, wrap and compare mode; EASU samples through it. | The guard saves unit 0's `GL_SAMPLER_BINDING` (`gl/FSR1/FSR1.cpp:116-122`), restores it (`:180-191`), and the internal passes bind sampler 0 (`:733`). `STATE_SAMPLER` (`gl/FSR1/FSR1Plan.h:214-219`) is in `kApplyFSRState` (`:224-227`). | `test_state_mask` requires `STATE_SAMPLER`; `test_source_invariants` requires the guard query and `GLES.glBindSampler(0, 0);` in `ApplyFSR`. Device behavior of a compare sampler is still unexercised (section 6). |
 | 5 | LOW | A resize failure deleted the targets but kept the program and quad; the failure path implied full cleanup. | `CheckResolutionChange` now calls `DestroyProgramAndQuad()` on the failure arm as well (`gl/FSR1/FSR1.cpp:811-820`); the init failure arm already did. No FSR1 object survives a latched failure. | `test_source_invariants` requires at least two `DestroyProgramAndQuad();` call sites; `DestroyProgramAndQuad` zeroes the program, quad, buffer and uniform locations. |
 | 6 | LOW (tests) | The state-mask test omitted `STATE_STENCIL`, `STATE_RASTERIZER_DISCARD` and the sampler bit; nothing tied the masks to the bodies. | `tests/fsr1_core_test.cpp:349-495`: required bits extended, creation/recreate masks asserted, source-invariant test added (masks in use, no direct draw-FBO field write, republish function writes both trackers, cleanup call sites). Shader check strengthened: exactly one sampler uniform, EASU `textureGather(uInputTex, ...)`, RCAS `texelFetch(uInputTex, ...)` (`:329-333`). | `sh MobileGlues-cpp/tests/run.sh` exit 0 (section 4). |
 
@@ -100,28 +101,29 @@ render   = round(output / preset scale), clamped to [1, output]
 
 Resources can be built before the application's next bind of framebuffer 0 (the shader-compile
 hook) or at present time if the surface was not yet current. In both cases the render texture
-starts unwritten. Two per-context flags describe the path:
+starts unwritten. One per-context flag describes the path: `FSR1_Context::g_dirty` = "this
+render target has been bound for drawing at least once". `gl/framebuffer.cpp` sets it only when
+it redirects a **draw** bind of framebuffer 0 to a nonzero `g_renderFBO`; a bind of 0 that is
+not redirected (FSR1 off/unbuilt) is the surface and does not set it.
 
-- `FSR1_Context::g_dirty` = "this render target has been bound for drawing at least once".
-  `gl/framebuffer.cpp` sets it only when it redirects a **draw** bind of framebuffer 0 to a
-  nonzero `g_renderFBO`; a bind of 0 that is not redirected (FSR1 off/unbuilt) is the surface
-  and does not set it.
-- `FSR1_Context::g_skipNextPresent` = a successful rebuild produced fresh, unwritten storage
-  and exactly one present is being held.
+`FSR1Plan::DecidePresent(primed)` is the whole rule and is exercised on the host: `Wait` when
+never primed (the surface is presented exactly as the application drew it, with a one-time
+forced log saying upscaling is waiting), `Upscale` otherwise. `ApplyFSR` never clears `g_dirty`
+on present, so an application that binds framebuffer 0 once and then renders frame after frame
+keeps being upscaled. Clearing it there was the `3314e39` defect: the surface froze on the
+first upscaled frame.
 
-`FSR1Plan::DecidePresent(primed, skip)` is the whole rule and is exercised on the host:
-`Wait` when never primed (the surface is presented exactly as the application drew it, with a
-one-time forced log saying upscaling is waiting); `SkipOne` after a rebuild; `Upscale`
-otherwise. `ApplyFSR` never clears `g_dirty` on present, so an application that binds
-framebuffer 0 once and then renders frame after frame keeps being upscaled. Clearing it there
-was the follow-up defect: the surface froze on the first upscaled frame.
+A successful rebuild preserves priming. The guard restores the driver's draw binding to the
+replacement (and both trackers were republished), so a bind-once application draws a complete
+next frame into the new target before it presents, and an application that rebinds does so
+before drawing. The next presented frame is therefore upscaled. There is deliberately no
+one-present hold: a hold keyed on "no redirect bind" cannot distinguish that case from a frame
+that was in fact drawn into the replacement, and it discarded that valid frame -- the
+`cf0a068` defect removed by `dbd60a9`. An unprimed path stays unprimed across a rebuild and
+waits for its first redirect bind.
 
-A rebuild preserves priming (otherwise the bind-once application would never upscale again)
-and holds one present, because the new texture is empty. A redirect bind after the rebuild
-drops the hold -- that frame will draw into the new target before it is presented. If the
-application does not rebind, the hold expires after that one present and upscaling resumes on
-the next frame. `InitFSRResources`, the failure arms and the resize-failure latch clear both
-flags; the flags are stored and loaded per context with the objects they describe.
+`InitFSRResources`, the failure arms and the resize-failure latch clear `g_dirty`; a successful
+rebuild does not. The flag is stored and loaded per context with the objects it describes.
 
 `InitFSRResources` no longer binds the render FBO or sets a viewport after building: its guard
 restored both, so the bind had no effect and the viewport write was the leak in review
@@ -163,13 +165,13 @@ allocation, copy, or pass is added to the disabled path.
 | File | Change |
 | --- | --- |
 | `MobileGlues-cpp/gl/FSR1/FSR1Plan.h` (new) | Pure sizing/pass/format/state-mask contract: sampler bit, viewport in both creation masks, and the persistent-priming decision/rebuild transitions. No GL, no allocation. |
-| `MobileGlues-cpp/gl/FSR1/FSR1.cpp` | Two-pass execution, output-first sizing, RGBA8 creation, FBO checks, expanded state guard including unit 0's sampler, persistent priming with a one-present post-rebuild hold, dual-tracker republish, failure latching and full cleanup, pass-through viewport, context-state fields for the new objects and both priming flags. |
-| `MobileGlues-cpp/gl/FSR1/FSR1.h` | Uniform and EASU/texture object declarations; output extent; `g_dirty` (persistent primed) and `g_skipNextPresent` documented as per-context state. |
+| `MobileGlues-cpp/gl/FSR1/FSR1.cpp` | Two-pass execution, output-first sizing, RGBA8 creation, FBO checks, expanded state guard including unit 0's sampler, persistent priming preserved across rebuilds, dual-tracker republish, failure latching and full cleanup, pass-through viewport, context-state fields for the new objects and the priming flag. |
+| `MobileGlues-cpp/gl/FSR1/FSR1.h` | Uniform and EASU/texture object declarations; output extent; `g_dirty` (persistent primed, survives a successful rebuild) documented as per-context state. |
 | `MobileGlues-cpp/gl/FSR1/FSRShaderSource.h` | Two-pass fragment entry with `uPass`/`uInputSize`/`uOutputSize`; EASU output returned by pass 0; RCAS reads the bound intermediate with clamped taps. |
-| `MobileGlues-cpp/gl/framebuffer.cpp` | `g_dirty` set only for a real redirect, which also drops the post-rebuild present hold; new `mg_framebuffer_republish_draw_binding` that updates this file's per-context draw binding and `gl_state->current_draw_fbo` together. |
+| `MobileGlues-cpp/gl/framebuffer.cpp` | `g_dirty` set only for a real redirect; new `mg_framebuffer_republish_draw_binding` that updates this file's per-context draw binding and `gl_state->current_draw_fbo` together. |
 | `MobileGlues-cpp/gl/framebuffer.h` | Declaration of the republish entry point and why both trackers exist. |
-| `MobileGlues-cpp/tests/fsr1_core_test.cpp` (new) | Sizing grid, dataflow, synthetic 1px-edge executable model, format policy, complete state mask (stencil, rasterizer discard, sampler, creation/recreate viewport), priming transitions (wait/upscale/bind-once multi-frame/post-rebuild hold), source-level invariants, strengthened shader-interface assertions. |
-| `MobileGlues-cpp/tests/framebuffer_shuffle_test.cpp` | Adds the dual-tracker republish scenario and the no-target/no-priming plus redirect-drops-hold arms against the real `gl/framebuffer.cpp`. |
+| `MobileGlues-cpp/tests/fsr1_core_test.cpp` (new) | Sizing grid, dataflow, synthetic 1px-edge executable model, format policy, complete state mask (stencil, rasterizer discard, sampler, creation/recreate viewport), priming transitions (wait/upscale/bind-once multi-frame/primed rebuild with no skipped present), source-level invariants, strengthened shader-interface assertions. |
+| `MobileGlues-cpp/tests/framebuffer_shuffle_test.cpp` | Adds the dual-tracker republish scenario and the no-target/no-priming and redirect-primes arms against the real `gl/framebuffer.cpp`. |
 | `MobileGlues-cpp/tests/run.sh` | Builds and runs the new host test. |
 
 ## 4. Commands actually run and observed results
@@ -228,24 +230,28 @@ cmake --build build/android-arm64-fsr -j 24
 Not run after the review fixes: the glslang validation (no shader source changed), any device
 install, game launch, screenshot, timing or FPS measurement. No claim of device PASS.
 
-After the persistent-priming follow-up (`cf0a068`):
+After the second re-review (`dbd60a9`, post-rebuild hold removed):
 
 ```sh
 sh MobileGlues-cpp/tests/run.sh
 # result: exit 0. fsr1_core_test: all checks passed, including test_priming_state
-#   (one bind then three consecutive presents all choose Upscale; a primed rebuild
-#   chooses SkipOne once then Upscale; an unprimed rebuild stays Wait) and the
-#   source invariants (ApplyFSR does not clear g_dirty; it uses DecidePresent;
-#   rebuild sets the hold from SkipPresentAfterRebuild). framebuffer_shuffle_test
-#   all checks passed (0 failures), scenario 9 now also asserting that a bind 0
-#   without an FSR target does not prime and that a redirect bind clears the
-#   post-rebuild hold. Other host suites unchanged and passing.
+#   (never primed waits; one bind then three consecutive presents all choose
+#   Upscale; a primed rebuild also chooses Upscale on the very next present, so
+#   no present is skipped; an unprimed rebuild stays Wait) and the source
+#   invariants (ApplyFSR does not clear g_dirty; it uses DecidePresent(bool); no
+#   g_skipNextPresent or SkipPresentAfterRebuild remains in FSR1.cpp or
+#   framebuffer.cpp). framebuffer_shuffle_test all checks passed (0 failures),
+#   scenario 9 asserting that a bind 0 without an FSR target does not prime and
+#   that a redirect bind primes. Other host suites unchanged and passing.
 
 cmake --build build/android-arm64-fsr -j 24
 # result: exit 0; [6/6] Linking CXX shared library libmobileglues.so
 #   build/android-arm64-fsr/libmobileglues.so sha256
-#     c541c8834a640a962e2271f6677da8ba53e8fa3c3e75a5d07f406058ca613840
+#     7386e0c1b0442ee34d2826cef1aa7fbc767eb05e20c06be6c65f14a8390edfb9
 ```
+
+The `cf0a068` run (persistent priming with the hold) is superseded by this one; the hold was
+removed because it skipped a valid frame.
 
 ## 5. Acceptance status
 
@@ -258,7 +264,7 @@ cmake --build build/android-arm64-fsr -j 24
 | Host tests built and run | PASS | `sh MobileGlues-cpp/tests/run.sh`, exit 0. |
 | ARM64 compile | PASS | Release `libmobileglues.so` built with NDK r28c; rebuilt at `3314e39` (section 4). |
 | Review 1: creation/recreate cannot leave the application viewport changed | PASS (mask + source) | `STATE_VIEWPORT` in `kResourceCreationState`/`kRecreateState`; tests assert both; the writes the guards used to undo are gone. |
-| Review 2: no upscale of an unprimed render target; persistent once primed | PASS (host transitions + source) | `g_dirty` set only by a redirect (`framebuffer.cpp:192`), never cleared by a present, so bind-once multi-frame keeps upscaling; `g_skipNextPresent` holds one present after a rebuild and is dropped by the next redirect bind; build/failure clear both; both per context. `test_priming_state` covers wait/upscale/bind-once/post-rebuild; device frame ordering NOT RUN. |
+| Review 2: no upscale of an unprimed render target; persistent once primed; every valid frame after a rebuild presented | PASS (host transitions + source) | `g_dirty` set only by a redirect (`framebuffer.cpp:191`), never cleared by a present or a successful rebuild, so bind-once multi-frame keeps upscaling and the first frame after a rebuild is upscaled; cleared only by build/failure/latch; per context. `test_priming_state` covers wait/upscale/bind-once and asserts a primed rebuild has no skipped present. Device frame ordering NOT RUN. |
 | Review 3: both draw-FBO trackers name the recreated FBO / 0 | PASS (host test against real `framebuffer.cpp`) | `framebuffer_shuffle_test` scenario 9 plus source invariant forbidding direct field writes. |
 | Review 4: unit 0 sampler cannot override the passes | PASS (mask + source) | `STATE_SAMPLER`, driver query/restore, sampler 0 bound for the passes; compare-sampler behavior NOT RUN on device. |
 | Review 5: resize failure leaves no FSR1 objects | PASS (source) | `DestroyProgramAndQuad()` on the resize-failure arm; test requires both cleanup sites. |
@@ -306,13 +312,19 @@ cmake --build build/android-arm64-fsr -j 24
 10. **Applications that bind framebuffer 0 once, before FSR1's resources exist, never prime
     it.** They keep drawing on the surface (correct native image) while FSR1 logs once that it
     is waiting and stays inactive. That is the only case in which a single bind is not enough:
-    once primed, no further bind is required (persistent priming), and after a resize rebuild a
-    bind simply drops the one held present. Whether Minecraft/Adreno titles bind 0 before the
-    first shader is compiled is a device question, not verified here; if one does not, it will
-    present natively rather than upscaled.
+    once primed, no further bind is required (persistent priming), including across a resize
+    rebuild, where the next presented frame is upscaled. Whether Minecraft/Adreno titles bind 0
+    before the first shader is compiled is a device question, not verified here; if one does
+    not, it will present natively rather than upscaled.
 11. **Sampler compare on device.** The guard restores `GL_SAMPLER_BINDING` and the passes bind
     sampler 0, but no device run has exercised an application compare sampler (or a sampler
     with non-LINEAR filters) left on unit 0 at present time.
+12. **First frame after a rebuild assumes a draw (device gap).** Priming is preserved across a
+    successful rebuild and there is no present hold, per re-review: a hold keyed on "no bind"
+    discarded frames that were drawn into the replacement without a redirect bind. If an
+    application rebuilds and then presents without drawing into the replacement at all, the
+    first presented frame upscales empty storage. That ordering has not been observed on a
+    device; the alternative (holding a present) is worse for the normal case.
 
 Next dependency: the Minecraft adapter (or an agreed viewport/screen-size policy) to make the
 application render its scene at the render extent, then device qualification of shader
