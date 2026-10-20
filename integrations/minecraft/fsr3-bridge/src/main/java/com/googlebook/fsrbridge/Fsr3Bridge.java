@@ -153,20 +153,26 @@ public final class Fsr3Bridge {
      * FSR3 is enabled and a non-native quality preset is selected. Minecraft
      * only: this is the optional adapter boundary, not a generic renderer hook.
      */
+    private static volatile boolean inFinalPass;
+
+    public static void beginFinalPass() { inFinalPass = true; }
+    public static void endFinalPass() { inFinalPass = false; }
+
+    /** World/composite programs get the scene extent; the final pass gets native. */
+    public static int uniformWidth(int width) {
+        return inFinalPass ? width : sceneWidth(width);
+    }
+
+    public static int uniformHeight(int height) {
+        return inFinalPass ? height : sceneHeight(height);
+    }
+
     public static int sceneWidth(int width) {
-        if (width <= 0 || !available()) {
-            logScene("width " + width + " unchanged (adapter unavailable)");
-            return width;
-        }
+        if (width <= 0 || !LOADED) return width;
         try {
             float scale = NativeBridge.scale();
-            if (scale <= 1.001f) {
-                logScene("width " + width + " unchanged (scale=" + scale + ")");
-                return width;
-            }
-            int scaled = Math.max(64, Math.round(width / scale));
-            logScene("width " + width + " -> " + scaled + " (scale=" + scale + ")");
-            return scaled;
+            if (scale <= 1.001f) return width;
+            return Math.max(64, Math.round(width / scale));
         } catch (Throwable t) {
             warn("scale failed: " + t);
             return width;
@@ -175,32 +181,13 @@ public final class Fsr3Bridge {
 
     /** Height is kept independent so odd window dimensions do not accumulate rounding. */
     public static int sceneHeight(int height) {
-        if (height <= 0 || !available()) {
-            logScene("height " + height + " unchanged (adapter unavailable)");
-            return height;
-        }
+        if (height <= 0 || !LOADED) return height;
         try {
             float scale = NativeBridge.scale();
-            if (scale <= 1.001f) {
-                logScene("height " + height + " unchanged (scale=" + scale + ")");
-                return height;
-            }
-            int scaled = Math.max(64, Math.round(height / scale));
-            logScene("height " + height + " -> " + scaled + " (scale=" + scale + ")");
-            return scaled;
+            if (scale <= 1.001f) return height;
+            return Math.max(64, Math.round(height / scale));
         } catch (Throwable t) {
-            warn("scale failed: " + t);
             return height;
-        }
-    }
-
-    private static void logScene(String message) {
-        if (sceneLogDone) return;
-        sceneLogDone = true;
-        try {
-            Class<?> log = Class.forName("android.util.Log");
-            log.getMethod("w", String.class, String.class).invoke(null, "MGFSR3", message);
-        } catch (Throwable ignored) {
         }
     }
 

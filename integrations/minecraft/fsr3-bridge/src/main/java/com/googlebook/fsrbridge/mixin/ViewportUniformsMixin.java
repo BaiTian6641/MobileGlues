@@ -17,11 +17,11 @@ public abstract class ViewportUniformsMixin {
 
     @Inject(method = "lambda$addViewportUniforms$0", at = @At("RETURN"), cancellable = true)
     private static void mgfsr3$height(CallbackInfoReturnable<Integer> cir) {
-        cir.setReturnValue(Fsr3Bridge.sceneHeight(cir.getReturnValue()));
+        cir.setReturnValue(Fsr3Bridge.uniformHeight(cir.getReturnValue()));
     }
 
     @Inject(method = "lambda$addViewportUniforms$1", at = @At("RETURN"), cancellable = true)
     private static void mgfsr3$width(CallbackInfoReturnable<Integer> cir) {
-        cir.setReturnValue(Fsr3Bridge.sceneWidth(cir.getReturnValue()));
+        cir.setReturnValue(Fsr3Bridge.uniformWidth(cir.getReturnValue()));
     }
 }

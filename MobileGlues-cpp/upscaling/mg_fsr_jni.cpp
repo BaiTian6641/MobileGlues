@@ -264,7 +264,7 @@ struct MotionGuard {
     }
 };
 
-bool run_camera_motion(JniState& s, GLuint depth, int width, int height, bool& motion_active) {
+bool run_camera_motion(JniState& s, GLuint depth, int width, int height, bool allow_motion, bool& motion_active) {
     motion_active = false;
     CameraState camera;
     bool has_prev = false;
@@ -280,7 +280,7 @@ bool run_camera_motion(JniState& s, GLuint depth, int width, int height, bool& m
     const float identity[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
     float current_vp[16], previous_vp[16], inverse_vp[16];
     float camera_delta[3] = {0, 0, 0};
-    if (has_prev) {
+    if (has_prev && allow_motion) {
         mg_fsr3_motion::multiply(camera.projection, camera.model_view, current_vp);
         mg_fsr3_motion::multiply(camera.previous_projection, camera.previous_model_view, previous_vp);
         if (!mg_fsr3_motion::invert(current_vp, inverse_vp)) return false;
@@ -288,6 +288,7 @@ bool run_camera_motion(JniState& s, GLuint depth, int width, int height, bool& m
         camera_delta[1] = static_cast<float>(camera.position[1] - camera.previous_position[1]);
         camera_delta[2] = static_cast<float>(camera.position[2] - camera.previous_position[2]);
     } else {
+        has_prev = false;
         std::copy(std::begin(identity), std::end(identity), std::begin(inverse_vp));
         std::copy(std::begin(identity), std::end(identity), std::begin(previous_vp));
     }
@@ -496,8 +497,12 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     GLES.glBlitFramebuffer(0, 0, width, height, 0, 0, rw, rh, GL_COLOR_BUFFER_BIT, GL_LINEAR);
     GLES.glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(fbo));
 
+    // Stable spatial profile: advertise no motion when history is off. The
+    // backend always samples the motion texture, so zero it via uHasPrev=0
+    // instead of feeding camera-only vectors for hands/sky.
+    static const bool history_enabled = std::getenv("MG_FSR3_HISTORY") != nullptr;
     bool motion_active = false;
-    const bool depth_input_ready = run_camera_motion(s, depth, rw, rh, motion_active);
+    const bool depth_input_ready = run_camera_motion(s, depth, rw, rh, history_enabled, motion_active);
     const int input_w = depth_input_ready ? rw : width;
     const int input_h = depth_input_ready ? rh : height;
     const GLuint color_input = depth_input_ready ? s.color_input : color;
@@ -532,7 +537,7 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     desc.camera_near = 0.1f;
     desc.camera_far = 1000.0f;
     desc.camera_fov_y_radians = 1.0471975511965976f;
-    desc.motion_valid = 1;
+    desc.motion_valid = history_enabled ? 1 : 0;
     desc.motion_confidence = motion_active ? MG_FSR_MOTION_CAMERA_ONLY : MG_FSR_MOTION_NONE;
     desc.frame_delta_seconds = delta;
     // Camera-only motion is experimental: keep history only when reprojection
@@ -541,7 +546,6 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     // Temporal history stays off until scene jitter, depth parameters and the
     // pack TAA boundary are owned coherently. MG_FSR3_HISTORY is a developer
     // opt-in for that later experiment.
-    static const bool history_enabled = std::getenv("MG_FSR3_HISTORY") != nullptr;
     desc.reset_history = (s.frame <= 1 || !motion_active || !history_enabled) ? 1 : 0;
     desc.reset_reason = desc.reset_history ? MG_FSR_RESET_SESSION : MG_FSR_RESET_NONE;
 
