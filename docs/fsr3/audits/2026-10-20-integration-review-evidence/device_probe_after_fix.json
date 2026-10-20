@@ -1,0 +1,30 @@
+Initializing MobileGlues ...
+The Open Source License of MobileGlues: 
+  GNU LGPL-2.1 License
+MG_DIR_PATH = /sdcard/MG
+Unsupported launcher detected, force using default config.
+[MobileGlues] Setting: enableAngle                 = false
+[MobileGlues] Setting: ignoreError                 = 0
+[MobileGlues] Setting: enableExtComputeShader      = false
+[MobileGlues] Setting: enableExtTimerQuery         = true
+[MobileGlues] Setting: enableExtDirectStateAccess  = true
+[MobileGlues] Setting: maxGlslCacheSize            = 0
+[MobileGlues] Setting: angleDepthClearFixMode      = 0
+[MobileGlues] Setting: bufferCoherentAsFlush       = 1
+[MobileGlues] Setting: customGLVersion             = 4.0.0
+[MobileGlues] Setting: fsr1Setting                 = 0
+[MobileGlues] Setting: fsr3Setting                 = 0
+[MobileGlues] Setting: fsr3Quality                 = 0
+[MobileGlues] Setting: hideMGEnvLevel              = 0
+EGL initialized successfully
+OpenGL ES Version: OpenGL ES 3.2 (320)
+Detected GL_EXT_multi_draw_indirect!
+Enable-capability extensions: multisample_compatibility=1 clip_cull_distance=0 depth_clamp=1 sRGB_write_control=1 NV_polygon_mode=1 OES_sample_shading=1
+multidrawMode/multidrawDisableBackends are no longer used. The selection is an order now: multidrawOrder (global, backend names best first, may contain "native") and multidrawOrder<EntryPoint> for per-function exceptions.
+multidrawModeArrays is no longer used; see multidrawOrder / multidrawOrderArrays
+[MobileGlues] multidrawOrderArrays               = multiindirect > unroll
+[MobileGlues] multidrawOrderElements             = multiindirect > indirect > unroll
+[MobileGlues] multidrawOrderElementsBaseVertex   = multiindirect > indirect > basevertex > unroll > compute
+[MobileGlues] multidrawOrderArraysIndirect       = multiindirect > indirect
+[MobileGlues] multidrawOrderElementsIndirect     = multiindirect > indirect
+{"probe":"fsr3-backend","renderer":"loaded","checks":[{"name":"context","status":"PASS"},{"name":"caps","status":"PASS"},{"name":"dispatch1","status":"PASS"},{"name":"output","status":"PASS"},{"name":"output_fbo","status":"PASS"},{"name":"flat_output","status":"PASS"},{"name":"gl_error","status":"PASS"},{"name":"dispatch2_history","status":"PASS"},{"name":"flat_output2","status":"PASS"},{"name":"dispatch3_reset","status":"PASS"}],"gl_renderer":"Adreno (TM)  X1-85 | ANGLE | Vulkan 1.4.295 | OpenGL ES 3.2"}

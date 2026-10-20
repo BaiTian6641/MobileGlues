@@ -430,7 +430,8 @@ namespace {
     // point at all.
     EGLBoolean presentSurfaceWithDamage(EGLDisplay dpy, EGLSurface surface, EGLint* rects, EGLint n_rects,
                                         SwapWithDamageFn backend) {
-        const bool fsr_on = global_settings.fsr1_setting != FSR1_Quality_Preset::Disabled;
+        const bool fsr_on = global_settings.fsr1_setting != FSR1_Quality_Preset::Disabled ||
+                            global_settings.fsr3_setting == FSR3_Mode::Experimental;
         if (backend != nullptr && !fsr_on) {
             return backend(dpy, surface, rects, n_rects);
         }
