@@ -329,6 +329,31 @@ int main(int argc, char** argv) {
     const int dispatch3 = api.mg_fsr_dispatch(session, &desc);
     checks.emplace_back("dispatch3_reset", dispatch3 == 0 ? "PASS" : "FAIL");
 
+    // Resize transition: output changes, application state must still survive.
+    api.glBindFramebuffer(GL_FRAMEBUFFER, app_fbo);
+    api.glBindBuffer(GL_UNIFORM_BUFFER, app_ubo);
+    api.glActiveTexture(GL_TEXTURE0);
+    api.glBindTexture(GL_TEXTURE_2D, color_tex);
+    api.glViewport(1, 2, 17, 19);
+    desc.frame_id = 4;
+    desc.output_width = 640;
+    desc.output_height = 360;
+    desc.output_active = {0, 0, 640, 360};
+    desc.reset_history = 1;
+    desc.reset_reason = MG_FSR_RESET_RESIZE;
+    const int dispatch4 = api.mg_fsr_dispatch(session, &desc);
+    checks.emplace_back("dispatch4_resize", dispatch4 == 0 ? "PASS" : "FAIL");
+    GLint resize_tex = 0, resize_ubo = 0, resize_fbo = 0, resize_viewport[4]{};
+    api.glGetIntegerv(GL_TEXTURE_BINDING_2D, &resize_tex);
+    api.glGetIntegerv(GL_UNIFORM_BUFFER_BINDING, &resize_ubo);
+    api.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &resize_fbo);
+    api.glGetIntegerv(GL_VIEWPORT, resize_viewport);
+    checks.emplace_back("resize_state_texture", resize_tex == static_cast<GLint>(color_tex) ? "PASS" : "FAIL");
+    checks.emplace_back("resize_state_ubo", resize_ubo == static_cast<GLint>(app_ubo) ? "PASS" : "FAIL");
+    checks.emplace_back("resize_state_fbo", resize_fbo == static_cast<GLint>(app_fbo) ? "PASS" : "FAIL");
+    checks.emplace_back("resize_state_viewport", resize_viewport[0] == 1 && resize_viewport[1] == 2 &&
+                        resize_viewport[2] == 17 && resize_viewport[3] == 19 ? "PASS" : "FAIL");
+
     std::string json = "{\"probe\":\"fsr3-backend\",\"renderer\":\"";
     json += "loaded\","; // keep the JSON valid without a GL string dependency
     add_checks(json, checks);

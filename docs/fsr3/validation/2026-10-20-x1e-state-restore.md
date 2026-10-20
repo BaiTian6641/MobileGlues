@@ -23,6 +23,16 @@ dispatch2_history PASS
 dispatch3_reset PASS
 ```
 
-This verifies the R6 wrapper-level `SessionStateGuard` on X1E. It does not cover
-an actual resize transition, two contexts, or the FSR3-off path; those remain
-open.
+A fourth dispatch changed the output extent to 640x360. The same application
+texture, UBO, draw FBO and viewport survived both the resize and the passes:
+
+```text
+dispatch4_resize PASS
+resize_state_texture PASS
+resize_state_ubo PASS
+resize_state_fbo PASS
+resize_state_viewport PASS
+```
+
+This verifies the R6 wrapper-level `SessionStateGuard` on X1E for first use and
+resize. Two contexts and the FSR3-off path remain open.
