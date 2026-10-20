@@ -51,7 +51,7 @@ Expected when the adapter activates at Quality (1.5x) on a 2880x1800 surface:
 
 ```text
 RenderTargetsMixin loaded
-FSR3 bridge: experimental submit 1920x1200 -> 1920x1200 (render 1920x1200); synthetic motion, scene native
+FSR3 bridge: experimental submit 1920x1200 -> 1920x1200 (render 1920x1200); camera_motion=1, Iris scene adapter
 ```
 
 The bridge log now says `Iris scene adapter`; the adapter extent must still be
@@ -127,3 +127,12 @@ objects. No pass/quality claim exists until device screenshots and motion-debug
 captures are reviewed.
 
 The package hashes below supersede the prior static-motion pair.
+
+
+## Host checks for semantic motion
+
+`tests/fsr3_motion_math_test.cpp` verifies the column-major multiply, identity
+and translation inverse, and singular-matrix rejection used by the camera-only
+reprojection pass. `tests/fsr3_viewport_test.cpp` verifies the scene-viewport
+rule. Both pass in `sh MobileGlues-cpp/tests/run.sh`. Runtime matrix extraction
+from Iris and the GLSL motion dispatch remain device-NOT-RUN.
