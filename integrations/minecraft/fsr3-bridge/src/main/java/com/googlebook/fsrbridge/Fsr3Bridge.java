@@ -372,11 +372,18 @@ public final class Fsr3Bridge {
     }
 
     /** Called on the render thread immediately after Iris' final pass. */
+    private static boolean submitLogged;
+
     public static void submit() {
         if (!LOADED) return;
         try {
             int rc = NativeBridge.submit();
-            if (rc != 0) mark("submit rc=" + rc);
+            if (rc == 0 && !submitLogged) {
+                submitLogged = true;
+                mark("FSR3 submit success");
+            } else if (rc != 0) {
+                mark("submit rc=" + rc);
+            }
         } catch (Throwable t) {
             warn("nativeSubmit failed: " + t);
         }
