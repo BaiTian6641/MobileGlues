@@ -1,0 +1,7 @@
+probe: egl display
+probe: context current
+probe: inputs created
+probe: session created
+probe: caps rc=0 mask=4
+probe: dispatch1 start
+probe: dispatch1 rc=0

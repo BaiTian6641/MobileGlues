@@ -120,3 +120,15 @@ harness uses test-only readback, full barriers and `glFinish`; multi-frame
 history/reset, ABI wiring, persistent resource reuse, real Minecraft inputs and
 performance remain unproven. A Vulkan interoperation experiment is not opened
 unless a concrete GLES production requirement fails.
+
+## D-FSR-012: The first production backend is LDR and backend-output owned
+
+Status: accepted for the S3 slice; narrower than ABI v1.
+
+The in-tree GLES backend accepts LDR color and returns its own RGBA8 output;
+the adapter reads it through `mg_fsr_get_output`. Application-owned output, HDR
+color and non-full active rectangles are rejected with explicit errors until a
+qualified profile exists. This avoids claiming support for color/exposure and
+composition paths that have not been validated. The ABI structures already
+carry those fields; enabling them is an additive backend capability, not a
+contract change.

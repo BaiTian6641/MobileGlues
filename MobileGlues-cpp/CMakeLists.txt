@@ -124,6 +124,8 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
     gl/glsl/compat_subgroup.cpp
     gl/glsl/compat_subgroup_partition.cpp
     gl/FSR1/FSR1.cpp
+    upscaling/mg_fsr.cpp
+    upscaling/fsr3/fsr3_backend.cpp
 
     gl/vertexattrib.cpp
     glx/lookup.cpp

@@ -51,7 +51,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | S2 contract | **PASS (frozen)** | `docs/fsr3/frame-contract.md` ABI v1 |
 | S2 backend feasibility | **PASS (compile/ops + one-pass/full-chain dispatch)** | X1E RCAS exact vs CPU; 8-pass chain executed at 2x/1.5x with host parity; independent Vulkan and multi-frame history NOT RUN |
 | S2 game audit | **PASS (source)** | `docs/fsr3/audits/minecraft-iris-pass-input.md`: final TAA is `composite6`, jitter is partial, no velocity buffer in Iris 1.8.14 |
-| S3 native temporal backend | **READY** | S2 dispatch gate passed; production backend/controller not yet in-tree |
+| S3 native temporal backend | **PARTIAL** | In-tree ABI/backend implemented; X1E production probe PASS for 3 frames; adapter, reference clip and timing NOT RUN |
 | S4 first game path | **BLOCKED** | waits for S1/S2/S3 |
 | S5 Complementary | **BLOCKED** | waits for S4 |
 | S6 qualification | **NOT RUN** | no FSR3 installation exists |
@@ -81,7 +81,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 
 1. Review core FSR1 diff and evidence; integrate only after the off path and truthful failure
    checks are demonstrated.
-2. Implement the in-tree GLES backend/controller against ABI v1; execute multi-frame history/reset next.
+2. Integrate the backend with the Minecraft/Iris `composite6` boundary and a scene-wide jitter/motion source.
 3. Reconcile the game audit with the frozen ABI, then assign the first vertical slice.
 4. Build the first FSR3-capable test binary and run the white UI/ACT/WSR baseline before any
    performance claim.
