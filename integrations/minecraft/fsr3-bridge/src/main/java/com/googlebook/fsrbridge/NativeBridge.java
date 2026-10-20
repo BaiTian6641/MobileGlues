@@ -1,7 +1,7 @@
 package com.googlebook.fsrbridge;
 
 /** Tiny helper that reuses the core already mapped by the renderer plugin. */
-final class NativeBridge {
+public final class NativeBridge {
     private static boolean loaded;
 
     private NativeBridge() {
@@ -52,6 +52,8 @@ final class NativeBridge {
     static native void bridgeMode();
 
     static native int submit();
+
+    public static native void finalScope(boolean active);
 
     static native String trace(int op, int role, int frame, int event);
 }

@@ -14,6 +14,7 @@
 #include "image_metadata.h"
 #include "image_bindings.h"
 #include "diagnostic.h"
+#include "FSR3Direct.h"
 #include "shader_state.h"
 #include "../egl/context.h"
 
@@ -199,6 +200,11 @@ void setupBufferTextureUniforms(GLuint program) {
 
 mg_depth_draw_guard prepareForDraw() {
     LOG_D("prepareForDraw...")
+    {
+        GLint current = 0;
+        GLES.glGetIntegerv(GL_CURRENT_PROGRAM, &current);
+        FSR3ApplyFinalViewportUniforms(current);
+    }
     mg_diag_on_draw();
     if (hardware->emulate_texture_buffer) {
         setupBufferTextureUniforms(gl_state->current_program);

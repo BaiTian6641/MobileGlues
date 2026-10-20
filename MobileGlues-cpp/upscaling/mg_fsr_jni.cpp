@@ -605,6 +605,11 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
 }
 
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeFinalScope(JNIEnv*, jclass, jboolean active) {
+    FSR3SetFinalScope(active == JNI_TRUE);
+}
+
 #ifdef MG_FSR3_DIAGNOSTICS
 namespace {
 

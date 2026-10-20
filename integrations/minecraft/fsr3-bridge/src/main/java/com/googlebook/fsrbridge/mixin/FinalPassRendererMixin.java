@@ -2,6 +2,7 @@ package com.googlebook.fsrbridge.mixin;
 
 import com.googlebook.fsrbridge.DiagnosticTrace;
 import com.googlebook.fsrbridge.Fsr3Bridge;
+import com.googlebook.fsrbridge.NativeBridge;
 import net.irisshaders.iris.pipeline.FinalPassRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -26,6 +27,7 @@ public abstract class FinalPassRendererMixin {
             DiagnosticTrace.startRole("FINAL_DRAW", true);
             DiagnosticTrace.snapshot("FINAL_ENTRY", null);
             Fsr3Bridge.beginFinalPass();
+            NativeBridge.finalScope(true);
             Fsr3Bridge.captureCamera();
             Fsr3Bridge.resetNativeViewport();
         }
@@ -37,6 +39,7 @@ public abstract class FinalPassRendererMixin {
             DiagnosticTrace.endRole("FINAL_DRAW_RETURN", null);
             Fsr3Bridge.submit();
             DiagnosticTrace.plain("FINAL_POST_SUBMIT", null);
+            NativeBridge.finalScope(false);
             Fsr3Bridge.endFinalPass();
         }
     }

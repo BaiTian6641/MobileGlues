@@ -25,6 +25,9 @@ void FSR3SetNativeExtent(int width, int height);
 void FSR3SetBridgeMode();
 bool FSR3BridgeMode();
 
+void FSR3SetFinalScope(bool active);
+void FSR3ApplyFinalViewportUniforms(int currentProgram);
+
 // True when the optional Minecraft/Iris bridge has presented in this frame.
 // The swap-path diagnostic present must then stay out of the way: the bridge
 // already ran before HUD composition, and running the direct path would process

@@ -15,6 +15,7 @@ using CameraFn = void (*)(JNIEnv*, jclass, jfloatArray, jfloatArray, jdoubleArra
 using CameraInvalidFn = void (*)(JNIEnv*, jclass);
 using BridgeModeFn = void (*)(JNIEnv*, jclass);
 using TraceFn = jstring (*)(JNIEnv*, jclass, jint, jint, jint, jint);
+using FinalScopeFn = void (*)(JNIEnv*, jclass, jboolean);
 AvailableFn g_available = nullptr;
 SubmitFn g_submit = nullptr;
 ScaleFn g_scale = nullptr;
@@ -23,6 +24,7 @@ CameraFn g_camera = nullptr;
 CameraInvalidFn g_camera_invalid = nullptr;
 BridgeModeFn g_bridge_mode = nullptr;
 TraceFn g_trace = nullptr;
+FinalScopeFn g_final_scope = nullptr;
 } // namespace
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -50,6 +52,8 @@ Java_com_googlebook_fsrbridge_NativeBridge_init(JNIEnv* env, jclass, jstring pat
         dlsym(g_core, "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeBridgeMode"));
     g_trace = reinterpret_cast<TraceFn>(
         dlsym(g_core, "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeTrace"));
+    g_final_scope = reinterpret_cast<FinalScopeFn>(
+        dlsym(g_core, "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeFinalScope"));
     return (g_available && g_submit) ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -130,4 +134,13 @@ Java_com_googlebook_fsrbridge_NativeBridge_trace(JNIEnv* env, jclass clazz, jint
     jstring result = g_trace(env, target, op, role, frame, event);
     env->DeleteLocalRef(target);
     return result;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_googlebook_fsrbridge_NativeBridge_finalScope(JNIEnv* env, jclass clazz, jboolean active) {
+    if (!g_final_scope) return;
+    jclass target = env->FindClass("com/googlebook/fsrbridge/Fsr3Bridge");
+    if (!target) return;
+    g_final_scope(env, target, active);
+    env->DeleteLocalRef(target);
 }

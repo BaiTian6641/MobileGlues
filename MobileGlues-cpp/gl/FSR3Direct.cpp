@@ -58,6 +58,7 @@ std::atomic<bool> g_bridge_presented_this_frame{false};
 std::atomic<int> g_native_width{0};
 std::atomic<int> g_native_height{0};
 std::atomic<bool> g_bridge_mode{false};
+thread_local bool g_final_scope = false;
 
 struct PresentGuard {
     GLint draw = 0, read = 0, active = GL_TEXTURE0, tex0 = 0, sampler0 = 0;
@@ -241,6 +242,20 @@ bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
         LOG_W_FORCE("FSR3 scene viewport %dx%d -> %dx%d", surface_w, surface_h, width, height);
     }
     return true;
+}
+
+void FSR3SetFinalScope(bool active) { g_final_scope = active; }
+
+void FSR3ApplyFinalViewportUniforms(int currentProgram) {
+    if (!g_final_scope) return;
+    int width = 0, height = 0;
+    if (!FSR3GetSurfaceSize(width, height) || width <= 0 || height <= 0) return;
+    const GLint wl = GLES.glGetUniformLocation(currentProgram, "viewWidth");
+    const GLint hl = GLES.glGetUniformLocation(currentProgram, "viewHeight");
+    const GLint al = GLES.glGetUniformLocation(currentProgram, "aspectRatio");
+    if (wl >= 0) GLES.glUniform1f(wl, static_cast<GLfloat>(width));
+    if (hl >= 0) GLES.glUniform1f(hl, static_cast<GLfloat>(height));
+    if (al >= 0) GLES.glUniform1f(al, static_cast<GLfloat>(width) / static_cast<GLfloat>(height));
 }
 
 void FSR3NativeViewport() {

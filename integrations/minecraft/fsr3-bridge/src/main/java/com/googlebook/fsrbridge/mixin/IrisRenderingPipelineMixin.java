@@ -33,6 +33,11 @@ public abstract class IrisRenderingPipelineMixin {
         DiagnosticTrace.beginFrame("LEVEL");
     }
 
+    @Inject(method = "beginLevelRendering", at = @At("RETURN"), require = 0)
+    private void mgfsr3$clearSceneDepth(CallbackInfo ci) {
+        Fsr3Bridge.clearSceneDepth();
+    }
+
     @Inject(method = "setPhase", at = @At("HEAD"), require = 0)
     private void mgfsr3$tracePhase(WorldRenderingPhase phase, CallbackInfo ci) {
         DiagnosticTrace.phase(phase.name());

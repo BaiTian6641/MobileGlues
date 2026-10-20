@@ -174,6 +174,7 @@ public final class Fsr3Bridge {
     private static int managedWidth;
     private static int managedHeight;
     private static int managedFormat;
+    private static int managedDepthFbo;
 
     /**
      * Experiment B: give the scaled Iris color targets a matching scene depth.
@@ -196,8 +197,11 @@ public final class Fsr3Bridge {
             DepthBufferFormat depthFormat = DepthBufferFormat.fromGlEnumOrDefault(format);
             DepthTexture next = new DepthTexture("mgfsr3-scene-depth", width, height, depthFormat);
             int nextId = next.getTextureId();
+            int nextFbo = createDepthFbo(nextId);
             DepthTexture previous = managedDepth;
+            int previousFbo = managedDepthFbo;
             managedDepth = next;
+            managedDepthFbo = nextFbo;
             managedWidth = width;
             managedHeight = height;
             managedFormat = format;
@@ -207,6 +211,7 @@ public final class Fsr3Bridge {
                 } catch (Throwable ignored) {
                 }
             }
+            if (previousFbo != 0) deleteFbo(previousFbo);
             mark("scene depth " + width + "x" + height + " id=" + nextId + " format=" + format);
             return nextId;
         } catch (Throwable t) {
@@ -223,6 +228,73 @@ public final class Fsr3Bridge {
         }
         managedDepth = null;
         managedWidth = managedHeight = managedFormat = 0;
+        if (managedDepthFbo != 0) {
+            deleteFbo(managedDepthFbo);
+            managedDepthFbo = 0;
+        }
+    }
+
+    private static int createDepthFbo(int texture) {
+        try {
+            Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
+            int[] fbo = new int[1];
+            gl30.getMethod("glGenFramebuffers", int.class, int[].class).invoke(null, 1, fbo);
+            gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8D40, fbo[0]);
+            gl30.getMethod("glFramebufferTexture2D", int.class, int.class, int.class, int.class, int.class)
+                    .invoke(null, 0x8D40, 0x8D00, 0x0DE1, texture, 0);
+            int status = (Integer) gl30.getMethod("glCheckFramebufferStatus", int.class)
+                    .invoke(null, 0x8D40);
+            gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8D40, 0);
+            if (status != 0x8CD5) {
+                warn("scene depth FBO incomplete: " + Integer.toHexString(status));
+                deleteFbo(fbo[0]);
+                return 0;
+            }
+            return fbo[0];
+        } catch (Throwable t) {
+            warn("scene depth FBO creation failed: " + t);
+            return 0;
+        }
+    }
+
+    private static void deleteFbo(int fbo) {
+        try {
+            Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
+            gl30.getMethod("glDeleteFramebuffers", int.class, int[].class).invoke(null, 1, new int[]{fbo});
+        } catch (Throwable ignored) {
+        }
+    }
+
+    public static void clearSceneDepth() {
+        if (managedDepthFbo == 0) return;
+        try {
+            Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
+            Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
+            int[] previousFbo = new int[1];
+            gl11.getMethod("glGetIntegerv", int.class, int[].class)
+                    .invoke(null, 0x8CA6, previousFbo);
+            int[] scissor = new int[1];
+            gl11.getMethod("glGetIntegerv", int.class, int[].class)
+                    .invoke(null, 0x0C11, scissor);
+            int[] depthMask = new int[1];
+            gl11.getMethod("glGetIntegerv", int.class, int[].class)
+                    .invoke(null, 0x0B72, depthMask);
+            float[] clearDepth = new float[1];
+            gl11.getMethod("glGetFloatv", int.class, float[].class)
+                    .invoke(null, 0x0B73, clearDepth);
+            gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8D40, managedDepthFbo);
+            if (scissor[0] != 0) gl11.getMethod("glDisable", int.class).invoke(null, 0x0C11);
+            gl11.getMethod("glDepthMask", boolean.class).invoke(null, true);
+            gl11.getMethod("glClearDepth", double.class).invoke(null, 1.0d);
+            gl11.getMethod("glClear", int.class).invoke(null, 0x0100);
+            gl11.getMethod("glClearDepth", double.class).invoke(null, (double) clearDepth[0]);
+            gl11.getMethod("glDepthMask", boolean.class).invoke(null, depthMask[0] != 0);
+            if (scissor[0] != 0) gl11.getMethod("glEnable", int.class).invoke(null, 0x0C11);
+            gl30.getMethod("glBindFramebuffer", int.class, int.class)
+                    .invoke(null, 0x8D40, previousFbo[0]);
+        } catch (Throwable t) {
+            warn("scene depth clear failed: " + t);
+        }
     }
 
     private static int queryTextureFormat(int texture) {
