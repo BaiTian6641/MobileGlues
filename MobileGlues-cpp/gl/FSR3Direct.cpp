@@ -57,6 +57,7 @@ thread_local bool g_in_present = false;
 std::atomic<bool> g_bridge_presented_this_frame{false};
 std::atomic<int> g_native_width{0};
 std::atomic<int> g_native_height{0};
+std::atomic<bool> g_bridge_mode{false};
 
 struct PresentGuard {
     GLint draw = 0, read = 0, active = GL_TEXTURE0, tex0 = 0, sampler0 = 0;
@@ -171,6 +172,14 @@ bool FSR3GetSurfaceSize(int& width, int& height) {
     return surface_size(width, height);
 }
 
+void FSR3SetBridgeMode() {
+    g_bridge_mode.store(true, std::memory_order_release);
+}
+
+bool FSR3BridgeMode() {
+    return g_bridge_mode.load(std::memory_order_acquire);
+}
+
 void FSR3SetNativeExtent(int width, int height) {
     g_native_width.store(width > 0 ? width : 0, std::memory_order_relaxed);
     g_native_height.store(height > 0 ? height : 0, std::memory_order_relaxed);
@@ -184,8 +193,6 @@ bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
     if (surface_w <= 0 || surface_h <= 0) {
         if (!surface_size(surface_w, surface_h)) return false;
     }
-    if (width != surface_w || height != surface_h) return false;
-
     GLint fbo = 0;
     GLES.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fbo);
     if (fbo == 0) return false;
@@ -207,6 +214,20 @@ bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
     GLES.glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &target_h);
     GLES.glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(prev_tex));
     GLES.glActiveTexture(static_cast<GLenum>(prev_unit));
+    if (target_w >= surface_w && target_h >= surface_h) {
+        if (width == surface_w && height == surface_h) return false;
+        x = 0;
+        y = 0;
+        width = surface_w;
+        height = surface_h;
+        static bool logged_native = false;
+        if (!logged_native) {
+            logged_native = true;
+            LOG_W_FORCE("FSR3 native-target viewport %dx%d", width, height);
+        }
+        return true;
+    }
+    if (width != surface_w || height != surface_h) return false;
     const FSR3ViewportPlan plan = FSR3PlanViewport(surface_w, surface_h, target_w, target_h,
                                                     x, y, width, height);
     if (!plan.adjust) return false;
@@ -246,8 +267,9 @@ bool FSR3BridgePresentedThisFrame() {
 
 void ApplyFSR3Present() {
     if (global_settings.fsr3_setting != FSR3_Mode::Experimental) return;
-    // The bridge runs before HUD and the swap path runs after HUD. Skip exactly
-    // the swap that follows a bridge submit, even on a long/stalled frame.
+    // The Minecraft bridge is the product route. The direct path consumes the
+    // already-composed framebuffer and must never touch menu/UI-only frames.
+    if (FSR3BridgeMode()) return;
     if (FSR3BridgePresentedThisFrame()) return;
     if (g_in_present) return;
     if (!GLES.glDispatchCompute || !GLES.glBindImageTexture) return;

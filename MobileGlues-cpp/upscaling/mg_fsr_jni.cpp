@@ -378,10 +378,10 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeViewport(JNIEnv*, jclass) {
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeAvailable(JNIEnv*, jclass) {
-    return (global_settings.fsr3_setting == FSR3_Mode::Experimental && GLES.glDispatchCompute &&
-            GLES.glBindImageTexture)
-               ? JNI_TRUE
-               : JNI_FALSE;
+    const bool available = global_settings.fsr3_setting == FSR3_Mode::Experimental &&
+                           GLES.glDispatchCompute && GLES.glBindImageTexture;
+    if (available) FSR3SetBridgeMode();
+    return available ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT void JNICALL

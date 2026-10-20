@@ -68,6 +68,7 @@ public final class Fsr3Bridge {
 
     private static boolean cameraWarning;
     private static volatile boolean sceneLogDone;
+    private static volatile boolean finalPass;
 
     /**
      * Capture Iris' current camera matrices for camera-only reprojection.
@@ -147,7 +148,7 @@ public final class Fsr3Bridge {
      * only: this is the optional adapter boundary, not a generic renderer hook.
      */
     public static int sceneWidth(int width) {
-        if (width <= 0 || !available()) {
+        if (finalPass || width <= 0 || !available()) {
             logScene("width " + width + " unchanged (adapter unavailable)");
             return width;
         }
@@ -168,7 +169,7 @@ public final class Fsr3Bridge {
 
     /** Height is kept independent so odd window dimensions do not accumulate rounding. */
     public static int sceneHeight(int height) {
-        if (height <= 0 || !available()) {
+        if (finalPass || height <= 0 || !available()) {
             logScene("height " + height + " unchanged (adapter unavailable)");
             return height;
         }
@@ -195,6 +196,14 @@ public final class Fsr3Bridge {
             log.getMethod("w", String.class, String.class).invoke(null, "MGFSR3", message);
         } catch (Throwable ignored) {
         }
+    }
+
+    public static void setFinalPass(boolean active) {
+        finalPass = active;
+    }
+
+    public static boolean finalPassActive() {
+        return finalPass;
     }
 
     /** Forget camera/history inputs after a world, shader or pipeline change. */

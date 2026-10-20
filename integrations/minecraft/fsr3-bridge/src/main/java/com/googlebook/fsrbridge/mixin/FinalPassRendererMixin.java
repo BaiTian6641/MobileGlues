@@ -23,6 +23,7 @@ public abstract class FinalPassRendererMixin {
     private void mgfsr3$nativeViewport(CallbackInfo ci) {
         if (Fsr3Bridge.available()) {
             Fsr3Bridge.captureCamera();
+            Fsr3Bridge.setFinalPass(true);
             Fsr3Bridge.resetNativeViewport();
         }
     }
@@ -31,6 +32,7 @@ public abstract class FinalPassRendererMixin {
     private void mgfsr3$submitBeforeHud(CallbackInfo ci) {
         if (Fsr3Bridge.available()) {
             Fsr3Bridge.submit();
+            Fsr3Bridge.setFinalPass(false);
         }
     }
 }

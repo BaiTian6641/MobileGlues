@@ -217,12 +217,20 @@ void glBindFramebuffer(GLenum target, GLuint framebuffer) {
     // Iris binds its scaled gbuffer/composite FBOs without setting a viewport.
     // Scale the current surface-sized viewport at bind time; native final/HUD
     // targets and shadow targets do not match the surface and stay untouched.
-    if (target != GL_READ_FRAMEBUFFER && draw_fb != 0) {
-        GLint vp[4] = {0, 0, 0, 0};
-        GLES.glGetIntegerv(GL_VIEWPORT, vp);
-        int x = vp[0], y = vp[1], w = vp[2], h = vp[3];
-        if (FSR3AdjustViewport(x, y, w, h)) {
-            GLES.glViewport(x, y, w, h);
+    if (target != GL_READ_FRAMEBUFFER) {
+        if (draw_fb == 0) {
+            // GUI/menu/HUD frames return to the default framebuffer. A scaled
+            // scene viewport must not leak into them.
+            if (global_settings.fsr3_setting == FSR3_Mode::Experimental) {
+                FSR3NativeViewport();
+            }
+        } else {
+            GLint vp[4] = {0, 0, 0, 0};
+            GLES.glGetIntegerv(GL_VIEWPORT, vp);
+            int x = vp[0], y = vp[1], w = vp[2], h = vp[3];
+            if (FSR3AdjustViewport(x, y, w, h)) {
+                GLES.glViewport(x, y, w, h);
+            }
         }
     }
 }

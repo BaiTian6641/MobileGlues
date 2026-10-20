@@ -22,6 +22,8 @@ bool FSR3AdjustViewport(int& x, int& y, int& width, int& height);
 bool FSR3GetSurfaceSize(int& width, int& height);
 void FSR3NativeViewport();
 void FSR3SetNativeExtent(int width, int height);
+void FSR3SetBridgeMode();
+bool FSR3BridgeMode();
 
 // True when the optional Minecraft/Iris bridge has presented in this frame.
 // The swap-path diagnostic present must then stay out of the way: the bridge
