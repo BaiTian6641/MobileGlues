@@ -15,6 +15,9 @@ $CXX -o /tmp/mg_cache_key_test tests/cache_key_test.cpp      gl/glsl/cache_key.c
 $CXX -o /tmp/mg_image_test tests/compat_image_test.cpp gl/glsl/compat_image.cpp
 $CXX -o /tmp/mg_subgroup_test tests/compat_subgroup_test.cpp gl/glsl/compat_subgroup.cpp gl/glsl/compat_subgroup_partition.cpp
 $CXX -o /tmp/mg_fsr_contract_test tests/fsr_contract_test.cpp
+$CXX -o /tmp/mg_fsr1_core_test tests/fsr1_core_test.cpp
+/tmp/mg_fsr1_core_test
+echo
 /tmp/mg_pixel_test
 echo
 /tmp/mg_fb_test

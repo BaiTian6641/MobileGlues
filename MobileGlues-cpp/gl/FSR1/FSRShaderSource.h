@@ -3884,53 +3884,74 @@ AF1 sharpness){
   cB=ASatH2(nB+AGtZeroH2(dit-rB)*AH2_(1.0/1023.0));}
 #endif
 
+// One program, two explicit passes. uPass selects which stage this draw is:
+//   0 = EASU   scene render extent -> target extent intermediate
+//   1 = RCAS   intermediate (== target extent) -> final target
+// Both passes use gl_FragCoord, which is in the extent of the framebuffer being
+// written. EASU's ip is therefore an output pixel and its input/output sizes come
+// from uniforms, never from textureSize(). RCAS samples the texture bound for its
+// pass -- the intermediate -- at exactly those coordinates.
 uniform sampler2D uInputTex;
-uniform vec4 uConst0;
-uniform vec2 uViewportSize;
+uniform int uPass;
+uniform vec2 uInputSize;
+uniform vec2 uOutputSize;
 in vec2 vTexCoord;
 out vec4 oFragColor;
 
-AF4 FsrRcasLoadF(ASU2 p) { return texelFetch(uInputTex, ASU2(p), 0); }
+// RCAS walks a 3x3 cross around the pixel, so the outermost ring asks for
+// coordinates one texel outside the image. texelFetch is undefined there; clamp
+// to the last real texel instead of letting the border take whatever the driver
+// returns.
+AF4 FsrRcasLoadF(ASU2 p) {
+    ASU2 last = ASU2(uInputSize) - ASU2(1, 1);
+    return texelFetch(uInputTex, clamp(ASU2(p), ASU2(0, 0), last), 0);
+}
 void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b) {}
 AF4 FsrEasuRF(AF2 p) { AF4 res = textureGather(uInputTex, p, 0); return res; }
 AF4 FsrEasuGF(AF2 p) { AF4 res = textureGather(uInputTex, p, 1); return res; }
 AF4 FsrEasuBF(AF2 p) { AF4 res = textureGather(uInputTex, p, 2); return res; }
 
 void main() {
-    ivec2 texSize = textureSize(uInputTex, 0);
-    vec2 inputTexCoord = vTexCoord * (vec2(texSize) / uViewportSize);
     AU2 ip = AU2(gl_FragCoord.xy);
-    
-    AF1 inputViewportInPixelsX = uViewportSize.x;
-    AF1 inputViewportInPixelsY = uViewportSize.y;
-    AF1 outputSizeInPixelsX = float(texSize.x);
-    AF1 outputSizeInPixelsY = float(texSize.y);
-    
-    A_STATIC const AF1 sharpness = 0.2; // 0.0-1.0
-    A_STATIC const AF3 lumaWeight = AF3(0.2126, 0.7152, 0.0722);
-    
-    AU4 const0;
-    AU4 const1;
-    AU4 const2;
-    AU4 const3;
-    FsrEasuCon(
-        const0, const1, const2, const3,
-        inputViewportInPixelsX, inputViewportInPixelsY,
-        inputViewportInPixelsX, inputViewportInPixelsY,
-        outputSizeInPixelsX, outputSizeInPixelsY
-    );
-    
-    AF3 color;
-    FsrEasuF(
-        color,
-        ip,
-        const0, const1, const2, const3
-    );
-    
+
+    if (uPass == 0) {
+        // EASU. inputViewport and inputSize are both the render texture extent;
+        // outputSize is the extent of the intermediate being written.
+        AF1 inputViewportInPixelsX = uInputSize.x;
+        AF1 inputViewportInPixelsY = uInputSize.y;
+        AF1 inputSizeInPixelsX = uInputSize.x;
+        AF1 inputSizeInPixelsY = uInputSize.y;
+        AF1 outputSizeInPixelsX = uOutputSize.x;
+        AF1 outputSizeInPixelsY = uOutputSize.y;
+
+        AU4 const0;
+        AU4 const1;
+        AU4 const2;
+        AU4 const3;
+        FsrEasuCon(
+            const0, const1, const2, const3,
+            inputViewportInPixelsX, inputViewportInPixelsY,
+            inputSizeInPixelsX, inputSizeInPixelsY,
+            outputSizeInPixelsX, outputSizeInPixelsY
+        );
+
+        AF3 color;
+        FsrEasuF(
+            color,
+            ip,
+            const0, const1, const2, const3
+        );
+
+        oFragColor = vec4(color, 1.0);
+        return;
+    }
+
+    // RCAS reads exactly what the previous pass wrote: the bound texture is the
+    // EASU intermediate, and input/output extents are equal.
     A_STATIC const AF1 rcasAt = 0.25;
     AU4 con;
     FsrRcasCon(con, rcasAt);
-    
+
     AF3 sharpenedColor;
     FsrRcasF(
         sharpenedColor.r,
@@ -3940,6 +3961,5 @@ void main() {
         con
     );
 
-    
     oFragColor = vec4(sharpenedColor, 1.0);
 })fsr_glsl";

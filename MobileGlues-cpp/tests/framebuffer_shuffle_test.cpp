@@ -159,6 +159,33 @@ int main() {
     { GLenum b[] = {GL_COLOR_ATTACHMENT0}; glDrawBuffers(1, b); }
     expect("recycled name did not inherit colortex0", physical[0], 555);
 
+    printf("9. republishing a replaced draw binding moves both trackers\n");
+    // FSR1's RecreateFSRTargets deletes its render FBO and creates a new one
+    // behind this file's back. gl_state->current_draw_fbo and the per-context
+    // draw binding must both name the replacement; if only one does, later
+    // attachment and draw-buffer calls index a deleted name.
+    FSR1_Context::g_renderFBO = 0;
+    FSR1_Context::g_dirty = false;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // no FSR target: this is the surface
+    expect("bind 0 without an FSR target does not prime", FSR1_Context::g_dirty ? 1u : 0u, 0u);
+
+    FSR1_Context::g_renderFBO = 42;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);   // redirected to 42
+    expect("redirect is the tracked draw binding", gl_state->current_draw_fbo, 42);
+    expect("redirect primes the render target", FSR1_Context::g_dirty ? 1u : 0u, 1u);
+    glDrawBuffer(GL_NONE); // mark 42's record: all colour attachments are NONE
+    expect("record 42 is all-none", mg_draw_framebuffer_all_none() ? 1u : 0u, 1u);
+
+    mg_framebuffer_republish_draw_binding(43);
+    expect("republish updates gl_state's tracker", gl_state->current_draw_fbo, 43);
+    // A stale per-context tracker would still find record 42 and answer true.
+    expect("republish updates the per-context tracker", mg_draw_framebuffer_all_none() ? 1u : 0u, 0u);
+
+    mg_framebuffer_republish_draw_binding(0); // the failure path
+    expect("failed rebuild republishes the surface", gl_state->current_draw_fbo, 0);
+    FSR1_Context::g_renderFBO = 0;
+    FSR1_Context::g_dirty = false;
+
     printf("\n%s (%d failures)\n", fails ? "FAILED" : "all checks passed", fails);
     return fails != 0;
 }

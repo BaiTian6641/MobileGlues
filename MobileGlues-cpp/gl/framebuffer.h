@@ -107,6 +107,16 @@ void InitFramebufferMap(size_t expectedSize);
 // directly from another translation unit.
 bool mg_draw_framebuffer_all_none();
 
+// Point both draw-framebuffer trackers -- this file's per-context binding and
+// gl_state->current_draw_fbo -- at `framebuffer`, without a backend bind.
+//
+// For the one caller that swaps the currently bound object backend-side: FSR1's
+// RecreateFSRTargets deletes its render FBO and creates a replacement, and no
+// glDeleteFramebuffers hook sees that. glBindFramebuffer normally keeps the two
+// trackers in step; this is the narrow entry point for when it cannot be used
+// (the driver is already where the caller wants it, or the replacement is 0).
+void mg_framebuffer_republish_draw_binding(GLuint framebuffer);
+
 // Points the backend READ binding at the FSR1 render target for as long as it
 // lives, and only when the application is reading its own framebuffer 0 while
 // FSR1 is on. A no-op in every other case.
