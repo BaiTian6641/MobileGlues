@@ -10,7 +10,7 @@ Settings: shaders ON, FSR3 history absent, motion zero, RCAS 0.4.
 
 - APK `e7d655bd…`
 - Core `af74d676…`
-- Bridge `4f50f10a…`
+- Bridge `24677cd5…`
 
 Previous NativeAA rollback remains APK `538455b7…`, core `5733b7bb…`,
 bridge `1f759cfe…`.
@@ -54,10 +54,11 @@ night-scene observations, not matched benchmark or thermal evidence.
 - The final program now receives `viewWidth=2880,viewHeight=1585` through the
   native final-scope override; the earlier 1694×932 observation is fixed.
 - A black/garbled world was captured after the first scaled-depth build. The
-  trace showed the bridge-owned depth texture was not cleared each frame. A
-  depth-only clear at `beginLevelRendering` RETURN is implemented and committed;
-  it must be visually verified on the installed final pair before any preset is
-  called qualified.
+  bridge-owned depth clear then failed because of an incorrect LWJGL
+  `glGenFramebuffers` signature. The corrected depth-only clear is installed
+  and visually verified in the night frame; see
+  [depth-clear evidence](2026-10-20-x1e-depth-clear-fixed.md). Temporal motion
+  remains unverified.
 - UltraPerformance and a post-change NativeAA regression were not rerun.
 - Active pack archive SHA-256/option map remain missing.
 - No matched frame-time, star-rotation, resize, or shader-reload matrix in this

@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "experiment": "B",
-  "status": "installed on C1L63708PZ; final-scope trace verified 2880x1585; depth-clear test pending",
+  "status": "installed on C1L63708PZ; depth-clear night visual PASS (static); temporal motion unverified",
   "source_head": "6997d078372ef8cfca8b07bf5e657af86adf6529",
   "diagnostic_tuple": {
     "apk_sha256": "e7d655bd612970e982eb70b4e24cdd1f7752c5417567f51b290dedaa825cec28",
     "core_sha256": "af74d6768b31f1eca9df8b5f833d173f55940eecce278cbcfb6a8972ed302aca",
-    "bridge_sha256": "4f50f10a071092f3e7825a01ef03b56556d12d996f65e975d675111ee1879e19"
+    "bridge_sha256": "24677cd56c78dd6714f67892f259d41a32b1e4aa34537efc0da6d5d245a6546e"
   },
   "baseline_rollback": {
     "apk_sha256": "538455b765ec680f52919ecd4e296513353108a539352626ba4f45b9c43a0c39",
@@ -92,13 +92,14 @@
     "balanced_depth_trace": "/home/polar/MobileGlues-fixtures/experiment-b/balanced-depth-trace.jsonl",
     "balanced_night": "/home/polar/MobileGlues-fixtures/experiment-b/balanced-night.png",
     "quality_f3": "/home/polar/MobileGlues-fixtures/experiment-b/quality-f3.png",
-    "performance_f3": "/home/polar/MobileGlues-fixtures/experiment-b/performance-f3.png"
+    "performance_f3": "/home/polar/MobileGlues-fixtures/experiment-b/performance-f3.png",
+    "final_depth_clear": "/home/polar/MobileGlues-fixtures/experiment-b/final-depth-clear-night.png",
+    "final_depth_trace": "/home/polar/MobileGlues-fixtures/experiment-b/final-depth-clear-trace.jsonl"
   },
   "open": [
-    "bridge-owned scene depth clear is implemented but not yet visually verified on device",
-    "black/garbled world was captured before the clear; source has the fix",
+    "temporal motion/ghosting during camera and hand motion not yet tested",
     "UltraPerformance and NativeAA regression not rerun in this checkpoint",
     "active pack archive SHA-256 and option map still missing",
-    "no matched frame-time, thermal or star-rotation recheck for this pair"
+    "no matched frame-time or thermal benchmark"
   ]
 }
