@@ -80,3 +80,24 @@ The first review found two blocking integration defects, both now fixed:
   RAII guard, including early returns after aux allocation.
 
 Host semantic tests pass with these changes. Device runtime remains NOT RUN.
+
+## S3 multi-frame probe status
+
+`tools/fsr3_spike/backend_probe/main.cpp` already submits three frames
+(reset, history, reset) and checks output/dispatch state on the target. It was
+built for ARM64, not host.
+
+A host build was attempted as an additional check:
+
+```sh
+g++ -O2 -std=c++20 -I MobileGlues-cpp \
+  -o /tmp/mg_fsr3_backend_probe tools/fsr3_spike/backend_probe/main.cpp -ldl -lEGL -lGLESv2
+/tmp/mg_fsr3_backend_probe build/host-release/libmobileglues.so
+```
+
+Result: **FAIL/BLOCKED before dispatch**. `dlopen` runs the core static
+initializer, which calls the frontend `glGetIntegerv` before a current context
+has populated the GLES dispatch table; the process recurses and segfaults.
+This is a host-harness initialization limitation, not a backend result. Do not
+record it as a multi-frame PASS. The ARM64 multi-frame probe remains NOT RUN
+until a device run is authorized.
