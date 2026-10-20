@@ -45,7 +45,7 @@ final class NativeBridge {
 
     static native void viewport();
 
-    static native void camera(float[] modelView, float[] projection, float[] cameraPosition);
+    static native void camera(float[] modelView, float[] projection, double[] cameraPosition);
 
     static native void invalidateCamera();
 

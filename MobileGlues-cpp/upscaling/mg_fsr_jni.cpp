@@ -73,10 +73,10 @@ struct CameraState {
     bool has_previous = false;
     float model_view[16]{};
     float projection[16]{};
-    float position[3]{};
+    double position[3]{};
     float previous_model_view[16]{};
     float previous_projection[16]{};
-    float previous_position[3]{};
+    double previous_position[3]{};
     std::chrono::steady_clock::time_point last_capture{};
 };
 CameraState g_camera;
@@ -283,9 +283,9 @@ bool run_camera_motion(JniState& s, GLuint depth, int width, int height, bool& m
         mg_fsr3_motion::multiply(camera.projection, camera.model_view, current_vp);
         mg_fsr3_motion::multiply(camera.previous_projection, camera.previous_model_view, previous_vp);
         if (!mg_fsr3_motion::invert(current_vp, inverse_vp)) return false;
-        camera_delta[0] = camera.position[0] - camera.previous_position[0];
-        camera_delta[1] = camera.position[1] - camera.previous_position[1];
-        camera_delta[2] = camera.position[2] - camera.previous_position[2];
+        camera_delta[0] = static_cast<float>(camera.position[0] - camera.previous_position[0]);
+        camera_delta[1] = static_cast<float>(camera.position[1] - camera.previous_position[1]);
+        camera_delta[2] = static_cast<float>(camera.position[2] - camera.previous_position[2]);
     } else {
         std::copy(std::begin(identity), std::end(identity), std::begin(inverse_vp));
         std::copy(std::begin(identity), std::end(identity), std::begin(previous_vp));
@@ -393,14 +393,15 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeCameraInvalid(JNIEnv*, jclass) {
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeCamera(JNIEnv* env, jclass, jfloatArray mv, jfloatArray proj,
-                                                       jfloatArray position) {
+                                                       jdoubleArray position) {
     if (!mv || !proj || !position) return;
     if (env->GetArrayLength(mv) < 16 || env->GetArrayLength(proj) < 16 ||
         env->GetArrayLength(position) < 3) return;
-    float current_mv[16], current_proj[16], current_pos[3];
+    float current_mv[16], current_proj[16];
+    double current_pos[3];
     env->GetFloatArrayRegion(mv, 0, 16, current_mv);
     env->GetFloatArrayRegion(proj, 0, 16, current_proj);
-    env->GetFloatArrayRegion(position, 0, 3, current_pos);
+    env->GetDoubleArrayRegion(position, 0, 3, current_pos);
     std::lock_guard<std::mutex> lock(g_camera_mutex);
     const auto now = std::chrono::steady_clock::now();
     if (g_camera.valid && g_camera.last_capture.time_since_epoch().count() != 0 &&
@@ -409,10 +410,10 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeCamera(JNIEnv* env, jclass, jfloa
     }
     bool keep_previous = g_camera.valid && g_camera.has_previous;
     if (g_camera.valid) {
-        const float dx = current_pos[0] - g_camera.position[0];
-        const float dy = current_pos[1] - g_camera.position[1];
-        const float dz = current_pos[2] - g_camera.position[2];
-        if (dx * dx + dy * dy + dz * dz > 64.0f * 64.0f) keep_previous = false;
+        const double dx = current_pos[0] - g_camera.position[0];
+        const double dy = current_pos[1] - g_camera.position[1];
+        const double dz = current_pos[2] - g_camera.position[2];
+        if (dx * dx + dy * dy + dz * dz > 64.0 * 64.0) keep_previous = false;
         std::copy(std::begin(g_camera.model_view), std::end(g_camera.model_view), std::begin(g_camera.previous_model_view));
         std::copy(std::begin(g_camera.projection), std::end(g_camera.projection), std::begin(g_camera.previous_projection));
         std::copy(std::begin(g_camera.position), std::end(g_camera.position), std::begin(g_camera.previous_position));

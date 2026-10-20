@@ -11,7 +11,7 @@ using AvailableFn = jboolean (*)(JNIEnv*, jclass);
 using SubmitFn = jint (*)(JNIEnv*, jclass);
 using ScaleFn = jfloat (*)(JNIEnv*, jclass);
 using ViewportFn = void (*)(JNIEnv*, jclass);
-using CameraFn = void (*)(JNIEnv*, jclass, jfloatArray, jfloatArray, jfloatArray);
+using CameraFn = void (*)(JNIEnv*, jclass, jfloatArray, jfloatArray, jdoubleArray);
 using CameraInvalidFn = void (*)(JNIEnv*, jclass);
 AvailableFn g_available = nullptr;
 SubmitFn g_submit = nullptr;
@@ -86,7 +86,7 @@ Java_com_googlebook_fsrbridge_NativeBridge_invalidateCamera(JNIEnv* env, jclass 
 extern "C" JNIEXPORT void JNICALL
 Java_com_googlebook_fsrbridge_NativeBridge_camera(JNIEnv* env, jclass clazz,
                                                   jfloatArray modelView, jfloatArray projection,
-                                                  jfloatArray cameraPosition) {
+                                                  jdoubleArray cameraPosition) {
     if (!g_camera) return;
     jclass target = env->FindClass("com/googlebook/fsrbridge/Fsr3Bridge");
     if (!target) return;

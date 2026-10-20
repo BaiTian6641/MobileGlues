@@ -81,7 +81,7 @@ This is the adoption record for the findings above, added after the review:
 | R1 unsigned reconstructed-depth sampler/filter | **FIXED** | `backend_review_after_fix.log`: unsigned sampler on unit 2, R32UI, integer filtering NEAREST; 8/8 dispatch PASS |
 | R2 final-image reconstruction boundary | **OPEN** | bridge still submits after the pack final pass |
 | R3 scene depth/screen-unit grid | **OPEN** | main depth and view/screen uniforms remain native-sized |
-| R4 camera float precision | **OPEN** | doubles still cast before delta |
+| R4 camera float precision | **FIXED (source); not packaged** | positions now cross JNI as double arrays and subtract before float delta; coordinated APK+JAR run pending |
 | R5 jitter/depth parameters/TAA ownership | **OPEN** | jitter zero; near/far/FOV hardcoded; pack final TAA still active |
 | R6 initialization state | **FIXED (source)** | `SessionStateGuard` in `mg_fsr.cpp`; wrapper-level device test NOT RUN |
 | R7 camera continuity | **FIXED (source)** | `keep_previous` no longer overwritten; no dedicated device run |

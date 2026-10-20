@@ -86,12 +86,12 @@ public final class Fsr3Bridge {
             Object position = cameraClass.getMethod("getUnshiftedCameraPosition").invoke(null);
             float[] mv = new float[16];
             float[] pr = new float[16];
-            float[] pos = new float[3];
+            double[] pos = new double[3];
             copyMatrix(modelView, mv);
             copyMatrix(projection, pr);
-            pos[0] = (float) position.getClass().getField("x").getDouble(position);
-            pos[1] = (float) position.getClass().getField("y").getDouble(position);
-            pos[2] = (float) position.getClass().getField("z").getDouble(position);
+            pos[0] = position.getClass().getField("x").getDouble(position);
+            pos[1] = position.getClass().getField("y").getDouble(position);
+            pos[2] = position.getClass().getField("z").getDouble(position);
             NativeBridge.camera(mv, pr, pos);
         } catch (Throwable t) {
             if (!cameraWarning) {
