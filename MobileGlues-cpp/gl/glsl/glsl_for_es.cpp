@@ -306,59 +306,42 @@ int getGLSLVersion(const char* glsl_code) {
 }
 
 std::string forceSupporterOutput(const std::string& glslCode) {
-    bool hasPrecisionFloat =
-        glslCode.find("precision ") != std::string::npos && glslCode.find("float;") != std::string::npos;
-    bool hasPrecisionInt =
-        glslCode.find("precision ") != std::string::npos && glslCode.find("int;") != std::string::npos;
+    // SPIRV-Cross is configured with an explicit highp default and emits
+    // `mediump` on RelaxedPrecision variables. Do not delete those lines or
+    // replace an authored default: that silently promotes pack mediump to
+    // highp and makes any future FP16 policy impossible. Only inject a highp
+    // default when the translated source has no precision statement at all.
+    bool has_precision_float = false;
+    bool has_precision_int = false;
+    std::istringstream iss(glslCode);
+    std::string line;
+    while (std::getline(iss, line)) {
+        if (line.find("precision ") != std::string::npos && line.find("float;") != std::string::npos)
+            has_precision_float = true;
+        if (line.find("precision ") != std::string::npos && line.find("int;") != std::string::npos)
+            has_precision_int = true;
+    }
+
+    std::string precision;
+    if (!has_precision_float) precision += "precision highp float;\n";
+    if (!has_precision_int) precision += "precision highp int;\n";
+    if (precision.empty()) return glslCode;
 
     std::string result = glslCode;
-    std::string precisionFloat;
-    std::string precisionInt;
-
-    if (hasPrecisionFloat && hasPrecisionInt) {
-        std::istringstream iss(result);
-        std::vector<std::string> lines;
-        std::string line;
-        while (std::getline(iss, line)) {
-            bool isPrecisionLine = (line.find("precision ") != std::string::npos) &&
-                                   (line.find("float;") != std::string::npos || line.find("int;") != std::string::npos);
-            if (!isPrecisionLine) {
-                lines.push_back(line);
-            }
-        }
-        result.clear();
-        for (size_t i = 0; i < lines.size(); ++i) {
-            if (i != 0) result += '\n';
-            result += lines[i];
-        }
-        precisionFloat = "precision highp float;\n";
-        precisionInt = "precision highp int;\n";
+    size_t last_extension = result.rfind("#extension");
+    size_t insertion = 0;
+    if (last_extension != std::string::npos) {
+        const size_t newline = result.find('\n', last_extension);
+        insertion = newline == std::string::npos ? result.length() : newline + 1;
     } else {
-        precisionFloat = hasPrecisionFloat ? "" : "precision highp float;\n";
-        precisionInt = hasPrecisionInt ? "" : "precision highp int;\n";
-    }
-
-    size_t lastExtensionPos = result.rfind("#extension");
-    size_t insertionPos = 0;
-
-    if (lastExtensionPos != std::string::npos) {
-        size_t nextNewline = result.find('\n', lastExtensionPos);
-        if (nextNewline != std::string::npos) {
-            insertionPos = nextNewline + 1;
-        } else {
-            insertionPos = result.length();
-        }
-    } else {
-        size_t firstNewline = result.find('\n');
-        if (firstNewline != std::string::npos) {
-            insertionPos = firstNewline + 1;
-        } else {
-            result = precisionFloat + precisionInt + result;
+        const size_t newline = result.find('\n');
+        if (newline == std::string::npos) {
+            result = precision + result;
             return result;
         }
+        insertion = newline + 1;
     }
-
-    result.insert(insertionPos, precisionFloat + precisionInt);
+    result.insert(insertion, precision);
     return result;
 }
 
@@ -1081,6 +1064,14 @@ std::string spirv_to_essl(std::vector<unsigned int> spirv, uint essl_version, in
                  "spvc_compiler_options_set_uint") ||
         !spvc_ok(context, spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ES, SPVC_TRUE),
                  "spvc_compiler_options_set_bool") ||
+        !spvc_ok(context,
+                 spvc_compiler_options_set_bool(
+                     options, SPVC_COMPILER_OPTION_GLSL_ES_DEFAULT_FLOAT_PRECISION_HIGHP, SPVC_TRUE),
+                 "spvc_compiler_options_set_bool(default float precision)") ||
+        !spvc_ok(context,
+                 spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ES_DEFAULT_INT_PRECISION_HIGHP,
+                                                SPVC_TRUE),
+                 "spvc_compiler_options_set_bool(default int precision)") ||
         !spvc_ok(context, spvc_compiler_install_compiler_options(compiler_glsl, options),
                  "spvc_compiler_install_compiler_options")) {
         errc = -1;

@@ -72,14 +72,44 @@ Expected outcome: ALU savings in color passes, with modest whole-frame gain
 because High is also fill/texture-bound. Expand only after the first slice passes
 its visual and performance gates.
 
+## Audit result (scope control)
+
+The precision audit of Complementary Reimagined r5.9.3, Unbound r5.9.2 and
+iterationRP r0.8.31 found **zero authored precision statements** in all three
+packs. The effective highp default came from MobileGlues. SPIRV-Cross's default
+fragment float precision is mediump, and the old `forceSupporterOutput`
+replacement deleted all precision lines and inserted highp, silently promoting
+any RelaxedPrecision variable.
+
+A mediump-able subset is limited to LDR color/luma work. Highest-value safe
+candidates:
+
+1. Complementary/Unbound `final` (color, sharpen, vignette) — keep UVs, depth,
+   dither coordinates and WSR clear path highp.
+2. iterationRP `composite85` (`FINAL_1`) — LDR output; keep UVs/material IDs highp.
+3. Complementary `composite7` FXAA color/luma — keep depth/UV/directions highp.
+4. Complementary `composite5` bloom-tile/saturation subgraph — keep tonemap,
+   depth and HDR color highp.
+
+Whole-pass mediump is unsafe for `composite`, `composite1`, composite HDR
+tonemap/Bloom accumulation, shadows, SSR/WSR, TAA/history, ACT/WSR and packed
+IDs. The static estimate for ranks 1–4 is only ~3–5% of executed fragment ALU,
+roughly **1–2% of frame time** at High; the 2.3x ALU ratio is not a frame-time
+ratio. This path is therefore a polish item, not a substitute for resolution and
+profile cuts.
+
 ## Gates
 
 - **G0 (done):** reproducible probe and driver precision contract recorded.
-- **G1:** preserve pack precision; no-op precision policy; existing shaderpack
+- **G1 (done):** SPIRV-Cross now emits an explicit highp default and keeps
+  explicit mediump on relaxed variables; `forceSupporterOutput` no longer
+  deletes precision lines. Translation cache schema bumped to 5.
+- **G2:** preserve pack precision; no-op precision policy; existing shaderpack
   output unchanged.
-- **G2:** `safe` allowlist for one color pass family, A/B FPS and visual
-  reference; no artifacts in shadows/SSR/TAA/IDs.
-- **G3:** expand allowlist pass by pass with measured gain and rollback.
+- **G3:** `safe` allowlist for `final` only, A/B FPS and visual reference; no
+  artifacts in shadows/SSR/TAA/IDs.
+- **G4:** add `composite7`/`composite5` color subgraphs only after per-pass gain
+  and reference validation; expand pass by pass.
 
 ## Validation
 
