@@ -29,10 +29,11 @@ FSR3 bridge: camera motion active at frame 2
 - World fills the full game view; no lower-left crop.
 - Hotbar/HUD are native-size and sharp; no observed HUD blur.
 - First frame reports `motion=0` (no previous camera); frame 2 reports camera motion active.
-- F3 overlay is present. Matched-ish baseline at the same world/pack:
-  FSR3 off ~30 FPS; FSR3 Quality ~22 FPS. This is a **net performance
-  FAIL** for the current pass cost; the camera/time windows were not
-  frame-locked, so treat the values as a first A/B, not a benchmark matrix.
+- F3 overlay is present. Early FSR3 Quality frames were ~22 FPS and one
+  FSR3-off frame ~30 FPS, but a different turned viewpoint measured ~18 FPS
+  off. Those cameras/areas are not matched. **Net performance is NOT
+  MEASURED**; no pass/fail conclusion is valid until the same camera, pack,
+  resolution and time window are captured in both modes.
 
 ## What this proves
 
@@ -45,8 +46,8 @@ FSR3 bridge: camera motion active at frame 2
 
 - That the Iris scene targets themselves, rather than only the bridge inputs, are
   reduced; a one-time target-size log is still needed.
-- Net performance versus FSR3 off. The first A/B is **negative** (~22 vs
-  ~30 FPS); FSR3 pass cost currently outweighs the scene reduction.
+- Net performance versus FSR3 off at a matched camera; the current samples
+  are not comparable.
 - Temporal quality, ghosting, jitter ownership, independent entity motion.
 - Complementary or r5.9.2 behavior; ACT/WSR/player reflections.
 - Sustained thermals/lifecycle.

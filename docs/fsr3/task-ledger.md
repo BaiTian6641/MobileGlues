@@ -19,7 +19,7 @@ Updated: 2026-10-20. Owner: coordinator. Gate labels follow
 | FSR-S3-A | S3 | Minimal in-tree GLES backend and shader adaptations | coordinator | `MobileGlues-cpp/upscaling/` | PARTIAL: ABI/backend/probe PASS | 8-pass backend, history, state guard, JNI bridge; no low-res scene, timing NOT RUN |
 | FSR-S4-A | S4 | Native config and optional Minecraft/Iris bridge | coordinator | `integrations/minecraft/` | PARTIAL: bridge submit PASS, performance FAIL | final-pass bridge only; scene-scale hook missing; 13 FPS at native scene |
 | FSR-S4-B | S4 | True low-resolution scene (scaled Iris targets/viewports/depth) | game | adapter/core | PARTIAL: implemented, build PASS, device NOT RUN | `audits/scene-scale-adapter.md`; APK `cb20cd…`, JAR `8aecd1…`; camera/depth corrections host build PASS, runtime extents/matrices not yet verified |
-| FSR-S4-C | S4 | Camera-only prototype, then moving objects | game | adapter/debug | PARTIAL: camera-only render PASS, independent motion NOT RUN; first A/B ~22 vs ~30 FPS | Quality run: camera_motion=1, full frame/HUD; `validation/2026-10-20-scene-adapter-quality.md` |
+| FSR-S4-C | S4 | Camera-only prototype, then moving objects | game | adapter/debug | PARTIAL: camera-only render PASS, independent motion NOT RUN; unmatched FPS samples only | Quality run: camera_motion=1, full frame/HUD; `validation/2026-10-20-scene-adapter-quality.md` |
 | FSR-S5-A | S5 | Complementary r5.9.3 profile; r5.9.2 regression | game/QA | integration metadata | BLOCKED | waits for S4 |
 | FSR-S6-A | S6 | Native/bilinear/FSR1/FSR3 matched benchmark matrix | QA | `bench/upscaling/` | NOT RUN | device serialized; thresholds provisional |
 | FSR-S6-B | S6 | Sustained thermal, lifecycle, packaging | QA | release | NOT RUN | waits for S5 |
