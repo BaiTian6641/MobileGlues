@@ -10,7 +10,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | --- | --- |
 | Integration worktree | `/home/polar/MobileGlues` |
 | Branch | `googlebook/x1e-stage1-3` |
-| HEAD | `141fce0` plus review-fix commit (scene adapter); package evidence in `audits/scene-scale-adapter.md` |
+| HEAD | `335cbc0` (scene adapter + independent review fixes); package evidence in `audits/scene-scale-adapter.md` |
 | Origin | `git@github.com:BaiTian6641/MobileGlues.git` |
 | Upstream | `https://github.com/MobileGL-Dev/MobileGlues.git` |
 | Untouched user changes | modified `.gitignore`, `docs/mobileglues-googlebook/validation/README.md`; untracked `.vscode/`, FSR3 plan, recent validation docs |
