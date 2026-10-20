@@ -182,14 +182,19 @@ public final class Fsr3Bridge {
      * only, without Minecraft/LWJGL jars.
      */
     public static synchronized int sceneFinalColorTexture(int width, int height) {
-        if (!LOADED || width <= 0 || height <= 0) return 0;
+        mark("alloc entry loaded=" + LOADED + " " + width + "x" + height + " existing=" + managedFinalColor);
+        if (!LOADED || width <= 0 || height <= 0) {
+            mark("alloc rejected loaded=" + LOADED + " " + width + "x" + height);
+            return 0;
+        }
         if (managedFinalColor != 0 && managedFinalWidth == width && managedFinalHeight == height) {
             return managedFinalColor;
         }
         try {
             Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
-            Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
+            Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL42");
             int texture = (int) gl11.getMethod("glGenTextures").invoke(null);
+            mark("alloc glGenTextures=" + texture + " gl=" + gl11.getClassLoader() + " thread=" + Thread.currentThread().getName());
             gl11.getMethod("glBindTexture", int.class, int.class).invoke(null, 0x0DE1, texture);
             var parameter = gl11.getMethod("glTexParameteri", int.class, int.class, int.class);
             parameter.invoke(null, 0x0DE1, 0x2801, 0x2601);
@@ -207,7 +212,7 @@ public final class Fsr3Bridge {
             mark("scene final color " + width + "x" + height + " id=" + texture);
             return texture;
         } catch (Throwable t) {
-            warn("scene final color allocation failed: " + t);
+            mark("scene final color allocation failed: " + t);
             return 0;
         }
     }
@@ -348,7 +353,7 @@ public final class Fsr3Bridge {
 
     private static int createDepthFbo(int texture) {
         try {
-            Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
+            Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL42");
             Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
             int[] previousDraw = new int[1], previousRead = new int[1];
             gl11.getMethod("glGetIntegerv", int.class, int[].class).invoke(null, 0x8CA6, previousDraw);
@@ -375,7 +380,7 @@ public final class Fsr3Bridge {
 
     private static void deleteFbo(int fbo) {
         try {
-            Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
+            Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL42");
             gl30.getMethod("glDeleteFramebuffers", int.class).invoke(null, fbo);
         } catch (Throwable ignored) {
         }
@@ -385,7 +390,7 @@ public final class Fsr3Bridge {
         if (managedDepthFbo == 0) return;
         try {
             Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
-            Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
+            Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL42");
             int[] previousDraw = new int[1], previousRead = new int[1];
             gl11.getMethod("glGetIntegerv", int.class, int[].class)
                     .invoke(null, 0x8CA6, previousDraw);
