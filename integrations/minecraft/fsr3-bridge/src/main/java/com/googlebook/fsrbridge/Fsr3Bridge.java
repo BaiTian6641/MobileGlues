@@ -237,9 +237,8 @@ public final class Fsr3Bridge {
     private static int createDepthFbo(int texture) {
         try {
             Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
-            int[] fbo = new int[1];
-            gl30.getMethod("glGenFramebuffers", int.class, int[].class).invoke(null, 1, fbo);
-            gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8D40, fbo[0]);
+            int fbo = (Integer) gl30.getMethod("glGenFramebuffers").invoke(null);
+            gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8D40, fbo);
             gl30.getMethod("glFramebufferTexture2D", int.class, int.class, int.class, int.class, int.class)
                     .invoke(null, 0x8D40, 0x8D00, 0x0DE1, texture, 0);
             int status = (Integer) gl30.getMethod("glCheckFramebufferStatus", int.class)
@@ -247,10 +246,10 @@ public final class Fsr3Bridge {
             gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8D40, 0);
             if (status != 0x8CD5) {
                 warn("scene depth FBO incomplete: " + Integer.toHexString(status));
-                deleteFbo(fbo[0]);
+                deleteFbo(fbo);
                 return 0;
             }
-            return fbo[0];
+            return fbo;
         } catch (Throwable t) {
             warn("scene depth FBO creation failed: " + t);
             return 0;
@@ -260,7 +259,7 @@ public final class Fsr3Bridge {
     private static void deleteFbo(int fbo) {
         try {
             Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
-            gl30.getMethod("glDeleteFramebuffers", int.class, int[].class).invoke(null, 1, new int[]{fbo});
+            gl30.getMethod("glDeleteFramebuffers", int.class).invoke(null, fbo);
         } catch (Throwable ignored) {
         }
     }
