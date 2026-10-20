@@ -38,8 +38,8 @@ adapter to request a real reduced scene.
 
 ## Package identity
 
-- Core `libmobileglues.so` SHA-256: `1f2f97fc245adb50c66b04a99bdad9a7aa0255e0170e936866bd651f9fd59d2e`
-- APK SHA-256: `1cc514331ce9ff026bec9b07ffa0048fa80f56d5405d447924a6fe81a72fd02f`
+- Core `libmobileglues.so` SHA-256: `8d90805335c82ccd3d86cd7e85d66ef38ce0f7649e6332bcdd52d630e795fb52`
+- APK SHA-256: `d89f75a33977a7cf0225fa7c2a7c84a206fc8014ab530eb439ef185d2f2795db`
 - Bridge JAR SHA-256: `2a48efb6fd0f60c17dca391c415f20226b7b468b89821d5596b3763e248b0076`
 - APK: `arm64-v8a` only, 16 KB ELF/archive alignment, debug-key signature
 - Files: `/home/polar/MobileGlues-fixtures/MobileGlues-scene-arm64.apk` and
@@ -101,3 +101,29 @@ has populated the GLES dispatch table; the process recurses and segfaults.
 This is a host-harness initialization limitation, not a backend result. Do not
 record it as a multi-frame PASS. The ARM64 multi-frame probe remains NOT RUN
 until a device run is authorized.
+
+
+## Camera-only motion (experimental)
+
+The bridge now captures Iris `CapturedRenderingState.getGbufferModelView()` and
+`getGbufferProjection()` through reflection at the final-pass hook and sends the
+two column-major matrices to the core with `nativeCamera`. The core keeps the
+previous pair and, when both frames exist, runs an 8x8 compute shader that:
+
+1. reconstructs a view-space/world position from the final depth attachment;
+2. projects it through the previous view-projection;
+3. writes `(previous_uv - current_uv) * extent` as RGBA16F motion.
+
+This is **camera-only**: independently moving entities, hands, particles,
+foliage, water and Create contraptions are not represented. Matrices may include
+Iris/pack projection jitter because no separate jitter uniform is captured yet;
+`motion_includes_jitter` stays 0. Depth is assumed GL 0..1, non-reversed, and the
+final attachment must be a 2D depth texture. Shader/pipeline failure falls back
+to zero motion, and history is reset every frame on that fallback.
+
+The bridge no longer resets history on every frame once camera motion executes;
+this is the first temporal-history experiment and is expected to ghost moving
+objects. No pass/quality claim exists until device screenshots and motion-debug
+captures are reviewed.
+
+The package hashes below supersede the prior static-motion pair.

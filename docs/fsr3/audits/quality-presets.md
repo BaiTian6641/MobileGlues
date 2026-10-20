@@ -68,8 +68,8 @@ Scene-adapter test package:
 - Bridge: `/home/polar/MobileGlues-fixtures/mgfsr3bridge-0.1.0.jar`
 - Package: `com.fcl.plugin.mobileglues`
 - ABI: `arm64-v8a` only
-- Core SHA-256: `1f2f97fc245adb50c66b04a99bdad9a7aa0255e0170e936866bd651f9fd59d2e` (16 KB-aligned ELF)
-- APK SHA-256: `1cc514331ce9ff026bec9b07ffa0048fa80f56d5405d447924a6fe81a72fd02f`
+- Core SHA-256: `8d90805335c82ccd3d86cd7e85d66ef38ce0f7649e6332bcdd52d630e795fb52` (16 KB-aligned ELF)
+- APK SHA-256: `d89f75a33977a7cf0225fa7c2a7c84a206fc8014ab530eb439ef185d2f2795db`
 - Bridge JAR SHA-256: `2a48efb6fd0f60c17dca391c415f20226b7b468b89821d5596b3763e248b0076`
 - Archive: `zipalign -P 16 4` + debug-key signature
 

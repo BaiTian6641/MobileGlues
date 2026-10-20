@@ -481,8 +481,11 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     desc.motion_valid = 1;
     desc.motion_confidence = camera_motion ? MG_FSR_MOTION_CAMERA_ONLY : MG_FSR_MOTION_NONE;
     desc.frame_delta_seconds = delta;
-    desc.reset_history = 1;
-    desc.reset_reason = MG_FSR_RESET_SESSION;
+    // Camera-only motion is experimental: keep history only when reprojection
+    // actually ran; otherwise reset every frame to avoid unbounded ghosting from
+    // the zero-motion fallback.
+    desc.reset_history = (s.frame <= 1 || !camera_motion) ? 1 : 0;
+    desc.reset_reason = desc.reset_history ? MG_FSR_RESET_SESSION : MG_FSR_RESET_NONE;
 
     if (mg_fsr_dispatch(s.session, &desc) != MG_FSR_OK) {
         if (!s.warned) {
