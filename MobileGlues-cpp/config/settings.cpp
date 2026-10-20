@@ -31,6 +31,7 @@ void init_settings() {
     global_settings.ext_direct_state_access = true;
     global_settings.custom_gl_version = {0, 0, 0}; // will go default
     global_settings.fsr1_setting = FSR1_Quality_Preset::Disabled;
+    global_settings.fsr3_setting = FSR3_Mode::Disabled;
     global_settings.hide_mg_env_level = HideMGEnvLevel::Disabled;
 
 #else
@@ -56,6 +57,8 @@ void init_settings() {
     int customGLVersionInt = success ? config_get_int("customGLVersion") : DEFAULT_GL_VERSION;
     FSR1_Quality_Preset fsr1Setting =
         success ? static_cast<FSR1_Quality_Preset>(config_get_int("fsr1Setting")) : FSR1_Quality_Preset::Disabled;
+    FSR3_Mode fsr3Setting =
+        success ? static_cast<FSR3_Mode>(config_get_int("fsr3Setting")) : FSR3_Mode::Disabled;
     HideMGEnvLevel hideMGEnvLevel =
         success ? static_cast<HideMGEnvLevel>(config_get_int("hideMGEnvLevel")) : HideMGEnvLevel::Disabled;
 
@@ -106,6 +109,13 @@ void init_settings() {
         static_cast<int>(fsr1Setting) >= static_cast<int>(FSR1_Quality_Preset::MaxValue)) {
         fsr1Setting = FSR1_Quality_Preset::Disabled;
     }
+    if (static_cast<int>(fsr3Setting) < 0 ||
+        static_cast<int>(fsr3Setting) >= static_cast<int>(FSR3_Mode::MaxValue)) {
+        fsr3Setting = FSR3_Mode::Disabled;
+    }
+    // The direct presentation path cannot provide both spatial and temporal
+    // upscaling at once; FSR3, when selected, owns the swap.
+    if (fsr3Setting != FSR3_Mode::Disabled) fsr1Setting = FSR1_Quality_Preset::Disabled;
     if (static_cast<int>(hideMGEnvLevel) < 0 ||
         static_cast<int>(hideMGEnvLevel) >= static_cast<int>(HideMGEnvLevel::MaxValue)) {
         hideMGEnvLevel = HideMGEnvLevel::Disabled;
@@ -134,6 +144,7 @@ void init_settings() {
         maxGlslCacheSize = 0;
         angleDepthClearFixMode = AngleDepthClearFixMode::Disabled;
         fsr1Setting = FSR1_Quality_Preset::Disabled;
+        fsr3Setting = FSR3_Mode::Disabled;
         hideMGEnvLevel = HideMGEnvLevel::Disabled;
     }
 
@@ -216,6 +227,7 @@ void init_settings() {
     global_settings.angle_depth_clear_fix_mode = angleDepthClearFixMode;
     global_settings.custom_gl_version = customGLVersion;
     global_settings.fsr1_setting = fsr1Setting;
+    global_settings.fsr3_setting = fsr3Setting;
     global_settings.hide_mg_env_level = hideMGEnvLevel;
 #endif
 
@@ -240,6 +252,7 @@ void init_settings() {
               global_settings.custom_gl_version.toString().c_str());
     }
     LOG_V("[MobileGlues] Setting: fsr1Setting                 = %i", static_cast<int>(global_settings.fsr1_setting))
+    LOG_V("[MobileGlues] Setting: fsr3Setting                 = %i", static_cast<int>(global_settings.fsr3_setting))
     LOG_V("[MobileGlues] Setting: hideMGEnvLevel              = %i",
           static_cast<int>(global_settings.hide_mg_env_level))
 
@@ -717,6 +730,9 @@ std::string dump_settings_string(std::string prefix) {
 
     ss << prefix << "CustomGLVersion: "
        << ((GLVersion.toInt(2) == DEFAULT_GL_VERSION) ? "(Default)" : std::to_string(GLVersion.toInt(2))) << "\n";
+
+    ss << prefix << "Fsr3Setting: "
+       << (global_settings.fsr3_setting == FSR3_Mode::Disabled ? "Disabled" : "Experimental") << "\n";
 
     ss << prefix << "Fsr1Setting: ";
 

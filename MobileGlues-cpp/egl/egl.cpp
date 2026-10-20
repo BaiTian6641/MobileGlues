@@ -9,6 +9,7 @@
 #include "context.h"
 #include "../config/settings.h"
 #include "../gl/FSR1/FSR1.h"
+#include "../gl/FSR3Direct.h"
 #include "../gl/log.h"
 #include "../gl/mg.h"
 #include "../gles/loader.h"
@@ -407,6 +408,10 @@ namespace {
     // and every path that presents a frame has to go through here.
     EGLBoolean presentSurface(EGLDisplay dpy, EGLSurface surface) {
         LOAD_EGL(eglSwapBuffers)
+        if (global_settings.fsr3_setting == FSR3_Mode::Experimental) {
+            ApplyFSR3Present();
+            return egl_eglSwapBuffers(dpy, surface);
+        }
         if (global_settings.fsr1_setting == FSR1_Quality_Preset::Disabled) {
             return egl_eglSwapBuffers(dpy, surface);
         }

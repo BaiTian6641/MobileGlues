@@ -79,6 +79,8 @@ public:
     bool dispatch(const Inputs& inputs);
 
     void destroy();
+    // Drop bookkeeping without issuing GL calls when the owning context is gone.
+    void abandon();
 
     bool ready() const { return initialized_; }
     const std::string& error() const { return error_; }

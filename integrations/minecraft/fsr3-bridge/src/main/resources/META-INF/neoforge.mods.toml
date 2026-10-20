@@ -1,0 +1,32 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "LGPL-2.1-only"
+
+[[mods]]
+modId = "mgfsr3bridge"
+version = "0.1.0"
+displayName = "MobileGlues FSR3 Iris Bridge"
+description = '''
+Optional Minecraft/Iris connector for the FSR3 backend built into MobileGlues.
+It submits the current main framebuffer's color/depth after Iris' final pass and
+lets MobileGlues own the reconstruction; it contains no upscaler or second
+renderer. The no-mod path remains available for vanilla and for users who do not
+install this bridge.
+'''
+
+[[mixins]]
+config = "mixins.mgfsrbridge.json"
+
+[[dependencies.mgfsr3bridge]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21,1.21.1]"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.mgfsr3bridge]]
+modId = "iris"
+type = "required"
+versionRange = "[1.8.8,)"
+ordering = "NONE"
+side = "CLIENT"

@@ -132,3 +132,27 @@ qualified profile exists. This avoids claiming support for color/exposure and
 composition paths that have not been validated. The ABI structures already
 carry those fields; enabling them is an additive backend capability, not a
 contract change.
+
+## D-FSR-013: The optional Iris connector submits the current main framebuffer
+
+Status: experimental; performance FAIL at native scene size.
+
+The bridge mixin runs at the end of Iris' `renderFinalPass`, where the main
+framebuffer is current and before vanilla HUD composition. A tiny JNI helper
+reuses the MobileGlues core already mapped by the renderer plugin, avoiding a
+second EGL/GL state. The native path resolves the current color/depth texture
+attachments and runs the same in-tree backend. It does not reduce scene
+resolution, so the 8-pass cost is a net loss at 2880x1585 (13 FPS versus 26 FPS).
+The config switch is off by default.
+
+## D-FSR-014: Low-resolution Minecraft scene work is still missing
+
+Status: blocker for the requested performance goal.
+
+Neither the native presentation path nor this bridge changes Iris/Minecraft
+render-target allocation, viewports, depth extents or screen-size uniforms. The
+current FSR3 execution is therefore a reconstruction/quality experiment only.
+A true low-resolution path needs a versioned scene-scale hook that keeps HUD at
+display resolution and scales all scene-dependent targets/viewports/depth
+coherently. Do not claim FSR3 performance support before that hook and its
+measurements exist.

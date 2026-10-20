@@ -73,7 +73,7 @@ struct DispatchGuard {
     GLint generic_ubo = 0;
     GLint blend = 0, depth = 0, stencil = 0, cull = 0, scissor_test = 0;
     GLint depth_mask = 0, depth_func = 0, cull_mode = 0;
-    GLint color_mask[4]{};
+    GLboolean color_mask[4]{};
     GLfloat clear_color[4]{};
 
     DispatchGuard() {
@@ -92,7 +92,7 @@ struct DispatchGuard {
         GLES.glGetIntegerv(GL_DEPTH_WRITEMASK, &depth_mask);
         GLES.glGetIntegerv(GL_DEPTH_FUNC, &depth_func);
         GLES.glGetIntegerv(GL_CULL_FACE_MODE, &cull_mode);
-        GLES.glGetBooleanv(GL_COLOR_WRITEMASK, reinterpret_cast<GLboolean*>(color_mask));
+        GLES.glGetBooleanv(GL_COLOR_WRITEMASK, color_mask);
         GLES.glGetFloatv(GL_COLOR_CLEAR_VALUE, clear_color);
 
         for (int i = 0; i < kMaxTextureUnits; ++i) {
@@ -131,8 +131,7 @@ struct DispatchGuard {
         GLES.glDepthMask(static_cast<GLboolean>(depth_mask));
         GLES.glDepthFunc(static_cast<GLenum>(depth_func));
         GLES.glCullFace(static_cast<GLenum>(cull_mode));
-        GLES.glColorMask(static_cast<GLboolean>(color_mask[0]), static_cast<GLboolean>(color_mask[1]),
-                         static_cast<GLboolean>(color_mask[2]), static_cast<GLboolean>(color_mask[3]));
+        GLES.glColorMask(color_mask[0], color_mask[1], color_mask[2], color_mask[3]);
         GLES.glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
 
         for (int i = 0; i < kMaxTextureUnits; ++i) {
@@ -165,7 +164,7 @@ struct ClearGuard {
     GLint viewport[4]{};
     GLint scissor[4]{};
     GLint scissor_test = 0;
-    GLint color_mask[4]{};
+    GLboolean color_mask[4]{};
     GLfloat clear_color[4]{};
 
     ClearGuard() {
@@ -173,7 +172,7 @@ struct ClearGuard {
         GLES.glGetIntegerv(GL_VIEWPORT, viewport);
         GLES.glGetIntegerv(GL_SCISSOR_BOX, scissor);
         GLES.glGetIntegerv(GL_SCISSOR_TEST, &scissor_test);
-        GLES.glGetBooleanv(GL_COLOR_WRITEMASK, reinterpret_cast<GLboolean*>(color_mask));
+        GLES.glGetBooleanv(GL_COLOR_WRITEMASK, color_mask);
         GLES.glGetFloatv(GL_COLOR_CLEAR_VALUE, clear_color);
     }
     ~ClearGuard() {
@@ -181,8 +180,7 @@ struct ClearGuard {
         GLES.glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
         GLES.glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
         if (scissor_test) GLES.glEnable(GL_SCISSOR_TEST); else GLES.glDisable(GL_SCISSOR_TEST);
-        GLES.glColorMask(static_cast<GLboolean>(color_mask[0]), static_cast<GLboolean>(color_mask[1]),
-                         static_cast<GLboolean>(color_mask[2]), static_cast<GLboolean>(color_mask[3]));
+        GLES.glColorMask(color_mask[0], color_mask[1], color_mask[2], color_mask[3]);
         GLES.glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
     }
 };
@@ -233,11 +231,12 @@ GLenum image_format_from_qualifier(const std::string& q) {
 
 
 Backend::Backend() = default;
-Backend::~Backend() { destroy(); }
+Backend::~Backend() { if (initialized_) destroy(); }
 
 void Backend::set_error(std::string message) {
     error_ = std::move(message);
-    failed_ = true;
+    // A per-dispatch GL error must not permanently disable the session. Init
+    // failures are represented by initialized_ == false instead.
 }
 
 bool Backend::clear_texture(const Texture& tex, int level, GLenum format, GLenum type, const void* value) {
@@ -555,6 +554,24 @@ void Backend::destroy_programs() {
     ubo_fsr_ = ubo_spd_ = ubo_rcas_ = clear_fbo_ = 0;
 }
 
+void Backend::abandon() {
+    // The context/share group is gone. Drop handles without calling GL.
+    auto drop = [](Texture& t) { t = {}; };
+    drop(input_exposure_); drop(input_reactive_); drop(input_transparency_); drop(output_);
+    for (auto& t : acc_) drop(t);
+    for (auto& t : luma_) drop(t);
+    for (auto& t : lh_) drop(t);
+    for (auto& t : iuc_) drop(t);
+    drop(intermediate_); drop(new_locks_); drop(dilated_reactive_); drop(shading_change_);
+    drop(spd_mips_); drop(farthest_mip1_); drop(spd_atomic_); drop(frame_info_);
+    drop(dilated_motion_); drop(dilated_depth_); drop(recon_depth_); drop(lanczos_lut_);
+    programs_.clear();
+    ubo_fsr_ = ubo_spd_ = ubo_rcas_ = clear_fbo_ = 0;
+    output_owned_ = false;
+    initialized_ = false;
+    failed_ = false;
+}
+
 void Backend::destroy() {
     destroy_textures();
     destroy_programs();
@@ -793,10 +810,15 @@ bool Backend::run_pass(size_t index, uint32_t width, uint32_t height) {
 }
 
 bool Backend::dispatch(const Inputs& in) {
-    if (!initialized_ || failed_) {
+    if (!initialized_) {
         set_error("FSR3 backend is not initialized");
         return false;
     }
+    // Isolate internal calls from a pending application error. The raw GLES
+    // frontend does not provide a scoped error channel; a failed internal pass
+    // returns an error for this frame and can be retried, but never latches the
+    // whole session off.
+    while (GLES.glGetError() != GL_NO_ERROR) {}
     if (in.hdr_color) {
         set_error("FSR3 HDR output profile is not qualified");
         return false;
@@ -928,14 +950,14 @@ bool Backend::dispatch(const Inputs& in) {
     GLES.glBindBuffer(GL_UNIFORM_BUFFER, ubo_rcas_);
     GLES.glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(rcas), &rcas);
 
-    if (!run_pass(0, render_width_, render_height_)) return false;
-    if (!run_pass(1, render_width_, render_height_)) return false;
-    if (!run_pass(2, render_width_, render_height_)) return false;
-    if (!run_pass(3, std::max(1u, render_width_ / 2), std::max(1u, render_height_ / 2))) return false;
-    if (!run_pass(4, render_width_, render_height_)) return false;
-    if (!run_pass(5, render_width_, render_height_)) return false;
-    if (!run_pass(6, output_width_, output_height_)) return false;
-    if (!run_pass(7, output_width_, output_height_)) return false;
+    if (!run_pass(0, render_width_, render_height_)) { first_frame_ = true; return false; }
+    if (!run_pass(1, render_width_, render_height_)) { first_frame_ = true; return false; }
+    if (!run_pass(2, render_width_, render_height_)) { first_frame_ = true; return false; }
+    if (!run_pass(3, std::max(1u, render_width_ / 2), std::max(1u, render_height_ / 2))) { first_frame_ = true; return false; }
+    if (!run_pass(4, render_width_, render_height_)) { first_frame_ = true; return false; }
+    if (!run_pass(5, render_width_, render_height_)) { first_frame_ = true; return false; }
+    if (!run_pass(6, output_width_, output_height_)) { first_frame_ = true; return false; }
+    if (!run_pass(7, output_width_, output_height_)) { first_frame_ = true; return false; }
 
     previous_render_width_ = render_width_;
     previous_render_height_ = render_height_;

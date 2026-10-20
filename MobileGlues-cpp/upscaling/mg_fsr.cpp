@@ -15,6 +15,8 @@
 #include "../egl/context.h"
 #include "../gles/gles.h"
 
+#include <EGL/egl.h>
+
 #include <algorithm>
 #include <atomic>
 #include <cstdio>
@@ -39,6 +41,7 @@ struct Session {
     uint64_t generation = 0;
     uint64_t last_frame_id = 0;
     uint64_t last_generation = 0;
+    uint64_t last_surface_id = 0;
     bool invalidate_requested = false;
     mg_fsr3::Backend backend;
     mg_fsr_resource_t output{};
@@ -48,8 +51,9 @@ struct Session {
 Session* session_from(void* p) { return static_cast<Session*>(p); }
 
 bool current_context_matches(const Session& s) {
-    const uint64_t current = g_current_ctx ? g_current_ctx->id : 0;
-    return s.context_id == 0 || current == 0 || s.context_id == current;
+    if (s.context_id == 0) return true;
+    if (!g_current_ctx) return true; // untracked launcher EGL path
+    return s.context_id == g_current_ctx->id;
 }
 
 int fail(Session* s, int code, std::string message) {
@@ -75,7 +79,15 @@ MG_FSR_EXPORT void* mg_fsr_create_session(void) {
 MG_FSR_EXPORT void mg_fsr_destroy_session(void* raw) {
     Session* session = session_from(raw);
     if (!session) return;
-    if (current_context_matches(*session)) session->backend.destroy();
+    // Calling GL deletion in a different context would delete that context's
+    // objects. If the owning context is gone, abandon only the handles.
+    const bool gl_current = (GLES.glGetString && GLES.glGetString(GL_VERSION) != nullptr) ||
+                            (eglGetCurrentContext() != EGL_NO_CONTEXT);
+    if ((g_current_ctx && session->context_id == g_current_ctx->id) ||
+        (!g_current_ctx && gl_current))
+        session->backend.destroy();
+    else
+        session->backend.abandon();
     delete session;
 }
 
@@ -116,11 +128,34 @@ MG_FSR_EXPORT int mg_fsr_dispatch(void* raw, const mg_fsr_dispatch_t* desc) {
     if (!desc || !valid_dispatch_abi(*desc)) return fail(session, MG_FSR_ERROR_ABI, "incompatible FSR ABI");
     if (!current_context_matches(*session))
         return fail(session, MG_FSR_ERROR_STATE, "FSR session belongs to a different context");
-    if (!g_current_ctx) return fail(session, MG_FSR_ERROR_STATE, "no current graphics context");
-    if (session->context_id == 0) session->context_id = g_current_ctx->id;
+    // The launcher may create EGL outside MobileGlues' tracked wrapper. The
+    // caller is on a render thread; the backend will truthfully fail if there is
+    // no usable context. Do not require our internal context shadow here.
+
+    if (session->context_id == 0)
+        session->context_id = g_current_ctx ? g_current_ctx->id : 1;
 
     if (desc->color.handle == 0 || desc->depth.handle == 0 || desc->motion.handle == 0)
         return fail(session, MG_FSR_ERROR_RESOURCE, "color, depth and motion are required");
+    if (desc->context_id != 0 && desc->context_id != session->context_id)
+        return fail(session, MG_FSR_ERROR_STATE, "dispatch context identity mismatch");
+    if (desc->frame_id != 0 && session->last_frame_id != 0 && desc->frame_id <= session->last_frame_id)
+        return fail(session, MG_FSR_ERROR_STATE, "non-monotonic frame id");
+    if (desc->depth_reversed || desc->depth_infinite_far)
+        return fail(session, MG_FSR_ERROR_CAPABILITY, "inverted/infinite depth needs the inverted shader permutation");
+    auto valid_tex = [](const mg_fsr_resource_t& r, bool required) {
+        if (r.handle == 0) return !required;
+        if (r.namespace_id != MG_FSR_NS_GL_FRONTEND) return false;
+        if (r.gl_target != GL_TEXTURE_2D || r.mip != 0 || r.layer != 0) return false;
+        if (r.handle > 0xFFFFFFFFull) return false;
+        return GLES.glIsTexture(static_cast<GLuint>(r.handle)) != GL_FALSE;
+    };
+    if (!valid_tex(desc->color, true) || !valid_tex(desc->depth, true) || !valid_tex(desc->motion, true))
+        return fail(session, MG_FSR_ERROR_RESOURCE, "invalid required texture resource");
+    if ((desc->exposure.handle && !valid_tex(desc->exposure, false)) ||
+        (desc->reactive.handle && !valid_tex(desc->reactive, false)) ||
+        (desc->transparency.handle && !valid_tex(desc->transparency, false)))
+        return fail(session, MG_FSR_ERROR_RESOURCE, "invalid optional texture resource");
     if (desc->render_width == 0 || desc->render_height == 0 || desc->output_width == 0 ||
         desc->output_height == 0)
         return fail(session, MG_FSR_ERROR_EXTENT, "zero-size FSR dispatch");
@@ -142,9 +177,12 @@ MG_FSR_EXPORT int mg_fsr_dispatch(void* raw, const mg_fsr_dispatch_t* desc) {
                                      (desc->output_active.height == 0 || desc->output_active.height == desc->output_height));
     if (!full_color_active || !full_output_active)
         return fail(session, MG_FSR_ERROR_EXTENT, "active rectangles are not yet supported");
-    const bool generation_reset = desc->resource_generation != 0 && session->last_generation != 0 &&
+    const bool generation_reset = desc->resource_generation != 0 &&
                                    desc->resource_generation != session->last_generation;
+    const bool surface_reset = desc->surface_id != 0 && session->last_surface_id != 0 &&
+                               desc->surface_id != session->last_surface_id;
     session->last_generation = desc->resource_generation;
+    session->last_surface_id = desc->surface_id;
 
     mg_fsr3::Inputs in{};
     in.frame_id = desc->frame_id;
@@ -177,10 +215,11 @@ MG_FSR_EXPORT int mg_fsr_dispatch(void* raw, const mg_fsr_dispatch_t* desc) {
     in.motion_includes_jitter = desc->motion_includes_jitter != 0;
     in.motion_units = desc->motion_units;
     in.frame_delta_seconds = desc->frame_delta_seconds;
-    in.reset_history = desc->reset_history != 0 || session->invalidate_requested || generation_reset;
+    in.reset_history = desc->reset_history != 0 || session->invalidate_requested || generation_reset || surface_reset;
     in.reset_reason = desc->reset_reason;
     session->invalidate_requested = false;
 
+    session->output = {};
     if (!session->backend.ready()) {
         if (!session->backend.initialize(in.render_width, in.render_height, in.output_width, in.output_height)) {
             return fail(session, MG_FSR_ERROR_BACKEND, session->backend.error());

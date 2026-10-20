@@ -103,3 +103,29 @@ Build identity at the probe:
 
 The next gate is the adapter vertical slice, then a real camera-motion clip and
 matched native/bilinear/FSR1/FSR3 measurements.
+
+## Review corrections (2026-10-20)
+
+Independent review found and the tree now fixes:
+
+- **Color-mask state**: `GL_COLOR_WRITEMASK` is saved as `GLboolean[4]`, not
+  `GLint[4]`; the previous cast restored `glColorMask(1,0,0,0)` after every
+  dispatch.
+- **Context-safe destruction**: `Backend::abandon()` drops handles without GL
+  calls when the owning context is gone. `mg_fsr_destroy_session` chooses
+  destroy/abandon based on the current EGL context, and the destructor no longer
+  issues unconditional deletes.
+- **Inverted/infinite depth**: rejected explicitly until the inverted shader
+  permutation and clear value are qualified. The device path uses non-inverted
+  depth.
+- **No permanent error latch**: internal dispatch errors are per-frame and
+  retryable; initialization failure is represented by `initialized_ == false`.
+- **ABI validation**: required resources must be live 2D textures with zero
+  mip/layer; context/surface identity and frame monotonicity are checked;
+  resource-generation changes reset history; output is cleared before a failed
+  dispatch so a deleted output name is never returned.
+- **Output after resize failure**: cleared.
+
+The corrected production probe still passes all ten checks; core/helper ARM64
+ELF `LOAD` alignments are `0x4000`, and the test APK passes
+`zipalign -c -P 16`.

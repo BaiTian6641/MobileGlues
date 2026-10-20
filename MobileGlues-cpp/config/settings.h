@@ -184,6 +184,16 @@ typedef enum class FSR1_Quality_Preset : int { // may be useless
     MaxValue      // 5
 };
 
+// Native presentation FSR3 is deliberately a single experimental switch. It
+// has no render-scale control because, without an engine adapter, the game's
+// scene is still produced at display resolution and no truthful Quality /
+// Balanced / Performance preset can be offered.
+typedef enum class FSR3_Mode : int {
+    Disabled = 0,
+    Experimental = 1,
+    MaxValue = 2,
+};
+
 constexpr int MD_ENTRY_COUNT = static_cast<int>(md_entry_t::MaxValue);
 constexpr int MD_BACKEND_COUNT = static_cast<int>(md_backend_t::MaxValue);
 
@@ -214,6 +224,7 @@ struct global_settings_t {
     AngleDepthClearFixMode angle_depth_clear_fix_mode;
     Version custom_gl_version;
     FSR1_Quality_Preset fsr1_setting;
+    FSR3_Mode fsr3_setting;
     HideMGEnvLevel hide_mg_env_level;
 };
 
