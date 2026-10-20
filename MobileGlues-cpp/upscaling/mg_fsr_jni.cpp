@@ -95,19 +95,38 @@ struct FramebufferGuard {
     GLint read = 0;
     GLint draw = 0;
     GLint viewport[4]{};
+    GLint scissor[4]{};
+    GLint scissor_test = 0;
+    GLboolean color_mask[4]{};
     bool active = false;
 
     FramebufferGuard() {
         GLES.glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read);
         GLES.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw);
         GLES.glGetIntegerv(GL_VIEWPORT, viewport);
+        GLES.glGetIntegerv(GL_SCISSOR_BOX, scissor);
+        GLES.glGetIntegerv(GL_SCISSOR_TEST, &scissor_test);
+        GLES.glGetBooleanv(GL_COLOR_WRITEMASK, color_mask);
         active = (read != 0 || draw != 0);
+        // Blits are geometry, so the caller's scissor and color mask apply to
+        // them. The final pass may leave a sub-rect scissor active; without this
+        // guard FSR3 writes only that rectangle and the untouched edge appears
+        // as a one-frame black band.
+        if (scissor_test) GLES.glDisable(GL_SCISSOR_TEST);
+        GLES.glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     }
     ~FramebufferGuard() {
-        if (!active) return;
+        if (!active) {
+            if (scissor_test) GLES.glEnable(GL_SCISSOR_TEST);
+            GLES.glColorMask(color_mask[0], color_mask[1], color_mask[2], color_mask[3]);
+            return;
+        }
         GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(read));
         GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(draw));
         GLES.glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+        GLES.glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+        if (scissor_test) GLES.glEnable(GL_SCISSOR_TEST); else GLES.glDisable(GL_SCISSOR_TEST);
+        GLES.glColorMask(color_mask[0], color_mask[1], color_mask[2], color_mask[3]);
     }
 };
 
