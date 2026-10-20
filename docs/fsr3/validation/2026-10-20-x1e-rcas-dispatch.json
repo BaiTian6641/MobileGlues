@@ -1,0 +1,285 @@
+{
+ "note": "Device evidence, C1L63708PZ. Single adapted FSR3.1.4 RCAS pass. Readback is test-only.",
+ "runs": [
+  {
+   "harness": "fsr3_dispatch",
+   "pass": "rcas",
+   "status": "PASS",
+   "reference": {
+    "model": "CPU fp32 port of FsrRcasF (ffx_fsr3upscaler_rcas.h, FSR3.1.4)",
+    "comparison_region": "interior, 1px border excluded (out-of-range texelFetch is undefined)",
+    "tolerance": "max_abs_8bit_diff<=1 and exact>=99.9%",
+    "con_x": 0.329876959,
+    "con_x_bits": 1051256226,
+    "sharpness_param": 0.2,
+    "interior_sha256": "748049f7305cfd530abd5100ad9fe7afebdcb0c506f4ee7c63a52d2864e444e0",
+    "interior_pixels": 56604
+   },
+   "renderer": "ANGLE (Qualcomm, Vulkan 1.4.295 (Adreno (TM)  X1-85 (0x43050C01)), Qualcomm Technologies Inc. Adreno Vulkan Driver-512.886.6)",
+   "vendor": "Google Inc. (Qualcomm)",
+   "gl_version": "OpenGL ES 3.2 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+   "glsl_version": "OpenGL ES GLSL ES 3.20 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+   "shader": {
+    "path": "/data/local/tmp/fsr3_shaders/rcas_essl320.glsl",
+    "sha256": "b64ac08df15ef7ae92176881cd29696e92e02acecbb2e11f60f19aecc6aeaf7d",
+    "bytes": 9466,
+    "file_ok": true,
+    "local_size": [
+     64,
+     1,
+     1
+    ],
+    "source": "ffx_fsr3upscaler_rcas_pass.glsl FSR3.1.4 (SDK v1.1.4 c6efa6b)"
+   },
+   "resources": {
+    "input": {
+     "type": "sampler2D",
+     "format": "GL_RGBA8",
+     "size": [
+      320,
+      180
+     ],
+     "filter": "NEAREST",
+     "data": "synthetic step/ramp/patch"
+    },
+    "exposure": {
+     "type": "sampler2D",
+     "format": "GL_R32F",
+     "size": [
+      1,
+      1
+     ],
+     "value": 1.0
+    },
+    "output": {
+     "type": "image2D",
+     "format": "GL_RGBA8",
+     "layout": "rgba8 writeonly",
+     "unit": 2,
+     "size": [
+      320,
+      180
+     ]
+    }
+   },
+   "uniform_blocks": [
+    {
+     "name": "cbFSR3UPSCALER_t",
+     "binding": 3,
+     "block_size": 148,
+     "active": true
+    },
+    {
+     "name": "cbRCAS_t",
+     "binding": 4,
+     "block_size": 16,
+     "active": true
+    }
+   ],
+   "samplers": [
+    "sampler2D SPIRV_Cross_Combinedr_rcas_inputSPIRV_Cross_DummySampler <- unit 0 (input RGBA8)",
+    "sampler2D SPIRV_Cross_Combinedr_input_exposureSPIRV_Cross_DummySampler <- unit 1 (exposure R32F)",
+    "image unit 2 <- output tex RGBA8 access=WRITE_ONLY gl=0"
+   ],
+   "dispatch": {
+    "groups": [
+     20,
+     12,
+     1
+    ],
+    "local_size": [
+     64,
+     1,
+     1
+    ],
+    "barrier": "GL_ALL_BARRIER_BITS",
+    "finish": true,
+    "repeat": 2
+   },
+   "readback": {
+    "method": "FBO attach + glReadPixels RGBA/UNSIGNED_BYTE",
+    "format": "RGBA8",
+    "bytes": 230400,
+    "sha256": "4463cdf65617df8a889aa0331e68777a56d0b76811218ea9a094a08f0af71819"
+   },
+   "checks": [
+    {
+     "name": "shader_compile_link",
+     "status": "PASS",
+     "detail": "program linked"
+    },
+    {
+     "name": "dispatch_and_readback",
+     "status": "PASS",
+     "detail": "dispatch issued, full barrier, glFinish, FBO readback"
+    },
+    {
+     "name": "determinism",
+     "status": "PASS",
+     "detail": "two dispatches, byte-identical readback"
+    },
+    {
+     "name": "cpu_model_interior",
+     "status": "PASS",
+     "detail": "interior_pixels=56604 exact=56604 (100.0000%) le1=56604 gt1=0 maxdiff=0 tolerance=maxdiff<=1 and exact>=99.9%"
+    },
+    {
+     "name": "flat_region_identity",
+     "status": "PASS",
+     "detail": "flat patch [43,63)-[103,117) pixels=3240 mismatched=0"
+    },
+    {
+     "name": "alpha_opaque",
+     "status": "PASS",
+     "detail": "alpha!=255 pixels=0"
+    },
+    {
+     "name": "output_is_sharpened",
+     "status": "PASS",
+     "detail": "pixels differing from input=2075"
+    }
+   ],
+   "errors": []
+  },
+  {
+   "harness": "fsr3_dispatch",
+   "pass": "rcas",
+   "status": "PASS",
+   "reference": {
+    "model": "CPU fp32 port of FsrRcasF (ffx_fsr3upscaler_rcas.h, FSR3.1.4)",
+    "comparison_region": "interior, 1px border excluded (out-of-range texelFetch is undefined)",
+    "tolerance": "max_abs_8bit_diff<=1 and exact>=99.9%",
+    "con_x": 1,
+    "con_x_bits": 1065353216,
+    "sharpness_param": 1,
+    "interior_sha256": "d453c48241eeaf627fd698b85119c7690b8096a6751686541b2061375c391969",
+    "interior_pixels": 228404
+   },
+   "renderer": "ANGLE (Qualcomm, Vulkan 1.4.295 (Adreno (TM)  X1-85 (0x43050C01)), Qualcomm Technologies Inc. Adreno Vulkan Driver-512.886.6)",
+   "vendor": "Google Inc. (Qualcomm)",
+   "gl_version": "OpenGL ES 3.2 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+   "glsl_version": "OpenGL ES GLSL ES 3.20 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+   "shader": {
+    "path": "/data/local/tmp/fsr3_shaders/rcas_essl320.glsl",
+    "sha256": "b64ac08df15ef7ae92176881cd29696e92e02acecbb2e11f60f19aecc6aeaf7d",
+    "bytes": 9466,
+    "file_ok": true,
+    "local_size": [
+     64,
+     1,
+     1
+    ],
+    "source": "ffx_fsr3upscaler_rcas_pass.glsl FSR3.1.4 (SDK v1.1.4 c6efa6b)"
+   },
+   "resources": {
+    "input": {
+     "type": "sampler2D",
+     "format": "GL_RGBA8",
+     "size": [
+      640,
+      360
+     ],
+     "filter": "NEAREST",
+     "data": "synthetic step/ramp/patch"
+    },
+    "exposure": {
+     "type": "sampler2D",
+     "format": "GL_R32F",
+     "size": [
+      1,
+      1
+     ],
+     "value": 1.0
+    },
+    "output": {
+     "type": "image2D",
+     "format": "GL_RGBA8",
+     "layout": "rgba8 writeonly",
+     "unit": 2,
+     "size": [
+      640,
+      360
+     ]
+    }
+   },
+   "uniform_blocks": [
+    {
+     "name": "cbFSR3UPSCALER_t",
+     "binding": 3,
+     "block_size": 148,
+     "active": true
+    },
+    {
+     "name": "cbRCAS_t",
+     "binding": 4,
+     "block_size": 16,
+     "active": true
+    }
+   ],
+   "samplers": [
+    "sampler2D SPIRV_Cross_Combinedr_rcas_inputSPIRV_Cross_DummySampler <- unit 0 (input RGBA8)",
+    "sampler2D SPIRV_Cross_Combinedr_input_exposureSPIRV_Cross_DummySampler <- unit 1 (exposure R32F)",
+    "image unit 2 <- output tex RGBA8 access=WRITE_ONLY gl=0"
+   ],
+   "dispatch": {
+    "groups": [
+     40,
+     23,
+     1
+    ],
+    "local_size": [
+     64,
+     1,
+     1
+    ],
+    "barrier": "GL_ALL_BARRIER_BITS",
+    "finish": true,
+    "repeat": 2
+   },
+   "readback": {
+    "method": "FBO attach + glReadPixels RGBA/UNSIGNED_BYTE",
+    "format": "RGBA8",
+    "bytes": 921600,
+    "sha256": "6e654a8766f7cdb4a752bd59cc4769144227f3bba8a9396af71e6b71f944540e"
+   },
+   "checks": [
+    {
+     "name": "shader_compile_link",
+     "status": "PASS",
+     "detail": "program linked"
+    },
+    {
+     "name": "dispatch_and_readback",
+     "status": "PASS",
+     "detail": "dispatch issued, full barrier, glFinish, FBO readback"
+    },
+    {
+     "name": "determinism",
+     "status": "PASS",
+     "detail": "two dispatches, byte-identical readback"
+    },
+    {
+     "name": "cpu_model_interior",
+     "status": "PASS",
+     "detail": "interior_pixels=228404 exact=228404 (100.0000%) le1=228404 gt1=0 maxdiff=0 tolerance=maxdiff<=1 and exact>=99.9%"
+    },
+    {
+     "name": "flat_region_identity",
+     "status": "PASS",
+     "detail": "flat patch [83,123)-[210,237) pixels=14478 mismatched=0"
+    },
+    {
+     "name": "alpha_opaque",
+     "status": "PASS",
+     "detail": "alpha!=255 pixels=0"
+    },
+    {
+     "name": "output_is_sharpened",
+     "status": "PASS",
+     "detail": "pixels differing from input=130733"
+    }
+   ],
+   "errors": []
+  }
+ ]
+}

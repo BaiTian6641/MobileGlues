@@ -1,0 +1,1461 @@
+{
+ "note": "Device evidence, C1L63708PZ. Full 8-pass FSR3.1.4 upscaler chain. Readback is test-only.",
+ "runs": [
+  {
+   "harness": "fsr3_dispatch",
+   "pass": "chain",
+   "status": "PASS",
+   "pattern": "flat",
+   "extent": {
+    "render": [
+     160,
+     90
+    ],
+    "upscale": [
+     320,
+     180
+    ]
+   },
+   "reference": {
+    "type": "differential + declared invariants",
+    "description": "host Mesa GLES run of the same adapted ESSL (byte hashes) plus analytic flat-frame expectations; not an independent Vulkan reference"
+   },
+   "renderer": "ANGLE (Qualcomm, Vulkan 1.4.295 (Adreno (TM)  X1-85 (0x43050C01)), Qualcomm Technologies Inc. Adreno Vulkan Driver-512.886.6)",
+   "vendor": "Google Inc. (Qualcomm)",
+   "gl_version": "OpenGL ES 3.2 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+   "glsl_version": "OpenGL ES GLSL ES 3.20 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+   "constants": {
+    "render": 160,
+    "upscale": 320,
+    "device_to_view_depth": [
+     1.00010002,
+     -0.10001,
+     1.02640045,
+     0.577350259
+    ],
+    "jitter_phase_count": 32,
+    "frame_index": 0,
+    "delta_time": 0.016,
+    "accumulation_added_per_frame": 0.333333343,
+    "min_disocclusion_accumulation": -0.333333343
+   },
+   "spd": {
+    "groups": [
+     3,
+     2
+    ],
+    "num_workgroups": 6,
+    "mips": 7,
+    "workgroup_offset": [
+     0,
+     0
+    ],
+    "renderSize": [
+     160,
+     90
+    ]
+   },
+   "passes": [
+    {
+     "name": "prepare_inputs",
+     "shader": "prepare_inputs_essl320.glsl",
+     "shader_sha256": "a624b575604835ed99cc82bd65c43bcdc952db74437ffd4029c8417b20669960",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      20,
+      12
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=8 bytes=256",
+      "sampler2D r_input_depth unit=0 texture=160x90 format=GL_R32F",
+      "sampler2D r_input_motion_vectors unit=1 texture=160x90 format=GL_RG16F",
+      "sampler2D r_input_color_jittered unit=2 texture=160x90 format=GL_RGBA8",
+      "image2D rw_farthest_depth unit=6 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_current_luma unit=7 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_reconstructed_previous_nearest_depth unit=5 level=0 format=GL_R32UI access=READ_WRITE",
+      "image2D rw_dilated_depth unit=4 level=0 format=GL_R32F access=WRITE_ONLY",
+      "image2D rw_dilated_motion_vectors unit=3 level=0 format=GL_RGBA16F access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "luma_pyramid",
+     "shader": "luma_pyramid_essl320.glsl",
+     "shader_sha256": "25c6aebaae4835eff3bcc3362c5bb73ab20018b0a3dd9cf4358cc36862c03c56",
+     "local_size": [
+      256,
+      1
+     ],
+     "groups": [
+      3,
+      2
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=11 bytes=256",
+      "uniform_block cbSPD_t binding=12 bytes=32",
+      "sampler2D r_current_luma unit=0 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth unit=1 texture=160x90 format=GL_RGBA16F",
+      "image2D rw_farthest_depth_mip1 unit=10 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D r_rw_frame_info unit=3 level=0 format=GL_RGBA32F access=READ_ONLY",
+      "image2D rw_frame_info unit=22 level=0 format=GL_RGBA32F access=WRITE_ONLY",
+      "image2D r_rw_spd_mip0 unit=4 level=0 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip1 unit=5 level=1 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip2 unit=6 level=2 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip3 unit=7 level=3 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip4 unit=8 level=4 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip5 unit=9 level=5 format=GL_RGBA16F access=READ_ONLY",
+      "image2D rw_spd_mip0 unit=24 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip1 unit=25 level=1 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip2 unit=26 level=2 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip3 unit=27 level=3 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip4 unit=28 level=4 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip5 unit=29 level=5 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_global_atomic unit=2 level=0 format=GL_R32UI access=READ_WRITE"
+     ]
+    },
+    {
+     "name": "shading_change_pyramid",
+     "shader": "shading_change_pyramid_essl320.glsl",
+     "shader_sha256": "3bfd9cd89b747ce735cd4e222d78c63db1cfe509ecdf977492e930ebb5b3f130",
+     "local_size": [
+      256,
+      1
+     ],
+     "groups": [
+      3,
+      2
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=11 bytes=256",
+      "uniform_block cbSPD_t binding=12 bytes=32",
+      "sampler2D r_dilated_motion_vectors unit=0 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_current_luma unit=1 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=2 texture=1x1 format=GL_R32F",
+      "sampler2D r_previous_luma unit=3 texture=160x90 format=GL_RGBA16F",
+      "image2D r_rw_spd_mip0 unit=5 level=0 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip1 unit=6 level=1 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip2 unit=7 level=2 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip3 unit=8 level=3 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip4 unit=9 level=4 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip5 unit=10 level=5 format=GL_RGBA16F access=READ_ONLY",
+      "image2D rw_spd_mip0 unit=24 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip1 unit=25 level=1 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip2 unit=26 level=2 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip3 unit=27 level=3 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip4 unit=28 level=4 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip5 unit=29 level=5 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_global_atomic unit=4 level=0 format=GL_R32UI access=READ_WRITE"
+     ]
+    },
+    {
+     "name": "shading_change",
+     "shader": "shading_change_essl320.glsl",
+     "shader_sha256": "0835f5e00e38652d7f4470dbe1f8acccc015f09b9b5375bbc03e08594e25a052",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      10,
+      6
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=2 bytes=256",
+      "sampler2D r_spd_mips unit=0 texture=80x45 format=GL_RGBA16F",
+      "sampler2D r_spd_mips unit=1 texture=80x45 format=GL_RGBA16F",
+      "image2D rw_shading_change unit=1 level=0 format=GL_RGBA8 access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "prepare_reactivity",
+     "shader": "prepare_reactivity_essl320.glsl",
+     "shader_sha256": "821a384220c16449a89eff8a4d97463c91c1cfbe1e16d2a0263dc4552076374f",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      20,
+      12
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=12 bytes=256",
+      "sampler2D r_dilated_motion_vectors unit=0 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_dilated_depth unit=1 texture=160x90 format=GL_R32F",
+      "sampler2D r_reconstructed_previous_nearest_depth unit=2 texture=160x90 format=GL_R32UI",
+      "sampler2D r_reactive_mask unit=3 texture=1x1 format=GL_R8",
+      "sampler2D r_shading_change unit=4 texture=80x45 format=GL_RGBA8",
+      "sampler2D r_transparency_and_composition_mask unit=5 texture=1x1 format=GL_R8",
+      "sampler2D r_transparency_and_composition_mask unit=6 texture=1x1 format=GL_R8",
+      "sampler2D r_accumulation unit=7 texture=160x90 format=GL_RGBA8",
+      "sampler2D r_current_luma unit=8 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=9 texture=1x1 format=GL_R32F",
+      "image2D rw_accumulation unit=11 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D rw_new_locks unit=23 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D rw_dilated_reactive_masks unit=9 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D r_rw_new_locks unit=10 level=0 format=GL_RGBA8 access=READ_ONLY"
+     ]
+    },
+    {
+     "name": "luma_instability",
+     "shader": "luma_instability_essl320.glsl",
+     "shader_sha256": "b8425c8503ca6371a8f37e640262aba614c08ec201469c4d535529963ee2a153",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      20,
+      12
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=9 bytes=256",
+      "sampler2D r_dilated_motion_vectors unit=0 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_dilated_reactive_masks unit=1 texture=160x90 format=GL_RGBA8",
+      "sampler2D r_current_luma unit=2 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=3 texture=1x1 format=GL_R32F",
+      "sampler2D r_luma_history unit=4 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=5 texture=80x45 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=6 texture=80x45 format=GL_RGBA16F",
+      "image2D rw_luma_history unit=7 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_luma_instability unit=8 level=0 format=GL_RGBA16F access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "accumulate",
+     "shader": "accumulate_essl320.glsl",
+     "shader_sha256": "f02e2a4f97841efa1ed124066e353091e0aca5fc043d0471489cdc2c45f22b16",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      40,
+      23
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=12 bytes=256",
+      "sampler2D r_input_motion_vectors unit=0 texture=160x90 format=GL_RG16F",
+      "sampler2D r_luma_instability unit=1 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=2 texture=80x45 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=3 texture=80x45 format=GL_RGBA16F",
+      "sampler2D r_dilated_reactive_masks unit=4 texture=160x90 format=GL_RGBA8",
+      "sampler2D r_internal_upscaled_color unit=5 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=6 texture=1x1 format=GL_R32F",
+      "sampler2D r_input_color_jittered unit=7 texture=160x90 format=GL_RGBA8",
+      "image2D rw_internal_upscaled_color unit=9 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_upscaled_output unit=10 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D r_rw_new_locks unit=11 level=0 format=GL_RGBA8 access=READ_ONLY",
+      "image2D rw_new_locks unit=23 level=0 format=GL_RGBA8 access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "rcas",
+     "shader": "rcas_essl320.glsl",
+     "shader_sha256": "b64ac08df15ef7ae92176881cd29696e92e02acecbb2e11f60f19aecc6aeaf7d",
+     "local_size": [
+      64,
+      1
+     ],
+     "groups": [
+      20,
+      12
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbRCAS_t binding=4 bytes=16",
+      "uniform_block cbFSR3UPSCALER_t binding=3 bytes=256",
+      "sampler2D r_rcas_input unit=0 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=1 texture=1x1 format=GL_R32F",
+      "image2D rw_upscaled_output unit=2 level=0 format=GL_RGBA8 access=WRITE_ONLY"
+     ]
+    }
+   ],
+   "hashes": {
+    "output": "010e45072c02a4ab360a2d54758c096b6d5eadeaf78ec73559e66d64748daee2",
+    "dilated_motion": "d8b443032200e143b1c49820b6d78c32d519553a3f63a38f48e8bc31da084f0a",
+    "reconstructed_depth": "864166db82d567116e650fbee347d086a29071398c9386a3b59e00d21df66ee9",
+    "spd_mip5": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+    "shading_change": "9202e68fbe5587e30738f2f118e87e10202a6eabd7297e1299978ed53c3a8f46",
+    "dilated_reactive": "6d6f368a78a3311505f9333eb9e51c24577d66124672d53a4f4d338752eb23c8"
+   },
+   "checks": [
+    {
+     "name": "chain_compile_link",
+     "status": "PASS",
+     "detail": "8/8 adapted passes compiled and linked"
+    },
+    {
+     "name": "prepare_inputs_reconstructed_depth",
+     "status": "PASS",
+     "detail": "rw_reconstructed_previous_nearest_depth pixels=14400 mismatched=0 expected_bits=0x3f000000"
+    },
+    {
+     "name": "prepare_inputs_dilated_depth",
+     "status": "PASS",
+     "detail": "rw_dilated_depth pixels=14400 out_of_tol=0 max_abs_diff=0 expected=0.5 tol=1e-06"
+    },
+    {
+     "name": "prepare_inputs_dilated_motion",
+     "status": "PASS",
+     "detail": "rw_dilated_motion_vectors level=0 pixels=14400 out_of_tol=0 max_abs_diff=0 expected=(0,0,0) first=(0,0,0,0) tol=0"
+    },
+    {
+     "name": "prepare_inputs_current_luma",
+     "status": "PASS",
+     "detail": "rw_current_luma level=0 pixels=14400 out_of_tol=0 max_abs_diff=0.000238329 expected=(0.493402,0,0) first=(0.493164,0,0,0) tol=0.002"
+    },
+    {
+     "name": "prepare_inputs_farthest_depth",
+     "status": "PASS",
+     "detail": "rw_farthest_depth level=0 pixels=14400 out_of_tol=0 max_abs_diff=2.88188e-05 expected=(0.19998,0,0) first=(0.199951,0,0,0) tol=0.002"
+    },
+    {
+     "name": "luma_pyramid_mip5_average",
+     "status": "PASS",
+     "detail": "rw_spd_mip5 level=5 pixels=2 out_of_tol=0 max_abs_diff=0.000238329 expected=(6.1e-05,0.493402,0) first=(6.09756e-05,0.493164,0,0) tol=0.005"
+    },
+    {
+     "name": "luma_pyramid_farthest_mip1",
+     "status": "PASS",
+     "detail": "rw_farthest_depth_mip1 level=0 pixels=3600 out_of_tol=0 max_abs_diff=2.88188e-05 expected=(0.19998,0,0) first=(0.199951,0,0,0) tol=0.002"
+    },
+    {
+     "name": "luma_pyramid_atomic_reset",
+     "status": "PASS",
+     "detail": "rw_spd_global_atomic pixels=1 mismatched=0 expected_bits=0x00000000"
+    },
+    {
+     "name": "shading_change_pyramid_flat_mip0",
+     "status": "PASS",
+     "detail": "rw_spd_mip0 level=0 size=80x45 spread=(0,0,0) tol=0.01"
+    },
+    {
+     "name": "shading_change_pyramid_flat_mip1",
+     "status": "PASS",
+     "detail": "rw_spd_mip1 level=1 size=40x22 spread=(0,0,0) tol=0.01"
+    },
+    {
+     "name": "shading_change_pyramid_flat_mip2",
+     "status": "PASS",
+     "detail": "rw_spd_mip2 level=2 size=20x11 spread=(0,0,0) tol=0.01"
+    },
+    {
+     "name": "shading_change_pyramid_flat_mip3",
+     "status": "PASS",
+     "detail": "rw_spd_mip3 level=3 size=10x5 spread=(0,0,0) tol=0.01"
+    },
+    {
+     "name": "shading_change_pyramid_flat_mip4",
+     "status": "PASS",
+     "detail": "rw_spd_mip4 level=4 size=5x2 spread=(0,0,0) tol=0.01"
+    },
+    {
+     "name": "shading_change_pyramid_flat_mip5",
+     "status": "PASS",
+     "detail": "rw_spd_mip5 level=5 size=2x1 spread=(0,0,0) tol=0.01"
+    },
+    {
+     "name": "chain_all_passes_dispatched",
+     "status": "PASS",
+     "detail": "8/8 passes dispatched with GL_ALL_BARRIER_BITS + glFinish"
+    },
+    {
+     "name": "chain_output_readback",
+     "status": "PASS",
+     "detail": "RGBA8 readback"
+    },
+    {
+     "name": "chain_flat_output_invariant",
+     "status": "PASS",
+     "detail": "extent=320x180 min=(96,128,191) max=(96,128,192) input=(96,128,192) spread=1 max_channel_diff=1 tolerance: spread<=1, diff<=3"
+    }
+   ],
+   "errors": []
+  },
+  {
+   "harness": "fsr3_dispatch",
+   "pass": "chain",
+   "status": "PASS",
+   "pattern": "step",
+   "extent": {
+    "render": [
+     160,
+     90
+    ],
+    "upscale": [
+     320,
+     180
+    ]
+   },
+   "reference": {
+    "type": "differential + declared invariants",
+    "description": "host Mesa GLES run of the same adapted ESSL (byte hashes) plus analytic flat-frame expectations; not an independent Vulkan reference"
+   },
+   "renderer": "ANGLE (Qualcomm, Vulkan 1.4.295 (Adreno (TM)  X1-85 (0x43050C01)), Qualcomm Technologies Inc. Adreno Vulkan Driver-512.886.6)",
+   "vendor": "Google Inc. (Qualcomm)",
+   "gl_version": "OpenGL ES 3.2 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+   "glsl_version": "OpenGL ES GLSL ES 3.20 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+   "constants": {
+    "render": 160,
+    "upscale": 320,
+    "device_to_view_depth": [
+     1.00010002,
+     -0.10001,
+     1.02640045,
+     0.577350259
+    ],
+    "jitter_phase_count": 32,
+    "frame_index": 0,
+    "delta_time": 0.016,
+    "accumulation_added_per_frame": 0.333333343,
+    "min_disocclusion_accumulation": -0.333333343
+   },
+   "spd": {
+    "groups": [
+     3,
+     2
+    ],
+    "num_workgroups": 6,
+    "mips": 7,
+    "workgroup_offset": [
+     0,
+     0
+    ],
+    "renderSize": [
+     160,
+     90
+    ]
+   },
+   "passes": [
+    {
+     "name": "prepare_inputs",
+     "shader": "prepare_inputs_essl320.glsl",
+     "shader_sha256": "a624b575604835ed99cc82bd65c43bcdc952db74437ffd4029c8417b20669960",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      20,
+      12
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=8 bytes=256",
+      "sampler2D r_input_depth unit=0 texture=160x90 format=GL_R32F",
+      "sampler2D r_input_motion_vectors unit=1 texture=160x90 format=GL_RG16F",
+      "sampler2D r_input_color_jittered unit=2 texture=160x90 format=GL_RGBA8",
+      "image2D rw_farthest_depth unit=6 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_current_luma unit=7 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_reconstructed_previous_nearest_depth unit=5 level=0 format=GL_R32UI access=READ_WRITE",
+      "image2D rw_dilated_depth unit=4 level=0 format=GL_R32F access=WRITE_ONLY",
+      "image2D rw_dilated_motion_vectors unit=3 level=0 format=GL_RGBA16F access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "luma_pyramid",
+     "shader": "luma_pyramid_essl320.glsl",
+     "shader_sha256": "25c6aebaae4835eff3bcc3362c5bb73ab20018b0a3dd9cf4358cc36862c03c56",
+     "local_size": [
+      256,
+      1
+     ],
+     "groups": [
+      3,
+      2
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=11 bytes=256",
+      "uniform_block cbSPD_t binding=12 bytes=32",
+      "sampler2D r_current_luma unit=0 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth unit=1 texture=160x90 format=GL_RGBA16F",
+      "image2D rw_farthest_depth_mip1 unit=10 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D r_rw_frame_info unit=3 level=0 format=GL_RGBA32F access=READ_ONLY",
+      "image2D rw_frame_info unit=22 level=0 format=GL_RGBA32F access=WRITE_ONLY",
+      "image2D r_rw_spd_mip0 unit=4 level=0 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip1 unit=5 level=1 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip2 unit=6 level=2 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip3 unit=7 level=3 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip4 unit=8 level=4 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip5 unit=9 level=5 format=GL_RGBA16F access=READ_ONLY",
+      "image2D rw_spd_mip0 unit=24 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip1 unit=25 level=1 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip2 unit=26 level=2 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip3 unit=27 level=3 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip4 unit=28 level=4 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip5 unit=29 level=5 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_global_atomic unit=2 level=0 format=GL_R32UI access=READ_WRITE"
+     ]
+    },
+    {
+     "name": "shading_change_pyramid",
+     "shader": "shading_change_pyramid_essl320.glsl",
+     "shader_sha256": "3bfd9cd89b747ce735cd4e222d78c63db1cfe509ecdf977492e930ebb5b3f130",
+     "local_size": [
+      256,
+      1
+     ],
+     "groups": [
+      3,
+      2
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=11 bytes=256",
+      "uniform_block cbSPD_t binding=12 bytes=32",
+      "sampler2D r_dilated_motion_vectors unit=0 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_current_luma unit=1 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=2 texture=1x1 format=GL_R32F",
+      "sampler2D r_previous_luma unit=3 texture=160x90 format=GL_RGBA16F",
+      "image2D r_rw_spd_mip0 unit=5 level=0 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip1 unit=6 level=1 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip2 unit=7 level=2 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip3 unit=8 level=3 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip4 unit=9 level=4 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip5 unit=10 level=5 format=GL_RGBA16F access=READ_ONLY",
+      "image2D rw_spd_mip0 unit=24 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip1 unit=25 level=1 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip2 unit=26 level=2 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip3 unit=27 level=3 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip4 unit=28 level=4 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip5 unit=29 level=5 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_global_atomic unit=4 level=0 format=GL_R32UI access=READ_WRITE"
+     ]
+    },
+    {
+     "name": "shading_change",
+     "shader": "shading_change_essl320.glsl",
+     "shader_sha256": "0835f5e00e38652d7f4470dbe1f8acccc015f09b9b5375bbc03e08594e25a052",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      10,
+      6
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=2 bytes=256",
+      "sampler2D r_spd_mips unit=0 texture=80x45 format=GL_RGBA16F",
+      "sampler2D r_spd_mips unit=1 texture=80x45 format=GL_RGBA16F",
+      "image2D rw_shading_change unit=1 level=0 format=GL_RGBA8 access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "prepare_reactivity",
+     "shader": "prepare_reactivity_essl320.glsl",
+     "shader_sha256": "821a384220c16449a89eff8a4d97463c91c1cfbe1e16d2a0263dc4552076374f",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      20,
+      12
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=12 bytes=256",
+      "sampler2D r_dilated_motion_vectors unit=0 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_dilated_depth unit=1 texture=160x90 format=GL_R32F",
+      "sampler2D r_reconstructed_previous_nearest_depth unit=2 texture=160x90 format=GL_R32UI",
+      "sampler2D r_reactive_mask unit=3 texture=1x1 format=GL_R8",
+      "sampler2D r_shading_change unit=4 texture=80x45 format=GL_RGBA8",
+      "sampler2D r_transparency_and_composition_mask unit=5 texture=1x1 format=GL_R8",
+      "sampler2D r_transparency_and_composition_mask unit=6 texture=1x1 format=GL_R8",
+      "sampler2D r_accumulation unit=7 texture=160x90 format=GL_RGBA8",
+      "sampler2D r_current_luma unit=8 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=9 texture=1x1 format=GL_R32F",
+      "image2D rw_accumulation unit=11 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D rw_new_locks unit=23 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D rw_dilated_reactive_masks unit=9 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D r_rw_new_locks unit=10 level=0 format=GL_RGBA8 access=READ_ONLY"
+     ]
+    },
+    {
+     "name": "luma_instability",
+     "shader": "luma_instability_essl320.glsl",
+     "shader_sha256": "b8425c8503ca6371a8f37e640262aba614c08ec201469c4d535529963ee2a153",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      20,
+      12
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=9 bytes=256",
+      "sampler2D r_dilated_motion_vectors unit=0 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_dilated_reactive_masks unit=1 texture=160x90 format=GL_RGBA8",
+      "sampler2D r_current_luma unit=2 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=3 texture=1x1 format=GL_R32F",
+      "sampler2D r_luma_history unit=4 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=5 texture=80x45 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=6 texture=80x45 format=GL_RGBA16F",
+      "image2D rw_luma_history unit=7 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_luma_instability unit=8 level=0 format=GL_RGBA16F access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "accumulate",
+     "shader": "accumulate_essl320.glsl",
+     "shader_sha256": "f02e2a4f97841efa1ed124066e353091e0aca5fc043d0471489cdc2c45f22b16",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      40,
+      23
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=12 bytes=256",
+      "sampler2D r_input_motion_vectors unit=0 texture=160x90 format=GL_RG16F",
+      "sampler2D r_luma_instability unit=1 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=2 texture=80x45 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=3 texture=80x45 format=GL_RGBA16F",
+      "sampler2D r_dilated_reactive_masks unit=4 texture=160x90 format=GL_RGBA8",
+      "sampler2D r_internal_upscaled_color unit=5 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=6 texture=1x1 format=GL_R32F",
+      "sampler2D r_input_color_jittered unit=7 texture=160x90 format=GL_RGBA8",
+      "image2D rw_internal_upscaled_color unit=9 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_upscaled_output unit=10 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D r_rw_new_locks unit=11 level=0 format=GL_RGBA8 access=READ_ONLY",
+      "image2D rw_new_locks unit=23 level=0 format=GL_RGBA8 access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "rcas",
+     "shader": "rcas_essl320.glsl",
+     "shader_sha256": "b64ac08df15ef7ae92176881cd29696e92e02acecbb2e11f60f19aecc6aeaf7d",
+     "local_size": [
+      64,
+      1
+     ],
+     "groups": [
+      20,
+      12
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbRCAS_t binding=4 bytes=16",
+      "uniform_block cbFSR3UPSCALER_t binding=3 bytes=256",
+      "sampler2D r_rcas_input unit=0 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=1 texture=1x1 format=GL_R32F",
+      "image2D rw_upscaled_output unit=2 level=0 format=GL_RGBA8 access=WRITE_ONLY"
+     ]
+    }
+   ],
+   "hashes": {
+    "output": "3babf435ebe710883253ec2aadb0c1e83bd0d4f071e5e8efd8debe45a1a371a4",
+    "dilated_motion": "d8b443032200e143b1c49820b6d78c32d519553a3f63a38f48e8bc31da084f0a",
+    "reconstructed_depth": "864166db82d567116e650fbee347d086a29071398c9386a3b59e00d21df66ee9",
+    "spd_mip5": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+    "shading_change": "9202e68fbe5587e30738f2f118e87e10202a6eabd7297e1299978ed53c3a8f46",
+    "dilated_reactive": "6d6f368a78a3311505f9333eb9e51c24577d66124672d53a4f4d338752eb23c8"
+   },
+   "checks": [
+    {
+     "name": "chain_compile_link",
+     "status": "PASS",
+     "detail": "8/8 adapted passes compiled and linked"
+    },
+    {
+     "name": "prepare_inputs_reconstructed_depth",
+     "status": "PASS",
+     "detail": "rw_reconstructed_previous_nearest_depth pixels=14400 mismatched=0 expected_bits=0x3f000000"
+    },
+    {
+     "name": "prepare_inputs_dilated_depth",
+     "status": "PASS",
+     "detail": "rw_dilated_depth pixels=14400 out_of_tol=0 max_abs_diff=0 expected=0.5 tol=1e-06"
+    },
+    {
+     "name": "prepare_inputs_dilated_motion",
+     "status": "PASS",
+     "detail": "rw_dilated_motion_vectors level=0 pixels=14400 out_of_tol=0 max_abs_diff=0 expected=(0,0,0) first=(0,0,0,0) tol=0"
+    },
+    {
+     "name": "prepare_inputs_farthest_depth",
+     "status": "PASS",
+     "detail": "rw_farthest_depth level=0 pixels=14400 out_of_tol=0 max_abs_diff=2.88188e-05 expected=(0.19998,0,0) first=(0.199951,0,0,0) tol=0.002"
+    },
+    {
+     "name": "chain_all_passes_dispatched",
+     "status": "PASS",
+     "detail": "8/8 passes dispatched with GL_ALL_BARRIER_BITS + glFinish"
+    },
+    {
+     "name": "chain_output_readback",
+     "status": "PASS",
+     "detail": "RGBA8 readback"
+    },
+    {
+     "name": "chain_step_output_non_degenerate",
+     "status": "PASS",
+     "detail": "min=16 max=239 (synthetic step frame, differential reference)"
+    }
+   ],
+   "errors": []
+  },
+  {
+   "harness": "fsr3_dispatch",
+   "pass": "chain",
+   "status": "PASS",
+   "pattern": "flat",
+   "extent": {
+    "render": [
+     320,
+     180
+    ],
+    "upscale": [
+     480,
+     270
+    ]
+   },
+   "reference": {
+    "type": "differential + declared invariants",
+    "description": "host Mesa GLES run of the same adapted ESSL (byte hashes) plus analytic flat-frame expectations; not an independent Vulkan reference"
+   },
+   "renderer": "ANGLE (Qualcomm, Vulkan 1.4.295 (Adreno (TM)  X1-85 (0x43050C01)), Qualcomm Technologies Inc. Adreno Vulkan Driver-512.886.6)",
+   "vendor": "Google Inc. (Qualcomm)",
+   "gl_version": "OpenGL ES 3.2 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+   "glsl_version": "OpenGL ES GLSL ES 3.20 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+   "constants": {
+    "render": 320,
+    "upscale": 480,
+    "device_to_view_depth": [
+     1.00010002,
+     -0.10001,
+     1.02640045,
+     0.577350259
+    ],
+    "jitter_phase_count": 18,
+    "frame_index": 0,
+    "delta_time": 0.016,
+    "accumulation_added_per_frame": 0.333333343,
+    "min_disocclusion_accumulation": -0.333333343
+   },
+   "spd": {
+    "groups": [
+     5,
+     3
+    ],
+    "num_workgroups": 15,
+    "mips": 8,
+    "workgroup_offset": [
+     0,
+     0
+    ],
+    "renderSize": [
+     320,
+     180
+    ]
+   },
+   "passes": [
+    {
+     "name": "prepare_inputs",
+     "shader": "prepare_inputs_essl320.glsl",
+     "shader_sha256": "a624b575604835ed99cc82bd65c43bcdc952db74437ffd4029c8417b20669960",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      40,
+      23
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=8 bytes=256",
+      "sampler2D r_input_depth unit=0 texture=320x180 format=GL_R32F",
+      "sampler2D r_input_motion_vectors unit=1 texture=320x180 format=GL_RG16F",
+      "sampler2D r_input_color_jittered unit=2 texture=320x180 format=GL_RGBA8",
+      "image2D rw_farthest_depth unit=6 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_current_luma unit=7 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_reconstructed_previous_nearest_depth unit=5 level=0 format=GL_R32UI access=READ_WRITE",
+      "image2D rw_dilated_depth unit=4 level=0 format=GL_R32F access=WRITE_ONLY",
+      "image2D rw_dilated_motion_vectors unit=3 level=0 format=GL_RGBA16F access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "luma_pyramid",
+     "shader": "luma_pyramid_essl320.glsl",
+     "shader_sha256": "25c6aebaae4835eff3bcc3362c5bb73ab20018b0a3dd9cf4358cc36862c03c56",
+     "local_size": [
+      256,
+      1
+     ],
+     "groups": [
+      5,
+      3
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=11 bytes=256",
+      "uniform_block cbSPD_t binding=12 bytes=32",
+      "sampler2D r_current_luma unit=0 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth unit=1 texture=320x180 format=GL_RGBA16F",
+      "image2D rw_farthest_depth_mip1 unit=10 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D r_rw_frame_info unit=3 level=0 format=GL_RGBA32F access=READ_ONLY",
+      "image2D rw_frame_info unit=22 level=0 format=GL_RGBA32F access=WRITE_ONLY",
+      "image2D r_rw_spd_mip0 unit=4 level=0 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip1 unit=5 level=1 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip2 unit=6 level=2 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip3 unit=7 level=3 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip4 unit=8 level=4 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip5 unit=9 level=5 format=GL_RGBA16F access=READ_ONLY",
+      "image2D rw_spd_mip0 unit=24 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip1 unit=25 level=1 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip2 unit=26 level=2 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip3 unit=27 level=3 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip4 unit=28 level=4 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip5 unit=29 level=5 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_global_atomic unit=2 level=0 format=GL_R32UI access=READ_WRITE"
+     ]
+    },
+    {
+     "name": "shading_change_pyramid",
+     "shader": "shading_change_pyramid_essl320.glsl",
+     "shader_sha256": "3bfd9cd89b747ce735cd4e222d78c63db1cfe509ecdf977492e930ebb5b3f130",
+     "local_size": [
+      256,
+      1
+     ],
+     "groups": [
+      5,
+      3
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=11 bytes=256",
+      "uniform_block cbSPD_t binding=12 bytes=32",
+      "sampler2D r_dilated_motion_vectors unit=0 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_current_luma unit=1 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=2 texture=1x1 format=GL_R32F",
+      "sampler2D r_previous_luma unit=3 texture=320x180 format=GL_RGBA16F",
+      "image2D r_rw_spd_mip0 unit=5 level=0 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip1 unit=6 level=1 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip2 unit=7 level=2 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip3 unit=8 level=3 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip4 unit=9 level=4 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip5 unit=10 level=5 format=GL_RGBA16F access=READ_ONLY",
+      "image2D rw_spd_mip0 unit=24 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip1 unit=25 level=1 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip2 unit=26 level=2 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip3 unit=27 level=3 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip4 unit=28 level=4 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip5 unit=29 level=5 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_global_atomic unit=4 level=0 format=GL_R32UI access=READ_WRITE"
+     ]
+    },
+    {
+     "name": "shading_change",
+     "shader": "shading_change_essl320.glsl",
+     "shader_sha256": "0835f5e00e38652d7f4470dbe1f8acccc015f09b9b5375bbc03e08594e25a052",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      20,
+      12
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=2 bytes=256",
+      "sampler2D r_spd_mips unit=0 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_spd_mips unit=1 texture=160x90 format=GL_RGBA16F",
+      "image2D rw_shading_change unit=1 level=0 format=GL_RGBA8 access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "prepare_reactivity",
+     "shader": "prepare_reactivity_essl320.glsl",
+     "shader_sha256": "821a384220c16449a89eff8a4d97463c91c1cfbe1e16d2a0263dc4552076374f",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      40,
+      23
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=12 bytes=256",
+      "sampler2D r_dilated_motion_vectors unit=0 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_dilated_depth unit=1 texture=320x180 format=GL_R32F",
+      "sampler2D r_reconstructed_previous_nearest_depth unit=2 texture=320x180 format=GL_R32UI",
+      "sampler2D r_reactive_mask unit=3 texture=1x1 format=GL_R8",
+      "sampler2D r_shading_change unit=4 texture=160x90 format=GL_RGBA8",
+      "sampler2D r_transparency_and_composition_mask unit=5 texture=1x1 format=GL_R8",
+      "sampler2D r_transparency_and_composition_mask unit=6 texture=1x1 format=GL_R8",
+      "sampler2D r_accumulation unit=7 texture=320x180 format=GL_RGBA8",
+      "sampler2D r_current_luma unit=8 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=9 texture=1x1 format=GL_R32F",
+      "image2D rw_accumulation unit=11 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D rw_new_locks unit=23 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D rw_dilated_reactive_masks unit=9 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D r_rw_new_locks unit=10 level=0 format=GL_RGBA8 access=READ_ONLY"
+     ]
+    },
+    {
+     "name": "luma_instability",
+     "shader": "luma_instability_essl320.glsl",
+     "shader_sha256": "b8425c8503ca6371a8f37e640262aba614c08ec201469c4d535529963ee2a153",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      40,
+      23
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=9 bytes=256",
+      "sampler2D r_dilated_motion_vectors unit=0 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_dilated_reactive_masks unit=1 texture=320x180 format=GL_RGBA8",
+      "sampler2D r_current_luma unit=2 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=3 texture=1x1 format=GL_R32F",
+      "sampler2D r_luma_history unit=4 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=5 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=6 texture=160x90 format=GL_RGBA16F",
+      "image2D rw_luma_history unit=7 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_luma_instability unit=8 level=0 format=GL_RGBA16F access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "accumulate",
+     "shader": "accumulate_essl320.glsl",
+     "shader_sha256": "f02e2a4f97841efa1ed124066e353091e0aca5fc043d0471489cdc2c45f22b16",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      60,
+      34
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=12 bytes=256",
+      "sampler2D r_input_motion_vectors unit=0 texture=320x180 format=GL_RG16F",
+      "sampler2D r_luma_instability unit=1 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=2 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=3 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_dilated_reactive_masks unit=4 texture=320x180 format=GL_RGBA8",
+      "sampler2D r_internal_upscaled_color unit=5 texture=480x270 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=6 texture=1x1 format=GL_R32F",
+      "sampler2D r_input_color_jittered unit=7 texture=320x180 format=GL_RGBA8",
+      "image2D rw_internal_upscaled_color unit=9 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_upscaled_output unit=10 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D r_rw_new_locks unit=11 level=0 format=GL_RGBA8 access=READ_ONLY",
+      "image2D rw_new_locks unit=23 level=0 format=GL_RGBA8 access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "rcas",
+     "shader": "rcas_essl320.glsl",
+     "shader_sha256": "b64ac08df15ef7ae92176881cd29696e92e02acecbb2e11f60f19aecc6aeaf7d",
+     "local_size": [
+      64,
+      1
+     ],
+     "groups": [
+      30,
+      17
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbRCAS_t binding=4 bytes=16",
+      "uniform_block cbFSR3UPSCALER_t binding=3 bytes=256",
+      "sampler2D r_rcas_input unit=0 texture=480x270 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=1 texture=1x1 format=GL_R32F",
+      "image2D rw_upscaled_output unit=2 level=0 format=GL_RGBA8 access=WRITE_ONLY"
+     ]
+    }
+   ],
+   "hashes": {
+    "output": "b2a26fa9b66da16c3f558b7ad33a02d57e633d258127d0c58e84e3025dcae8ec",
+    "dilated_motion": "91d2d62a5700cbf9404e3c575c3b6fc19e1e31c24c6fcfc0a2cf70d41314b447",
+    "reconstructed_depth": "bb7a01adb087b6d1b2c9fdee6a2f79fc9cd12568dc9f4284d29ea8f7a9b60b7c",
+    "spd_mip5": "5b6fb58e61fa475939767d68a446f97f1bff02c0e5935a3ea8bb51e6515783d8",
+    "shading_change": "c72274a22cba2dcef62e0f62834446ee39b0cd95ad0faa27a89b3b49f48aa390",
+    "dilated_reactive": "ec0371ef2f34e157857bbe15b09ff060f91b7a2fe115b696dcfbe12b2c6afb11"
+   },
+   "checks": [
+    {
+     "name": "chain_compile_link",
+     "status": "PASS",
+     "detail": "8/8 adapted passes compiled and linked"
+    },
+    {
+     "name": "prepare_inputs_reconstructed_depth",
+     "status": "PASS",
+     "detail": "rw_reconstructed_previous_nearest_depth pixels=57600 mismatched=0 expected_bits=0x3f000000"
+    },
+    {
+     "name": "prepare_inputs_dilated_depth",
+     "status": "PASS",
+     "detail": "rw_dilated_depth pixels=57600 out_of_tol=0 max_abs_diff=0 expected=0.5 tol=1e-06"
+    },
+    {
+     "name": "prepare_inputs_dilated_motion",
+     "status": "PASS",
+     "detail": "rw_dilated_motion_vectors level=0 pixels=57600 out_of_tol=0 max_abs_diff=0 expected=(0,0,0) first=(0,0,0,0) tol=0"
+    },
+    {
+     "name": "prepare_inputs_current_luma",
+     "status": "PASS",
+     "detail": "rw_current_luma level=0 pixels=57600 out_of_tol=0 max_abs_diff=0.000238329 expected=(0.493402,0,0) first=(0.493164,0,0,0) tol=0.002"
+    },
+    {
+     "name": "prepare_inputs_farthest_depth",
+     "status": "PASS",
+     "detail": "rw_farthest_depth level=0 pixels=57600 out_of_tol=0 max_abs_diff=2.88188e-05 expected=(0.19998,0,0) first=(0.199951,0,0,0) tol=0.002"
+    },
+    {
+     "name": "luma_pyramid_mip5_average",
+     "status": "PASS",
+     "detail": "rw_spd_mip5 level=5 pixels=10 out_of_tol=0 max_abs_diff=0.000238329 expected=(6.1e-05,0.493402,0) first=(6.09756e-05,0.493164,0,0) tol=0.005"
+    },
+    {
+     "name": "luma_pyramid_farthest_mip1",
+     "status": "PASS",
+     "detail": "rw_farthest_depth_mip1 level=0 pixels=14400 out_of_tol=0 max_abs_diff=2.88188e-05 expected=(0.19998,0,0) first=(0.199951,0,0,0) tol=0.002"
+    },
+    {
+     "name": "luma_pyramid_atomic_reset",
+     "status": "PASS",
+     "detail": "rw_spd_global_atomic pixels=1 mismatched=0 expected_bits=0x00000000"
+    },
+    {
+     "name": "shading_change_pyramid_flat_mip0",
+     "status": "PASS",
+     "detail": "rw_spd_mip0 level=0 size=160x90 spread=(0,0,0) tol=0.01"
+    },
+    {
+     "name": "shading_change_pyramid_flat_mip1",
+     "status": "PASS",
+     "detail": "rw_spd_mip1 level=1 size=80x45 spread=(0,0,0) tol=0.01"
+    },
+    {
+     "name": "shading_change_pyramid_flat_mip2",
+     "status": "PASS",
+     "detail": "rw_spd_mip2 level=2 size=40x22 spread=(0,0,0) tol=0.01"
+    },
+    {
+     "name": "shading_change_pyramid_flat_mip3",
+     "status": "PASS",
+     "detail": "rw_spd_mip3 level=3 size=20x11 spread=(0,0,0) tol=0.01"
+    },
+    {
+     "name": "shading_change_pyramid_flat_mip4",
+     "status": "PASS",
+     "detail": "rw_spd_mip4 level=4 size=10x5 spread=(0,0,0) tol=0.01"
+    },
+    {
+     "name": "shading_change_pyramid_flat_mip5",
+     "status": "PASS",
+     "detail": "rw_spd_mip5 level=5 size=5x2 spread=(0,0,0) tol=0.01"
+    },
+    {
+     "name": "chain_all_passes_dispatched",
+     "status": "PASS",
+     "detail": "8/8 passes dispatched with GL_ALL_BARRIER_BITS + glFinish"
+    },
+    {
+     "name": "chain_output_readback",
+     "status": "PASS",
+     "detail": "RGBA8 readback"
+    },
+    {
+     "name": "chain_flat_output_invariant",
+     "status": "PASS",
+     "detail": "extent=480x270 min=(96,128,191) max=(96,128,192) input=(96,128,192) spread=1 max_channel_diff=1 tolerance: spread<=1, diff<=3"
+    }
+   ],
+   "errors": []
+  },
+  {
+   "harness": "fsr3_dispatch",
+   "pass": "chain",
+   "status": "PASS",
+   "pattern": "step",
+   "extent": {
+    "render": [
+     320,
+     180
+    ],
+    "upscale": [
+     480,
+     270
+    ]
+   },
+   "reference": {
+    "type": "differential + declared invariants",
+    "description": "host Mesa GLES run of the same adapted ESSL (byte hashes) plus analytic flat-frame expectations; not an independent Vulkan reference"
+   },
+   "renderer": "ANGLE (Qualcomm, Vulkan 1.4.295 (Adreno (TM)  X1-85 (0x43050C01)), Qualcomm Technologies Inc. Adreno Vulkan Driver-512.886.6)",
+   "vendor": "Google Inc. (Qualcomm)",
+   "gl_version": "OpenGL ES 3.2 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+   "glsl_version": "OpenGL ES GLSL ES 3.20 (ANGLE 2.1 git hash: 89ef25f8f92e103b5bec64e19e36f308aac15164)",
+   "constants": {
+    "render": 320,
+    "upscale": 480,
+    "device_to_view_depth": [
+     1.00010002,
+     -0.10001,
+     1.02640045,
+     0.577350259
+    ],
+    "jitter_phase_count": 18,
+    "frame_index": 0,
+    "delta_time": 0.016,
+    "accumulation_added_per_frame": 0.333333343,
+    "min_disocclusion_accumulation": -0.333333343
+   },
+   "spd": {
+    "groups": [
+     5,
+     3
+    ],
+    "num_workgroups": 15,
+    "mips": 8,
+    "workgroup_offset": [
+     0,
+     0
+    ],
+    "renderSize": [
+     320,
+     180
+    ]
+   },
+   "passes": [
+    {
+     "name": "prepare_inputs",
+     "shader": "prepare_inputs_essl320.glsl",
+     "shader_sha256": "a624b575604835ed99cc82bd65c43bcdc952db74437ffd4029c8417b20669960",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      40,
+      23
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=8 bytes=256",
+      "sampler2D r_input_depth unit=0 texture=320x180 format=GL_R32F",
+      "sampler2D r_input_motion_vectors unit=1 texture=320x180 format=GL_RG16F",
+      "sampler2D r_input_color_jittered unit=2 texture=320x180 format=GL_RGBA8",
+      "image2D rw_farthest_depth unit=6 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_current_luma unit=7 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_reconstructed_previous_nearest_depth unit=5 level=0 format=GL_R32UI access=READ_WRITE",
+      "image2D rw_dilated_depth unit=4 level=0 format=GL_R32F access=WRITE_ONLY",
+      "image2D rw_dilated_motion_vectors unit=3 level=0 format=GL_RGBA16F access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "luma_pyramid",
+     "shader": "luma_pyramid_essl320.glsl",
+     "shader_sha256": "25c6aebaae4835eff3bcc3362c5bb73ab20018b0a3dd9cf4358cc36862c03c56",
+     "local_size": [
+      256,
+      1
+     ],
+     "groups": [
+      5,
+      3
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=11 bytes=256",
+      "uniform_block cbSPD_t binding=12 bytes=32",
+      "sampler2D r_current_luma unit=0 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth unit=1 texture=320x180 format=GL_RGBA16F",
+      "image2D rw_farthest_depth_mip1 unit=10 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D r_rw_frame_info unit=3 level=0 format=GL_RGBA32F access=READ_ONLY",
+      "image2D rw_frame_info unit=22 level=0 format=GL_RGBA32F access=WRITE_ONLY",
+      "image2D r_rw_spd_mip0 unit=4 level=0 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip1 unit=5 level=1 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip2 unit=6 level=2 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip3 unit=7 level=3 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip4 unit=8 level=4 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip5 unit=9 level=5 format=GL_RGBA16F access=READ_ONLY",
+      "image2D rw_spd_mip0 unit=24 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip1 unit=25 level=1 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip2 unit=26 level=2 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip3 unit=27 level=3 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip4 unit=28 level=4 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip5 unit=29 level=5 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_global_atomic unit=2 level=0 format=GL_R32UI access=READ_WRITE"
+     ]
+    },
+    {
+     "name": "shading_change_pyramid",
+     "shader": "shading_change_pyramid_essl320.glsl",
+     "shader_sha256": "3bfd9cd89b747ce735cd4e222d78c63db1cfe509ecdf977492e930ebb5b3f130",
+     "local_size": [
+      256,
+      1
+     ],
+     "groups": [
+      5,
+      3
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=11 bytes=256",
+      "uniform_block cbSPD_t binding=12 bytes=32",
+      "sampler2D r_dilated_motion_vectors unit=0 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_current_luma unit=1 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=2 texture=1x1 format=GL_R32F",
+      "sampler2D r_previous_luma unit=3 texture=320x180 format=GL_RGBA16F",
+      "image2D r_rw_spd_mip0 unit=5 level=0 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip1 unit=6 level=1 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip2 unit=7 level=2 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip3 unit=8 level=3 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip4 unit=9 level=4 format=GL_RGBA16F access=READ_ONLY",
+      "image2D r_rw_spd_mip5 unit=10 level=5 format=GL_RGBA16F access=READ_ONLY",
+      "image2D rw_spd_mip0 unit=24 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip1 unit=25 level=1 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip2 unit=26 level=2 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip3 unit=27 level=3 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip4 unit=28 level=4 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_mip5 unit=29 level=5 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_spd_global_atomic unit=4 level=0 format=GL_R32UI access=READ_WRITE"
+     ]
+    },
+    {
+     "name": "shading_change",
+     "shader": "shading_change_essl320.glsl",
+     "shader_sha256": "0835f5e00e38652d7f4470dbe1f8acccc015f09b9b5375bbc03e08594e25a052",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      20,
+      12
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=2 bytes=256",
+      "sampler2D r_spd_mips unit=0 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_spd_mips unit=1 texture=160x90 format=GL_RGBA16F",
+      "image2D rw_shading_change unit=1 level=0 format=GL_RGBA8 access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "prepare_reactivity",
+     "shader": "prepare_reactivity_essl320.glsl",
+     "shader_sha256": "821a384220c16449a89eff8a4d97463c91c1cfbe1e16d2a0263dc4552076374f",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      40,
+      23
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=12 bytes=256",
+      "sampler2D r_dilated_motion_vectors unit=0 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_dilated_depth unit=1 texture=320x180 format=GL_R32F",
+      "sampler2D r_reconstructed_previous_nearest_depth unit=2 texture=320x180 format=GL_R32UI",
+      "sampler2D r_reactive_mask unit=3 texture=1x1 format=GL_R8",
+      "sampler2D r_shading_change unit=4 texture=160x90 format=GL_RGBA8",
+      "sampler2D r_transparency_and_composition_mask unit=5 texture=1x1 format=GL_R8",
+      "sampler2D r_transparency_and_composition_mask unit=6 texture=1x1 format=GL_R8",
+      "sampler2D r_accumulation unit=7 texture=320x180 format=GL_RGBA8",
+      "sampler2D r_current_luma unit=8 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=9 texture=1x1 format=GL_R32F",
+      "image2D rw_accumulation unit=11 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D rw_new_locks unit=23 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D rw_dilated_reactive_masks unit=9 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D r_rw_new_locks unit=10 level=0 format=GL_RGBA8 access=READ_ONLY"
+     ]
+    },
+    {
+     "name": "luma_instability",
+     "shader": "luma_instability_essl320.glsl",
+     "shader_sha256": "b8425c8503ca6371a8f37e640262aba614c08ec201469c4d535529963ee2a153",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      40,
+      23
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=9 bytes=256",
+      "sampler2D r_dilated_motion_vectors unit=0 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_dilated_reactive_masks unit=1 texture=320x180 format=GL_RGBA8",
+      "sampler2D r_current_luma unit=2 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=3 texture=1x1 format=GL_R32F",
+      "sampler2D r_luma_history unit=4 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=5 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=6 texture=160x90 format=GL_RGBA16F",
+      "image2D rw_luma_history unit=7 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_luma_instability unit=8 level=0 format=GL_RGBA16F access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "accumulate",
+     "shader": "accumulate_essl320.glsl",
+     "shader_sha256": "f02e2a4f97841efa1ed124066e353091e0aca5fc043d0471489cdc2c45f22b16",
+     "local_size": [
+      8,
+      8
+     ],
+     "groups": [
+      60,
+      34
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbFSR3UPSCALER_t binding=12 bytes=256",
+      "sampler2D r_input_motion_vectors unit=0 texture=320x180 format=GL_RG16F",
+      "sampler2D r_luma_instability unit=1 texture=320x180 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=2 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_farthest_depth_mip1 unit=3 texture=160x90 format=GL_RGBA16F",
+      "sampler2D r_dilated_reactive_masks unit=4 texture=320x180 format=GL_RGBA8",
+      "sampler2D r_internal_upscaled_color unit=5 texture=480x270 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=6 texture=1x1 format=GL_R32F",
+      "sampler2D r_input_color_jittered unit=7 texture=320x180 format=GL_RGBA8",
+      "image2D rw_internal_upscaled_color unit=9 level=0 format=GL_RGBA16F access=WRITE_ONLY",
+      "image2D rw_upscaled_output unit=10 level=0 format=GL_RGBA8 access=WRITE_ONLY",
+      "image2D r_rw_new_locks unit=11 level=0 format=GL_RGBA8 access=READ_ONLY",
+      "image2D rw_new_locks unit=23 level=0 format=GL_RGBA8 access=WRITE_ONLY"
+     ]
+    },
+    {
+     "name": "rcas",
+     "shader": "rcas_essl320.glsl",
+     "shader_sha256": "b64ac08df15ef7ae92176881cd29696e92e02acecbb2e11f60f19aecc6aeaf7d",
+     "local_size": [
+      64,
+      1
+     ],
+     "groups": [
+      30,
+      17
+     ],
+     "barrier": "GL_ALL_BARRIER_BITS",
+     "status": "PASS",
+     "bindings": [
+      "uniform_block cbRCAS_t binding=4 bytes=16",
+      "uniform_block cbFSR3UPSCALER_t binding=3 bytes=256",
+      "sampler2D r_rcas_input unit=0 texture=480x270 format=GL_RGBA16F",
+      "sampler2D r_input_exposure unit=1 texture=1x1 format=GL_R32F",
+      "image2D rw_upscaled_output unit=2 level=0 format=GL_RGBA8 access=WRITE_ONLY"
+     ]
+    }
+   ],
+   "hashes": {
+    "output": "d32ad243eb38c7720a18b8d47ee10f8f7ade114196eee39b45b867516c9666bc",
+    "dilated_motion": "91d2d62a5700cbf9404e3c575c3b6fc19e1e31c24c6fcfc0a2cf70d41314b447",
+    "reconstructed_depth": "bb7a01adb087b6d1b2c9fdee6a2f79fc9cd12568dc9f4284d29ea8f7a9b60b7c",
+    "spd_mip5": "5b6fb58e61fa475939767d68a446f97f1bff02c0e5935a3ea8bb51e6515783d8",
+    "shading_change": "c72274a22cba2dcef62e0f62834446ee39b0cd95ad0faa27a89b3b49f48aa390",
+    "dilated_reactive": "ec0371ef2f34e157857bbe15b09ff060f91b7a2fe115b696dcfbe12b2c6afb11"
+   },
+   "checks": [
+    {
+     "name": "chain_compile_link",
+     "status": "PASS",
+     "detail": "8/8 adapted passes compiled and linked"
+    },
+    {
+     "name": "prepare_inputs_reconstructed_depth",
+     "status": "PASS",
+     "detail": "rw_reconstructed_previous_nearest_depth pixels=57600 mismatched=0 expected_bits=0x3f000000"
+    },
+    {
+     "name": "prepare_inputs_dilated_depth",
+     "status": "PASS",
+     "detail": "rw_dilated_depth pixels=57600 out_of_tol=0 max_abs_diff=0 expected=0.5 tol=1e-06"
+    },
+    {
+     "name": "prepare_inputs_dilated_motion",
+     "status": "PASS",
+     "detail": "rw_dilated_motion_vectors level=0 pixels=57600 out_of_tol=0 max_abs_diff=0 expected=(0,0,0) first=(0,0,0,0) tol=0"
+    },
+    {
+     "name": "prepare_inputs_farthest_depth",
+     "status": "PASS",
+     "detail": "rw_farthest_depth level=0 pixels=57600 out_of_tol=0 max_abs_diff=2.88188e-05 expected=(0.19998,0,0) first=(0.199951,0,0,0) tol=0.002"
+    },
+    {
+     "name": "chain_all_passes_dispatched",
+     "status": "PASS",
+     "detail": "8/8 passes dispatched with GL_ALL_BARRIER_BITS + glFinish"
+    },
+    {
+     "name": "chain_output_readback",
+     "status": "PASS",
+     "detail": "RGBA8 readback"
+    },
+    {
+     "name": "chain_step_output_non_degenerate",
+     "status": "PASS",
+     "detail": "min=16 max=238 (synthetic step frame, differential reference)"
+    }
+   ],
+   "errors": []
+  }
+ ]
+}

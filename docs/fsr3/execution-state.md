@@ -49,9 +49,9 @@ source of truth for the pre-FSR3 renderer/pack history.
 | S0 baseline/provenance | **PASS for identity; PARTIAL for regression baseline** | APK/core hashes, device tuple, host tests; white UI/ACT/WSR baseline not rerun in this lane |
 | S1 spatial foundation | **PARTIAL: host/build PASS, device NOT RUN** | Core branch `5f0c421` corrects dataflow/sizing; independent review running; adapter still needs to render the scene at the derived extent |
 | S2 contract | **PASS (frozen)** | `docs/fsr3/frame-contract.md` ABI v1 |
-| S2 backend feasibility | **PARTIAL: compile/ops PASS, dispatch NOT RUN** | X1E probe 14/22 with expected failures; 12/12 ESSL shaders compile; 10/10 host SPIRV-Cross; decision continue GLES |
+| S2 backend feasibility | **PASS (compile/ops + one-pass/full-chain dispatch)** | X1E RCAS exact vs CPU; 8-pass chain executed at 2x/1.5x with host parity; independent Vulkan and multi-frame history NOT RUN |
 | S2 game audit | **PASS (source)** | `docs/fsr3/audits/minecraft-iris-pass-input.md`: final TAA is `composite6`, jitter is partial, no velocity buffer in Iris 1.8.14 |
-| S3 native temporal backend | **BLOCKED** | waits for S2 decision |
+| S3 native temporal backend | **READY** | S2 dispatch gate passed; production backend/controller not yet in-tree |
 | S4 first game path | **BLOCKED** | waits for S1/S2/S3 |
 | S5 Complementary | **BLOCKED** | waits for S4 |
 | S6 qualification | **NOT RUN** | no FSR3 installation exists |
@@ -81,7 +81,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 
 1. Review core FSR1 diff and evidence; integrate only after the off path and truthful failure
    checks are demonstrated.
-2. Execute one adapted FSR3 pass and then the full 8-pass chain against the reference.
+2. Implement the in-tree GLES backend/controller against ABI v1; execute multi-frame history/reset next.
 3. Reconcile the game audit with the frozen ABI, then assign the first vertical slice.
 4. Build the first FSR3-capable test binary and run the white UI/ACT/WSR baseline before any
    performance claim.

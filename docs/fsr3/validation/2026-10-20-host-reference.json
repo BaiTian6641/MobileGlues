@@ -1,0 +1,162 @@
+{
+ "host": {
+  "renderer": "AMD Radeon Graphics (radeonsi, gfx1151, ACO, DRM 3.64, 7.0.0-38-generic)",
+  "vendor": "AMD",
+  "gl_version": "OpenGL ES 3.2 Mesa 26.0.0-devel"
+ },
+ "note": "Declared deterministic reference: the same adapted ESSL executed on host Mesa GLES 3.2. Regenerate with tools/fsr3_spike/dispatch/make_shaders.sh and reproduce.sh.",
+ "runs": [
+  {
+   "mode": "rcas",
+   "status": "PASS",
+   "extent": [
+    320,
+    180
+   ],
+   "output_sha256": "4463cdf65617df8a889aa0331e68777a56d0b76811218ea9a094a08f0af71819",
+   "shader_sha256": "b64ac08df15ef7ae92176881cd29696e92e02acecbb2e11f60f19aecc6aeaf7d"
+  },
+  {
+   "mode": "rcas",
+   "status": "PASS",
+   "extent": [
+    640,
+    360
+   ],
+   "output_sha256": "6e654a8766f7cdb4a752bd59cc4769144227f3bba8a9396af71e6b71f944540e",
+   "shader_sha256": "b64ac08df15ef7ae92176881cd29696e92e02acecbb2e11f60f19aecc6aeaf7d"
+  },
+  {
+   "mode": "chain",
+   "pattern": "flat",
+   "extent": {
+    "render": [
+     160,
+     90
+    ],
+    "upscale": [
+     320,
+     180
+    ]
+   },
+   "status": "PASS",
+   "hashes": {
+    "output": "010e45072c02a4ab360a2d54758c096b6d5eadeaf78ec73559e66d64748daee2",
+    "dilated_motion": "d8b443032200e143b1c49820b6d78c32d519553a3f63a38f48e8bc31da084f0a",
+    "reconstructed_depth": "864166db82d567116e650fbee347d086a29071398c9386a3b59e00d21df66ee9",
+    "spd_mip5": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+    "shading_change": "9202e68fbe5587e30738f2f118e87e10202a6eabd7297e1299978ed53c3a8f46",
+    "dilated_reactive": "6d6f368a78a3311505f9333eb9e51c24577d66124672d53a4f4d338752eb23c8"
+   },
+   "pass_shader_sha256": {
+    "prepare_inputs": "a624b575604835ed99cc82bd65c43bcdc952db74437ffd4029c8417b20669960",
+    "luma_pyramid": "25c6aebaae4835eff3bcc3362c5bb73ab20018b0a3dd9cf4358cc36862c03c56",
+    "shading_change_pyramid": "3bfd9cd89b747ce735cd4e222d78c63db1cfe509ecdf977492e930ebb5b3f130",
+    "shading_change": "0835f5e00e38652d7f4470dbe1f8acccc015f09b9b5375bbc03e08594e25a052",
+    "prepare_reactivity": "821a384220c16449a89eff8a4d97463c91c1cfbe1e16d2a0263dc4552076374f",
+    "luma_instability": "b8425c8503ca6371a8f37e640262aba614c08ec201469c4d535529963ee2a153",
+    "accumulate": "f02e2a4f97841efa1ed124066e353091e0aca5fc043d0471489cdc2c45f22b16",
+    "rcas": "b64ac08df15ef7ae92176881cd29696e92e02acecbb2e11f60f19aecc6aeaf7d"
+   }
+  },
+  {
+   "mode": "chain",
+   "pattern": "step",
+   "extent": {
+    "render": [
+     160,
+     90
+    ],
+    "upscale": [
+     320,
+     180
+    ]
+   },
+   "status": "PASS",
+   "hashes": {
+    "output": "3babf435ebe710883253ec2aadb0c1e83bd0d4f071e5e8efd8debe45a1a371a4",
+    "dilated_motion": "d8b443032200e143b1c49820b6d78c32d519553a3f63a38f48e8bc31da084f0a",
+    "reconstructed_depth": "864166db82d567116e650fbee347d086a29071398c9386a3b59e00d21df66ee9",
+    "spd_mip5": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+    "shading_change": "9202e68fbe5587e30738f2f118e87e10202a6eabd7297e1299978ed53c3a8f46",
+    "dilated_reactive": "6d6f368a78a3311505f9333eb9e51c24577d66124672d53a4f4d338752eb23c8"
+   },
+   "pass_shader_sha256": {
+    "prepare_inputs": "a624b575604835ed99cc82bd65c43bcdc952db74437ffd4029c8417b20669960",
+    "luma_pyramid": "25c6aebaae4835eff3bcc3362c5bb73ab20018b0a3dd9cf4358cc36862c03c56",
+    "shading_change_pyramid": "3bfd9cd89b747ce735cd4e222d78c63db1cfe509ecdf977492e930ebb5b3f130",
+    "shading_change": "0835f5e00e38652d7f4470dbe1f8acccc015f09b9b5375bbc03e08594e25a052",
+    "prepare_reactivity": "821a384220c16449a89eff8a4d97463c91c1cfbe1e16d2a0263dc4552076374f",
+    "luma_instability": "b8425c8503ca6371a8f37e640262aba614c08ec201469c4d535529963ee2a153",
+    "accumulate": "f02e2a4f97841efa1ed124066e353091e0aca5fc043d0471489cdc2c45f22b16",
+    "rcas": "b64ac08df15ef7ae92176881cd29696e92e02acecbb2e11f60f19aecc6aeaf7d"
+   }
+  },
+  {
+   "mode": "chain",
+   "pattern": "flat",
+   "extent": {
+    "render": [
+     320,
+     180
+    ],
+    "upscale": [
+     480,
+     270
+    ]
+   },
+   "status": "PASS",
+   "hashes": {
+    "output": "b2a26fa9b66da16c3f558b7ad33a02d57e633d258127d0c58e84e3025dcae8ec",
+    "dilated_motion": "91d2d62a5700cbf9404e3c575c3b6fc19e1e31c24c6fcfc0a2cf70d41314b447",
+    "reconstructed_depth": "bb7a01adb087b6d1b2c9fdee6a2f79fc9cd12568dc9f4284d29ea8f7a9b60b7c",
+    "spd_mip5": "5b6fb58e61fa475939767d68a446f97f1bff02c0e5935a3ea8bb51e6515783d8",
+    "shading_change": "c72274a22cba2dcef62e0f62834446ee39b0cd95ad0faa27a89b3b49f48aa390",
+    "dilated_reactive": "ec0371ef2f34e157857bbe15b09ff060f91b7a2fe115b696dcfbe12b2c6afb11"
+   },
+   "pass_shader_sha256": {
+    "prepare_inputs": "a624b575604835ed99cc82bd65c43bcdc952db74437ffd4029c8417b20669960",
+    "luma_pyramid": "25c6aebaae4835eff3bcc3362c5bb73ab20018b0a3dd9cf4358cc36862c03c56",
+    "shading_change_pyramid": "3bfd9cd89b747ce735cd4e222d78c63db1cfe509ecdf977492e930ebb5b3f130",
+    "shading_change": "0835f5e00e38652d7f4470dbe1f8acccc015f09b9b5375bbc03e08594e25a052",
+    "prepare_reactivity": "821a384220c16449a89eff8a4d97463c91c1cfbe1e16d2a0263dc4552076374f",
+    "luma_instability": "b8425c8503ca6371a8f37e640262aba614c08ec201469c4d535529963ee2a153",
+    "accumulate": "f02e2a4f97841efa1ed124066e353091e0aca5fc043d0471489cdc2c45f22b16",
+    "rcas": "b64ac08df15ef7ae92176881cd29696e92e02acecbb2e11f60f19aecc6aeaf7d"
+   }
+  },
+  {
+   "mode": "chain",
+   "pattern": "step",
+   "extent": {
+    "render": [
+     320,
+     180
+    ],
+    "upscale": [
+     480,
+     270
+    ]
+   },
+   "status": "PASS",
+   "hashes": {
+    "output": "d32ad243eb38c7720a18b8d47ee10f8f7ade114196eee39b45b867516c9666bc",
+    "dilated_motion": "91d2d62a5700cbf9404e3c575c3b6fc19e1e31c24c6fcfc0a2cf70d41314b447",
+    "reconstructed_depth": "bb7a01adb087b6d1b2c9fdee6a2f79fc9cd12568dc9f4284d29ea8f7a9b60b7c",
+    "spd_mip5": "5b6fb58e61fa475939767d68a446f97f1bff02c0e5935a3ea8bb51e6515783d8",
+    "shading_change": "c72274a22cba2dcef62e0f62834446ee39b0cd95ad0faa27a89b3b49f48aa390",
+    "dilated_reactive": "ec0371ef2f34e157857bbe15b09ff060f91b7a2fe115b696dcfbe12b2c6afb11"
+   },
+   "pass_shader_sha256": {
+    "prepare_inputs": "a624b575604835ed99cc82bd65c43bcdc952db74437ffd4029c8417b20669960",
+    "luma_pyramid": "25c6aebaae4835eff3bcc3362c5bb73ab20018b0a3dd9cf4358cc36862c03c56",
+    "shading_change_pyramid": "3bfd9cd89b747ce735cd4e222d78c63db1cfe509ecdf977492e930ebb5b3f130",
+    "shading_change": "0835f5e00e38652d7f4470dbe1f8acccc015f09b9b5375bbc03e08594e25a052",
+    "prepare_reactivity": "821a384220c16449a89eff8a4d97463c91c1cfbe1e16d2a0263dc4552076374f",
+    "luma_instability": "b8425c8503ca6371a8f37e640262aba614c08ec201469c4d535529963ee2a153",
+    "accumulate": "f02e2a4f97841efa1ed124066e353091e0aca5fc043d0471489cdc2c45f22b16",
+    "rcas": "b64ac08df15ef7ae92176881cd29696e92e02acecbb2e11f60f19aecc6aeaf7d"
+   }
+  }
+ ]
+}

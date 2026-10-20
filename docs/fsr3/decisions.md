@@ -106,3 +106,17 @@ this ANGLE/GLES provider; generated ESSL must use combined samplers and explicit
 SPD's `FFX_SPD_NO_WAVE_OPERATIONS` LDS fallback avoids the unavailable subgroup-quad path.
 These are source-level port requirements, not evidence that the full algorithm runs on the
 device.
+
+## D-FSR-011: GLES compute is the selected production backend route
+
+Status: accepted after S2 dispatch evidence.
+
+On X1E, the adapted FSR3.1.4 ESSL executed through ANGLE/Adreno: RCAS matched a
+CPU model byte-exactly on 56,604/56,604 and 228,404/228,404 interior pixels, and
+the full eight-pass chain passed flat-frame invariants and produced output/state
+hashes identical to the host Mesa run at 2x and 1.5x. This selects the GLES
+route for the production backend. It does not qualify the product: the chain
+harness uses test-only readback, full barriers and `glFinish`; multi-frame
+history/reset, ABI wiring, persistent resource reuse, real Minecraft inputs and
+performance remain unproven. A Vulkan interoperation experiment is not opened
+unless a concrete GLES production requirement fails.
