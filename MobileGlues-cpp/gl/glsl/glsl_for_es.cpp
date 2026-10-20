@@ -21,6 +21,8 @@
 #include <sstream>
 #include "cache.h"
 #include "cache_key.h"
+#include "compat_image.h"
+#include "compat_subgroup.h"
 #include "../../version.h"
 #include "../../gles/loader.h"
 
@@ -824,26 +826,7 @@ static std::string rename_reserved_identifier(const std::string& glsl, const cha
     return out;
 }
 
-static std::string lower_legacy_image_formats(std::string glsl) {
-    // ES 3.2 has no unorm16 image format qualifier. Desktop packs declare
-    // layout(rgba16)/layout(rg16) and rely on normalized 16-bit storage;
-    // rgba32f/rg32f preserve those values exactly. Only lines that also declare
-    // an image uniform are touched, so texture-format constants are unchanged.
-    size_t start = 0;
-    while (start < glsl.size()) {
-        const size_t end = glsl.find('\n', start);
-        const size_t length = (end == std::string::npos) ? glsl.size() - start : end - start;
-        std::string line = glsl.substr(start, length);
-        if (line.find("image") != std::string::npos && line.find("layout") != std::string::npos) {
-            replace_all(line, "rgba16", "rgba32f");
-            replace_all(line, "rg16", "rg32f");
-            glsl.replace(start, length, line);
-        }
-        if (end == std::string::npos) break;
-        start = end + 1;
-    }
-    return glsl;
-}
+
 
 static std::string lower_const_transpose(const std::string& glsl) {
     // Iris emits `const mat3 name = transpose(constMat);`. glslang rejects
@@ -883,9 +866,17 @@ std::string preprocess_glsl(const std::string& glsl, GLenum shaderType) {
     replace_all(ret, "#ifdef GL_ARB_derivative_control", "#if 0");
     replace_all(ret, "#ifndef GL_ARB_derivative_control", "#if 1");
 
-    ret = lower_legacy_image_formats(ret);
+    ret = mg_lower_legacy_image_formats(ret);
     ret = lower_const_transpose(ret);
     ret = rename_reserved_identifier(ret, "active", "mg_active");
+
+    // Desktop subgroup constructs have no ES 3.2 equivalent. Lower them to
+    // workgroup shared-memory operations (compute stage only).
+    MgSubgroupLoweringResult subgroup = mg_lower_subgroup_constructs(ret, shaderType);
+    ret = subgroup.source;
+    if (subgroup.unsupported) {
+        LOG_E("Subgroup lowering unsupported: %s", subgroup.reason.c_str())
+    }
 
     // GI_TemporalFilter injection
     inject_temporal_filter(ret);

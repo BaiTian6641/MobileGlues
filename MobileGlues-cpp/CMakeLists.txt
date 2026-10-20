@@ -120,6 +120,9 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
     gl/glsl/glsl_for_es.cpp
     gl/glsl/cache.cpp
     gl/glsl/cache_key.cpp
+    gl/glsl/compat_image.cpp
+    gl/glsl/compat_subgroup.cpp
+    gl/glsl/compat_subgroup_partition.cpp
     gl/FSR1/FSR1.cpp
 
     gl/vertexattrib.cpp
