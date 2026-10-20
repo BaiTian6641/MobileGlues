@@ -70,7 +70,7 @@ Scene-adapter test package:
 - Package: `com.fcl.plugin.mobileglues`
 - ABI: `arm64-v8a` only
 - Core SHA-256: `4a60051434ef1955a23680eb6a551967e985cf16f94206f295368e2401ce8471` (16 KB-aligned ELF)
-- APK SHA-256: `1d0da3ce2172ee1ffd13779cfe2bb40492c924c9775bfe03a1369225e1f729af`
+- APK SHA-256: `cb20cd9705446b379f75e90101114e7b01a1c711f1054f7aab0f1017aa8a3e02`
 - Bridge JAR SHA-256: `8aecd174f3d6c258899223ffe6717f71833ae017031678728d6a8e6e85030939`
 - Archive: `zipalign -P 16 4` + debug-key signature
 

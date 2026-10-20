@@ -39,7 +39,7 @@ adapter to request a real reduced scene.
 ## Package identity
 
 - Core `libmobileglues.so` SHA-256: `4a60051434ef1955a23680eb6a551967e985cf16f94206f295368e2401ce8471`
-- APK SHA-256: `1d0da3ce2172ee1ffd13779cfe2bb40492c924c9775bfe03a1369225e1f729af`
+- APK SHA-256: `cb20cd9705446b379f75e90101114e7b01a1c711f1054f7aab0f1017aa8a3e02`
 - Bridge JAR SHA-256: `8aecd174f3d6c258899223ffe6717f71833ae017031678728d6a8e6e85030939`
 - APK: `arm64-v8a` only, 16 KB ELF/archive alignment, debug-key signature
 - Files: `/home/polar/MobileGlues-fixtures/MobileGlues-scene-arm64.apk` and
@@ -160,3 +160,20 @@ The camera-motion review found four material defects, now corrected:
 
 Still unverified on device: ANGLE feedback sampling of the main depth texture,
 Iris matrix values, exact scene sub-rect placement, and motion quality.
+
+
+## APK packaging requirement (2026-10-20)
+
+The first device attempt crashed before rendering:
+
+```text
+UnsatisfiedLinkError: dlopen failed:
+.../com.fcl.plugin.mobileglues.../lib/arm64/libmobileglues.so not found
+```
+
+The test APK had `extractNativeLibs=false`; FCL resolves the renderer through
+`nativeLibraryDir`/`legacyNativeLibraryDir`, so the separately packaged core was
+never extracted. The test APK must use `android:extractNativeLibs="true"`
+(AGP `jniLibs.useLegacyPackaging = true`). The corrected APK has
+`legacyNativeLibraryDir`, and the extracted `libmobileglues.so` is present.
+This is a packaging/install property, not an FSR3 runtime result.
