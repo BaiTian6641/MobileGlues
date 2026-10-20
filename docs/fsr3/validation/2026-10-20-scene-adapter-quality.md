@@ -29,11 +29,13 @@ FSR3 bridge: camera motion active at frame 2
 - World fills the full game view; no lower-left crop.
 - Hotbar/HUD are native-size and sharp; no observed HUD blur.
 - First frame reports `motion=0` (no previous camera); frame 2 reports camera motion active.
-- F3 overlay is present. Early FSR3 Quality frames were ~22 FPS and one
-  FSR3-off frame ~30 FPS, but a different turned viewpoint measured ~18 FPS
-  off. Those cameras/areas are not matched. **Net performance is NOT
-  MEASURED**; no pass/fail conclusion is valid until the same camera, pack,
-  resolution and time window are captured in both modes.
+- F3 overlay is present. Turned-view samples: FSR3 off ~18 FPS; FSR3 Quality
+  ~20 FPS. The frames were not hardware/frame-locked and the camera is only
+  approximately matched, so this is **preliminary**, not a pass. Earlier
+  unmatched samples (~22 vs ~30 FPS) are not usable. S6 remains open.
+- Turned-view screenshots:
+  `2026-10-20-fsr3-off-turned.png` and
+  `2026-10-20-fsr3-quality-turned.png`.
 
 ## What this proves
 
