@@ -269,8 +269,12 @@ install, game launch, screenshot, timing or FPS measurement. No claim of device 
    first frame is only guaranteed safe when the bind happened before any resource existed.
 10. **Applications that bind framebuffer 0 once, before FSR1's resources exist, never prime
     it.** They keep drawing on the surface (correct native image) while FSR1 logs once that it
-    is waiting and stays inactive. Whether real Minecraft/Adreno titles rebind 0 per frame is
-    a device question, not verified here.
+    is waiting and stays inactive. The related case after resources exist -- bind 0 once, then
+    draw several frames without rebinding -- gets exactly one upscale: the post-present clear
+    is re-armed only by a new redirect bind, so later frames keep drawing into the render
+    target while the surface retains the last upscaled frame. The flag semantics are the
+    requested ones; a per-draw re-arm would be the fix if a real title behaves this way.
+    Whether Minecraft/Adreno titles rebind 0 per frame is a device question, not verified here.
 11. **Sampler compare on device.** The guard restores `GL_SAMPLER_BINDING` and the passes bind
     sampler 0, but no device run has exercised an application compare sampler (or a sampler
     with non-LINEAR filters) left on unit 0 at present time.
