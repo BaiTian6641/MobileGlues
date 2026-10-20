@@ -12,7 +12,7 @@ upscaler and config remain the authority.
 | Native scale | `Fsr3Bridge_nativeScale` reads `fsr3Quality`; returns 1.0 when FSR3 is off | host/ARM64 build PASS |
 | Viewport | `glViewport` and `glScissor` wrappers scale only when the draw FBO color attachment is below the EGL surface extent | host/ARM64 build PASS; runtime NOT RUN |
 | Final pass | `FinalPassRendererMixin` resets the viewport to native EGL extents at `HEAD` | bridge build PASS; runtime NOT RUN |
-| Double-present | direct swap-path FSR3 skips while the bridge has presented in the last 250 ms | host/ARM64 build PASS; runtime NOT RUN |
+| Double-present | direct swap-path FSR3 skips exactly the swap after a bridge submit via a per-frame flag | host/ARM64 build PASS; runtime NOT RUN |
 
 ## Why this shape
 
@@ -39,7 +39,7 @@ adapter to request a real reduced scene.
 ## Package identity
 
 - Core `libmobileglues.so` SHA-256: `4352e9de62a0366e9781f1a8c73f66a1ce16a3494428770f4a9d15424c845260`
-- APK SHA-256: `527d05a027dc52d6b492f7583e4f1bcff20e9e21bec05455bc37f3305163372e`
+- APK SHA-256: `4a5ef1bfba7e9af1fc800b9da00866a67929612519f158032b9aa485982f1b51`
 - Bridge JAR SHA-256: `6c233de3faa9527f26ee91691e67897dd8972c781b0bb9087fe639f64a175f1c`
 - APK: `arm64-v8a` only, 16 KB ELF/archive alignment, debug-key signature
 - Files: `/home/polar/MobileGlues-fixtures/MobileGlues-scene-arm64.apk` and
@@ -51,7 +51,7 @@ Expected when the adapter activates at Quality (1.5x) on a 2880x1800 surface:
 
 ```text
 RenderTargetsMixin loaded
-FSR3 bridge: experimental submit 1920x1200 -> 1920x1200 (render 1920x1200); camera_motion=1, Iris scene adapter
+FSR3 bridge: experimental submit 1920x1200 -> 2880x1800 (render 1920x1200); camera_motion=1, Iris scene adapter
 ```
 
 The bridge log now says `Iris scene adapter`; the adapter extent must still be
@@ -136,3 +136,26 @@ and translation inverse, and singular-matrix rejection used by the camera-only
 reprojection pass. `tests/fsr3_viewport_test.cpp` verifies the scene-viewport
 rule. Both pass in `sh MobileGlues-cpp/tests/run.sh`. Runtime matrix extraction
 from Iris and the GLSL motion dispatch remain device-NOT-RUN.
+
+
+## Second review corrections (camera/depth inputs)
+
+The camera-motion review found four material defects, now corrected:
+
+- Camera translation was omitted. The bridge now also captures
+  `CameraUniforms.getUnshiftedCameraPosition()` and passes
+  `current - previous` to the reprojection shader.
+- The motion/depth pass now runs at the scene extent and samples the valid
+  lower-left depth sub-rect at scene coordinates; it writes a scene-extent R32F
+  depth input and RGBA16F motion.
+- FSR3 now consumes scene-extent color/depth/motion and reconstructs to the
+  native output. The pre-HUD final image is downsampled to that extent.
+- Image units 0 and 1 are saved/restored and the MobileGlues image-binding
+  shadow is invalidated after the compute pass.
+- Camera history is invalidated after a >250 ms capture gap or a >64-block
+  camera jump; reflection failure explicitly invalidates it.
+- The shader stores zero motion on invalid reprojection/projection instead of
+  leaving stale texels.
+
+Still unverified on device: ANGLE feedback sampling of the main depth texture,
+Iris matrix values, exact scene sub-rect placement, and motion quality.

@@ -40,9 +40,10 @@ attachment; native FBOs (final composition, HUD, shadows) are left alone. The
 final-pass hook resets the viewport to the EGL surface before Iris composes to
 the native main target.
 
-The JNI bridge no longer downsamples the final image. At this stage it consumes
-the native final image for the FSR experiment; the scene reduction comes from
-the scaled Iris targets. This avoids applying the quality ratio twice.
+The JNI bridge now builds a coherent scene-extent input set: it downsamples the
+pre-HUD final color to the scene extent, copies the valid lower-left scene depth
+sub-rect through the motion/depth compute pass, and reconstructs to the native
+output. This is no longer a native-extent final-image-only experiment.
 
 ## Limits and claims
 
@@ -52,11 +53,11 @@ the scaled Iris targets. This avoids applying the quality ratio twice.
   scene target allocation, color/depth extents, and matching viewports; screen
   uniforms, decals/texelFetch consumers, and pack-specific jitter ownership are
   still unverified.
-- The final image enters FSR3 at native extent in the bridge path. Therefore the
-  FSR3 temporal cost is additional; only the scene-target reduction can pay for
-  it. No performance claim is valid until the device matrix runs.
-- No temporal-quality claim: depth is constant, motion is zero, and the game
-  final TAA remains enabled.
+- The bridge now feeds FSR3 at the scene extent. Its color input is a downsample
+  of the already-composed pre-HUD image, not raw scene color; the pack final TAA
+  still runs. This is not yet a clean reconstruction-boundary replacement.
+- No temporal-quality claim: camera-only motion exists, jitter is not captured,
+  independently moving objects are static, and the game final TAA remains enabled.
 - The previous native-scene measurement was 13 FPS with FSR3 on versus 26 FPS
   off at 2880x1585. The slider does not remove the missing scene-scale hook.
 
@@ -69,7 +70,7 @@ Scene-adapter test package:
 - Package: `com.fcl.plugin.mobileglues`
 - ABI: `arm64-v8a` only
 - Core SHA-256: `4352e9de62a0366e9781f1a8c73f66a1ce16a3494428770f4a9d15424c845260` (16 KB-aligned ELF)
-- APK SHA-256: `527d05a027dc52d6b492f7583e4f1bcff20e9e21bec05455bc37f3305163372e`
+- APK SHA-256: `4a5ef1bfba7e9af1fc800b9da00866a67929612519f158032b9aa485982f1b51`
 - Bridge JAR SHA-256: `6c233de3faa9527f26ee91691e67897dd8972c781b0bb9087fe639f64a175f1c`
 - Archive: `zipalign -P 16 4` + debug-key signature
 
