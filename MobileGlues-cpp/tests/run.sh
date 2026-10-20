@@ -16,10 +16,13 @@ $CXX -o /tmp/mg_image_test tests/compat_image_test.cpp gl/glsl/compat_image.cpp
 $CXX -o /tmp/mg_subgroup_test tests/compat_subgroup_test.cpp gl/glsl/compat_subgroup.cpp gl/glsl/compat_subgroup_partition.cpp
 $CXX -o /tmp/mg_fsr_contract_test tests/fsr_contract_test.cpp
 $CXX -o /tmp/mg_fsr1_core_test tests/fsr1_core_test.cpp
-$CXX -o /tmp/mg_fsr3_viewport_test tests/fsr3_viewport_test.cpp 
+$CXX -o /tmp/mg_fsr3_viewport_test tests/fsr3_viewport_test.cpp
+$CXX -o /tmp/mg_fsr3_motion_math_test tests/fsr3_motion_math_test.cpp 
 /tmp/mg_fsr1_core_test
 echo
 /tmp/mg_fsr3_viewport_test
+echo
+/tmp/mg_fsr3_motion_math_test
 echo
 /tmp/mg_pixel_test
 echo

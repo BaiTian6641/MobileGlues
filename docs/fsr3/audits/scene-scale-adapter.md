@@ -38,8 +38,8 @@ adapter to request a real reduced scene.
 
 ## Package identity
 
-- Core `libmobileglues.so` SHA-256: `8d90805335c82ccd3d86cd7e85d66ef38ce0f7649e6332bcdd52d630e795fb52`
-- APK SHA-256: `d89f75a33977a7cf0225fa7c2a7c84a206fc8014ab530eb439ef185d2f2795db`
+- Core `libmobileglues.so` SHA-256: `1d9cc8639a1329436e3bdeadc6a1bddeca7d95f9a344c529588d8d2a3ac83c03`
+- APK SHA-256: `c6c1497054dc7dd648308627bc031435ac90240f9d57f52082cc13dd793f5ca6`
 - Bridge JAR SHA-256: `2a48efb6fd0f60c17dca391c415f20226b7b468b89821d5596b3763e248b0076`
 - APK: `arm64-v8a` only, 16 KB ELF/archive alignment, debug-key signature
 - Files: `/home/polar/MobileGlues-fixtures/MobileGlues-scene-arm64.apk` and

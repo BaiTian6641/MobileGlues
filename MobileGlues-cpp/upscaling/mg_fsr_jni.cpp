@@ -14,6 +14,7 @@
 #if defined(__ANDROID__)
 
 #include "mg_fsr_abi.h"
+#include "fsr3_motion_math.h"
 #include "../config/settings.h"
 #include "../egl/context.h"
 #include "../gles/gles.h"
@@ -275,9 +276,9 @@ bool run_camera_motion(JniState& s, GLuint depth, int width, int height) {
     }
     if (!depth || width <= 0 || height <= 0 || !ensure_motion_program(s)) return false;
     float current_vp[16], previous_vp[16], inverse_vp[16];
-    mat4_multiply(camera.projection, camera.model_view, current_vp);
-    mat4_multiply(camera.previous_projection, camera.previous_model_view, previous_vp);
-    if (!mat4_invert(current_vp, inverse_vp)) return false;
+    mg_fsr3_motion::multiply(camera.projection, camera.model_view, current_vp);
+    mg_fsr3_motion::multiply(camera.previous_projection, camera.previous_model_view, previous_vp);
+    if (!mg_fsr3_motion::invert(current_vp, inverse_vp)) return false;
 
     MotionGuard guard;
     GLES.glUseProgram(s.motion_program);
