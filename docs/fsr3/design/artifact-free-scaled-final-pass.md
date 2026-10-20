@@ -19,8 +19,10 @@ Iris details that constrain the fix:
 
 - `RenderTargets` creates scaled `colortex` targets, `depthtex0`, and the
   `noHand`/`noTranslucents` depth copies at the constructor extent.
-- `copyPreHandDepth()` copies into `noHandDestFb`; its color attachment 0 and
-  `noHand` depth are the hand's likely write target.
+- `copyPreHandDepth()` copies pre-hand depth into `noHandDestFb`; the FBO has
+  color attachment 0 plus the `noHand` depth texture. Whether Iris leaves that
+  FBO bound for the hand draw is a measured question, not an assumption: the
+  `noHand` texture must retain pre-hand depth semantics.
 - `HandRenderer.renderSolid()` and `renderTranslucent()` draw into the current
   FBO; they do not create their own target.
 - `finalizeLevelRendering()` runs the composite and final pass at native output.
@@ -29,14 +31,19 @@ Iris details that constrain the fix:
 - Iris viewport uniforms are used by world and composite shaders; the final
   pass and UI must see native dimensions.
 
+Source anchors: Iris `RenderTargets.java:122-128` (target allocation/scale),
+`:209-230` (depth copies), `IrisRenderingPipeline.java:1045-1067`
+(beginHand/beginTranslucents/finalize), `HandRenderer.java:73-148` (hand
+phases), and the existing [pass-input audit](../audits/minecraft-iris-pass-input.md).
+
 ## Required ownership matrix
 
 | Phase | Color | Depth | Viewport | Motion |
 | --- | --- | --- | --- | --- |
 | World solid/cutout/entity | scene color0 (scaled) | scene depth (scaled) | scene extent | zero in current profile |
-| Copy pre-hand | scene color0 (scaled) | `noHand` (scaled) | n/a | n/a |
-| Hand solid | **scene color0 (scaled)** | **scene depth (scaled)** | **scene extent** | **zero** |
-| Translucents / hand translucent | scene color0 (scaled) | scene depth (scaled) | scene extent | zero |
+| Copy pre-hand | scene color0 (scaled) | `noHand` copy (scaled) | n/a | n/a |
+| Hand solid | **scene color0 (scaled)** | **single hand depth target at scene extent; measure which** | **scene extent** | **zero** |
+| Translucents / hand translucent | scene color0 (scaled) | same hand depth target at scene extent | scene extent | zero |
 | Composite | scene targets (scaled) | scene depth (scaled) | scene extent | zero |
 | Final pass | native output | reads scene depth | **native extent** | zero |
 | HUD/UI | native output | native | native | n/a |
@@ -44,7 +51,8 @@ Iris details that constrain the fix:
 
 Invariant: no hand or world color write may bind a native-sized color/depth
 target while the rest of the scene is scaled. No final/UI write may bind a
-scaled target.
+scaled target. The pre-hand copy must not leave a depth-only FBO bound, and
+the `noHand` texture must remain a pre-hand depth copy.
 
 ## Implementation plan (bounded, no behavior expansion)
 
@@ -65,9 +73,10 @@ trace before any product build.
 ### Experiment B — one scene extent for hand
 
 - Keep `RenderTargets` sizing at the quality extent.
-- Ensure the pre-hand copy leaves/binds the scaled scene color FBO with the
-  hand depth attachment; do not leave a depth-only copy FBO or a native main
-  target bound.
+- Ensure the pre-hand copy restores the scaled scene color FBO used by the
+  hand; do not leave a depth-only copy FBO or a native main target bound.
+- Do not force the hand into the `noHand` copy: that would invert `depthtex1`
+  semantics and can create the light/shadow overlay this design is eliminating.
 - Apply the scene viewport at bind time; keep the native viewport only for the
   final pass and FBO 0.
 - Keep `noHand`/`noTranslucents` at the same scaled extent as the scene.
@@ -78,6 +87,13 @@ trace before any product build.
 
 Gate: Balanced 1.7x shows no translucent hand/light overlay, stars stay
 world-locked, and hand/menu alignment matches the NativeAA baseline.
+
+### Activation policy
+
+The scene adapter stays conditional on a scaled quality preset. The current
+final-pass-only pack defaults to NativeAA; selecting Balanced/Performance is
+the opt-in for this experiment. If any gate fails, the adapter must force
+NativeAA rather than ship a scaled artifact.
 
 ### Experiment C — isolate light/shadow if B still overlays
 
