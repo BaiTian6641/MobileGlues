@@ -10,7 +10,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | --- | --- |
 | Integration worktree | `/home/polar/MobileGlues` |
 | Branch | `googlebook/x1e-stage1-3` |
-| HEAD | `9efab48`; R1/R6/R7/R9 fixed in installed pair, R4 fixed in source but not packaged; package `025850…` (see validation) |
+| HEAD | `d72acc0` plus R7/R4 validation docs; installed pair APK `3169ff…`, core `4ceefb…`, JAR `5c35d0…`; R7 camera re-arm device PASS |
 | Origin | `git@github.com:BaiTian6641/MobileGlues.git` |
 | Upstream | `https://github.com/MobileGL-Dev/MobileGlues.git` |
 | Untouched user changes | modified `.gitignore`, `docs/mobileglues-googlebook/validation/README.md`; untracked `.vscode/`, FSR3 plan, recent validation docs |
@@ -19,13 +19,13 @@ source of truth for the pre-FSR3 renderer/pack history.
 
 ### Provenance
 
-- Installed renderer: `com.fcl.plugin.mobileglues` **2.0.0**, review-fix APK
-  SHA-256 `025850a0180eead1d4434d35cf9f9d5ac5bfd09503572b7bde8a927f3df64ce9`.
+- Installed renderer: `com.fcl.plugin.mobileglues` **2.0.0**, R7/R4 APK
+  SHA-256 `3169ff55713ec8bab1cc20c52227c3c6754190c1eb309d823c5c64b33c392eb0`.
 - Installed ARM64 core: `lib/arm64-v8a/libmobileglues.so`, SHA-256
-  `472576b7fe303d06362277a4e9f2864dd1077177bebfe54e615dc1a38816024f`.
+  `4ceefb43035e5853d85380d8f9556a078fe50441d32362a9ab340fbf73e17d56`.
 - Installed bridge JAR: `mgfsr3bridge-0.1.0.jar`, SHA-256
-  `7e171274b9e86619e1455ec8849a297ca244615c5d1244dfa6794babff9724dc`
-  (diagnostic scene-extent logging on top of the functional bridge).
+  `5c35d0ca2c0536a3319f65688212ce8f3aa072fcc65fc4bf40426ec82ed87c06`
+  (double camera JNI; static constructor mixins; scene-extent logging).
 - The APK uses `extractNativeLibs=true`; direct `Android/data` replacement was
   performed through the FCL file manager after a scoped-storage helper placed
   the JAR in Downloads.
@@ -50,7 +50,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | S2 contract | **PASS (frozen)** | `docs/fsr3/frame-contract.md` ABI v1 |
 | S2 backend feasibility | **PASS** | X1E RCAS exact vs CPU; 8-pass chain 2x/1.5x; independent X1E multi-frame evidence now present |
 | S2 game audit | **PASS (source)** | `docs/fsr3/audits/minecraft-iris-pass-input.md`: final TAA is `composite6`, jitter is partial, no velocity buffer in Iris 1.8.14 |
-| S3 native temporal backend | **PARTIAL** | Deterministic reset/history/reset probe PASS; per-pass Quality GPU timing ~17–18 ms total (PrepareReactivity ~6, Accumulate ~4–5); flat synthetic probe, game integration not qualified |
+| S3 native temporal backend | **PARTIAL** | Deterministic reset/history/reset probe PASS; per-pass Quality GPU timing ~17.7–23.6 ms total (PrepareReactivity ~6, Accumulate ~4–5); flat synthetic probe, game integration not qualified |
 | S4 first game path | **PARTIAL: rendering PASS; performance NOT QUALIFIED** | Quality 1920x1057 -> 2880x1585, camera_motion=1, full world + native HUD; spot ~18 off/~20 Quality/~20 Performance, not frame-locked; R2/R3/R5 boundary/jitter defects remain; `validation/2026-10-20-scene-adapter-quality.md` |
 | S5 Complementary | **BLOCKED** | source boundary mapped; ACT/WSR/r5.9.2 device qualification NOT RUN |
 | S6 qualification | **NOT RUN** | no matched benchmark/thermal qualification |
@@ -65,6 +65,8 @@ source of truth for the pre-FSR3 renderer/pack history.
   (steady-state cost) remain open.
 - R1 host reproduction after the fix shows the unsigned sampler on its own unit
   with R32UI; all eight dispatch calls still succeed.
+- R7/R4 device run with the paired JAR/core: `camera motion active at frame 3`,
+  full frame/HUD, effective Balanced 1694x932 -> 2880x1585.
 - The X1E backend reset/history/reset probe is deterministic across two runs.
 - The first full-frame game run confirms the bridge loads, camera motion
   activates, output is native and HUD is correct at the tested tuple.
