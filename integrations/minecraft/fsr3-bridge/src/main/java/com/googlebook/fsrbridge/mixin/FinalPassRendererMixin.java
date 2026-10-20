@@ -22,6 +22,7 @@ public abstract class FinalPassRendererMixin {
     @Inject(method = "renderFinalPass", at = @At("HEAD"))
     private void mgfsr3$nativeViewport(CallbackInfo ci) {
         if (Fsr3Bridge.available()) {
+            Fsr3Bridge.captureCamera();
             Fsr3Bridge.resetNativeViewport();
         }
     }

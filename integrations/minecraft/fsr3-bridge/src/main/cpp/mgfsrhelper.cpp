@@ -11,10 +11,12 @@ using AvailableFn = jboolean (*)(JNIEnv*, jclass);
 using SubmitFn = jint (*)(JNIEnv*, jclass);
 using ScaleFn = jfloat (*)(JNIEnv*, jclass);
 using ViewportFn = void (*)(JNIEnv*, jclass);
+using CameraFn = void (*)(JNIEnv*, jclass, jfloatArray, jfloatArray);
 AvailableFn g_available = nullptr;
 SubmitFn g_submit = nullptr;
 ScaleFn g_scale = nullptr;
 ViewportFn g_viewport = nullptr;
+CameraFn g_camera = nullptr;
 } // namespace
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -34,6 +36,8 @@ Java_com_googlebook_fsrbridge_NativeBridge_init(JNIEnv* env, jclass, jstring pat
         dlsym(g_core, "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeScale"));
     g_viewport = reinterpret_cast<ViewportFn>(
         dlsym(g_core, "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeViewport"));
+    g_camera = reinterpret_cast<CameraFn>(
+        dlsym(g_core, "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeCamera"));
     return (g_available && g_submit) ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -63,6 +67,16 @@ Java_com_googlebook_fsrbridge_NativeBridge_viewport(JNIEnv* env, jclass clazz) {
     jclass target = env->FindClass("com/googlebook/fsrbridge/Fsr3Bridge");
     if (!target) return;
     g_viewport(env, target);
+    env->DeleteLocalRef(target);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_googlebook_fsrbridge_NativeBridge_camera(JNIEnv* env, jclass clazz,
+                                                  jfloatArray modelView, jfloatArray projection) {
+    if (!g_camera) return;
+    jclass target = env->FindClass("com/googlebook/fsrbridge/Fsr3Bridge");
+    if (!target) return;
+    g_camera(env, target, modelView, projection);
     env->DeleteLocalRef(target);
 }
 

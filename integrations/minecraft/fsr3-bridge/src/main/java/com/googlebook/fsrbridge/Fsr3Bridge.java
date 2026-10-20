@@ -66,6 +66,39 @@ public final class Fsr3Bridge {
         return NativeBridge.load(path);
     }
 
+    private static boolean cameraWarning;
+
+    /**
+     * Capture Iris' current camera matrices for camera-only reprojection.
+     * Reflection keeps this adapter independent of Minecraft/JOML at build time;
+     * if the class or matrix accessor is absent, the native side keeps the
+     * synthetic zero-motion path.
+     */
+    public static void captureCamera() {
+        if (!LOADED) return;
+        try {
+            Class<?> stateClass = Class.forName("net.irisshaders.iris.uniforms.CapturedRenderingState");
+            Object state = stateClass.getField("INSTANCE").get(null);
+            Object modelView = stateClass.getMethod("getGbufferModelView").invoke(state);
+            Object projection = stateClass.getMethod("getGbufferProjection").invoke(state);
+            float[] mv = new float[16];
+            float[] pr = new float[16];
+            copyMatrix(modelView, mv);
+            copyMatrix(projection, pr);
+            NativeBridge.camera(mv, pr);
+        } catch (Throwable t) {
+            if (!cameraWarning) {
+                cameraWarning = true;
+                warn("camera matrices unavailable; using zero motion: " + t);
+            }
+        }
+    }
+
+    private static void copyMatrix(Object matrix, float[] out) throws Exception {
+        if (matrix == null) throw new IllegalStateException("null matrix");
+        matrix.getClass().getMethod("get", float[].class, int.class).invoke(matrix, out, 0);
+    }
+
     public static void mark(String message) {
         System.err.println("[mgfsr3bridge] " + message);
         try {
