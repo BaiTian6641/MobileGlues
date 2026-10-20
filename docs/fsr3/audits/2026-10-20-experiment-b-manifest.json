@@ -6,7 +6,7 @@
   "diagnostic_tuple": {
     "apk_sha256": "e7d655bd612970e982eb70b4e24cdd1f7752c5417567f51b290dedaa825cec28",
     "core_sha256": "af74d6768b31f1eca9df8b5f833d173f55940eecce278cbcfb6a8972ed302aca",
-    "bridge_sha256": "24677cd56c78dd6714f67892f259d41a32b1e4aa34537efc0da6d5d245a6546e"
+    "bridge_sha256": "cd2c27819b20231240af69447d2d9e1db0476a75859a17a16fe680b95d39a98d"
   },
   "baseline_rollback": {
     "apk_sha256": "538455b765ec680f52919ecd4e296513353108a539352626ba4f45b9c43a0c39",

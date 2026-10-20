@@ -6,7 +6,7 @@ Installed pair:
 
 - APK `e7d655bd…`
 - Core `af74d676…`
-- Bridge `24677cd5…` (source `4640947`)
+- Bridge `cd2c2781…` (source `4640947`, rebuilt with source receipt)
 
 Settings: `AuroraLumen-Mobile-v2.zip`, profile `MOBILE_WSR (+1)`, Balanced,
 shaders ON, history absent, motion zero, RCAS 0.4.

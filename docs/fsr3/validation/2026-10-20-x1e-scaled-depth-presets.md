@@ -10,7 +10,7 @@ Settings: shaders ON, FSR3 history absent, motion zero, RCAS 0.4.
 
 - APK `e7d655bd…`
 - Core `af74d676…`
-- Bridge `24677cd5…`
+- Bridge `cd2c2781…`
 
 Previous NativeAA rollback remains APK `538455b7…`, core `5733b7bb…`,
 bridge `1f759cfe…`.
