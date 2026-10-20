@@ -87,7 +87,7 @@ checks exercise history/reset state without claiming image-quality equivalence.
 Build identity at the probe:
 
 - `build/android-arm64-release/libmobileglues.so`
-  SHA-256 `16678511c225c6013b0e8505ab21277ee7769a259b12d189c02c48765a476eb8`
+  SHA-256 `3ee4c807d9fbe09f00accebc542877a75be2a978090e5ce36a3af70e630c970c`
 
 ## Not qualified
 

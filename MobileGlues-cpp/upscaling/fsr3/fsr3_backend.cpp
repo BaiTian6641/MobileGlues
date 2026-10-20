@@ -611,6 +611,14 @@ bool Backend::initialize(uint32_t render_width, uint32_t render_height, uint32_t
 }
 
 bool Backend::resize(uint32_t render_width, uint32_t render_height, uint32_t output_width, uint32_t output_height) {
+    if (render_width == 0 || render_height == 0 || output_width == 0 || output_height == 0) {
+        set_error("FSR3 invalid resize extents");
+        return false;
+    }
+    if (render_width < 64 || render_height < 64) {
+        set_error("FSR3 render extent is too small for the SPD mip chain");
+        return false;
+    }
     if (render_width == render_width_ && render_height == render_height_ && output_width == output_width_ &&
         output_height == output_height_)
         return initialized_;
@@ -853,8 +861,9 @@ bool Backend::dispatch(const Inputs& in) {
     k.maxUpscaleSize[0] = k.upscaleSize[0];
     k.maxUpscaleSize[1] = k.upscaleSize[1];
 
-    const float fMin = std::min(in.camera_near, in.camera_far);
-    const float fMax = std::max(in.camera_near, in.camera_far);
+    float fMin = std::min(in.camera_near, in.camera_far);
+    float fMax = std::max(in.camera_near, in.camera_far);
+    if (in.depth_reversed) std::swap(fMin, fMax);
     const float fQ = fMax / (fMin - fMax);
     const int inv = in.depth_reversed ? 1 : 0;
     const int inf = in.depth_infinite_far ? 1 : 0;
