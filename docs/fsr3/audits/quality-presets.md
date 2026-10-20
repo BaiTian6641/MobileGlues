@@ -71,7 +71,7 @@ Scene-adapter test package:
 - ABI: `arm64-v8a` only
 - Core SHA-256: `4352e9de62a0366e9781f1a8c73f66a1ce16a3494428770f4a9d15424c845260` (16 KB-aligned ELF)
 - APK SHA-256: `4a5ef1bfba7e9af1fc800b9da00866a67929612519f158032b9aa485982f1b51`
-- Bridge JAR SHA-256: `6c233de3faa9527f26ee91691e67897dd8972c781b0bb9087fe639f64a175f1c`
+- Bridge JAR SHA-256: `8aecd174f3d6c258899223ffe6717f71833ae017031678728d6a8e6e85030939`
 - Archive: `zipalign -P 16 4` + debug-key signature
 
 ## Next gate

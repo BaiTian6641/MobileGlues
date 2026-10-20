@@ -170,6 +170,16 @@ public final class Fsr3Bridge {
         }
     }
 
+    /** Forget camera/history inputs after a world, shader or pipeline change. */
+    public static void invalidateCamera() {
+        if (!LOADED) return;
+        try {
+            NativeBridge.invalidateCamera();
+        } catch (Throwable t) {
+            warn("invalidate camera failed: " + t);
+        }
+    }
+
     /** Set the viewport back to the native EGL surface before Iris' final pass. */
     public static void resetNativeViewport() {
         if (!LOADED) return;

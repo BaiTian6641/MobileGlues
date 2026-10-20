@@ -40,7 +40,7 @@ adapter to request a real reduced scene.
 
 - Core `libmobileglues.so` SHA-256: `4352e9de62a0366e9781f1a8c73f66a1ce16a3494428770f4a9d15424c845260`
 - APK SHA-256: `4a5ef1bfba7e9af1fc800b9da00866a67929612519f158032b9aa485982f1b51`
-- Bridge JAR SHA-256: `6c233de3faa9527f26ee91691e67897dd8972c781b0bb9087fe639f64a175f1c`
+- Bridge JAR SHA-256: `8aecd174f3d6c258899223ffe6717f71833ae017031678728d6a8e6e85030939`
 - APK: `arm64-v8a` only, 16 KB ELF/archive alignment, debug-key signature
 - Files: `/home/polar/MobileGlues-fixtures/MobileGlues-scene-arm64.apk` and
   `/home/polar/MobileGlues-fixtures/mgfsr3bridge-0.1.0.jar`
@@ -152,8 +152,9 @@ The camera-motion review found four material defects, now corrected:
   native output. The pre-HUD final image is downsampled to that extent.
 - Image units 0 and 1 are saved/restored and the MobileGlues image-binding
   shadow is invalidated after the compute pass.
-- Camera history is invalidated after a >250 ms capture gap or a >64-block
-  camera jump; reflection failure explicitly invalidates it.
+- Camera history is invalidated after a >250 ms capture gap, a >64-block camera
+  jump, a reflection failure, or an Iris pipeline create/destroy (world or
+  shader generation change).
 - The shader stores zero motion on invalid reprojection/projection instead of
   leaving stale texels.
 

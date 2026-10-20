@@ -3,6 +3,6 @@
   "minVersion": "0.8",
   "package": "com.googlebook.fsrbridge.mixin",
   "compatibilityLevel": "JAVA_17",
-  "client": ["FinalPassRendererMixin", "RenderTargetsMixin"],
+  "client": ["FinalPassRendererMixin", "RenderTargetsMixin", "IrisRenderingPipelineMixin"],
   "injectors": {"defaultRequire": 1}
 }
