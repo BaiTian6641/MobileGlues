@@ -11,7 +11,7 @@ Status: **rendering PASS (single run); performance and temporal quality NOT RUN.
 - FSR3 setting: enabled, quality **Quality**.
 - APK SHA-256: `858743c7012c80f3349dea9a2573ccd0d89096573f3e4907d10b796c10316707`.
 - Core SHA-256: `83372740ffceb7f2b0c95cc7daa42b2e9c73b8a02c393b42df40d8a3364c6a14`.
-- Bridge SHA-256: `a7b9263993208d33dba51fdc0809c35ec71f0bd3ec62fca6b9029f2295e836c8`.
+- Bridge SHA-256 during success run: `a7b9263993208d33dba51fdc0809c35ec71f0bd3ec62fca6b9029f2295e836c8`. A later diagnostic-only JAR adds scene-extent logging.
 - Screenshot FSR3 Quality: `/home/polar/MobileGlues-fixtures/2026-10-20-fsr3-quality-camera-motion.png`
 - Log FSR3 Quality: `/home/polar/MobileGlues-fixtures/2026-10-20-fsr3-quality-camera-motion.log`
 - Screenshot FSR3 off baseline: `/home/polar/MobileGlues-fixtures/2026-10-20-fsr3-off-baseline.png`
