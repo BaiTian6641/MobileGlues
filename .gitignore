@@ -8,3 +8,8 @@ MobileGlues-cpp/tools/capability_probe/capability_probe_arm64
 MobileGlues-cpp/tools/wrapper_probe/wrapper_probe_arm64
 
 .gradle/
+references/
+references/*
+
+# FP16 probe build output
+MobileGlues-cpp/tools/fp16_probe/fp16_probe_arm64
