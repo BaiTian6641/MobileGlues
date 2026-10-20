@@ -1,0 +1,67 @@
+{
+  "created_utc": "2026-10-20T16:36:14.176501+00:00",
+  "review_start_revision": "d72acc0fc83589515b398fb454e54a5941ce7101",
+  "camera_fix_revision": "41a58f7eefceb7b3641c133d6bceef7e021d634e",
+  "reconciled_revision": "5d7ac39643e68b85dc77c35515cdea70485a19d2",
+  "device_commands_in_this_review": false,
+  "evidence_levels": [
+    "source-extracted host seam",
+    "host semantic suite",
+    "illustrative examples",
+    "arithmetic over existing device log"
+  ],
+  "runs": [
+    {
+      "name": "camera before",
+      "compile_exit_code": 0,
+      "run_exit_code": 1,
+      "expected": "FAIL; startup continuity defect"
+    },
+    {
+      "name": "camera after",
+      "compile_exit_code": 0,
+      "run_exit_code": 0,
+      "expected": "PASS; startup continuity only"
+    },
+    {
+      "name": "viewport",
+      "compile_exit_code": 0,
+      "run_exit_code": 1,
+      "expected": "FAIL; offscreen and subviewport overwritten"
+    },
+    {
+      "name": "host suite final",
+      "command": "sh MobileGlues-cpp/tests/run.sh",
+      "exit_code": 0,
+      "executables": 11,
+      "working_tree_test_patch": "host-suite-final-test.patch"
+    },
+    {
+      "name": "documentation examples",
+      "exit_code": 0,
+      "checks": 21,
+      "product_execution": false
+    }
+  ],
+  "extracted_functions_verified_verbatim": true,
+  "source_file_sha256": {
+    "d72acc0:MobileGlues-cpp/upscaling/mg_fsr_jni.cpp": "66bf3f4ad230784fc2d6a33ad392be93c7fc02cf69f054e7b690f8ae0c04c1b2",
+    "41a58f7:MobileGlues-cpp/upscaling/mg_fsr_jni.cpp": "0279458300106ebfceba9b89874b01fcd64fa3d7753df340969fb3bb9bb06732",
+    "5d7ac39:MobileGlues-cpp/gl/FSR3Direct.cpp": "7121f154545f8a15f31183e9ccae0146fed35d79b1364544006fa29b80121ac1"
+  },
+  "files": {
+    "README.md": "3b591e05a9910699d596a10e63df3f016a198bd8305afa49a9d0497a19d6a662",
+    "camera_capture.cpp": "0cc9d2be154e486bc9f282f6b919ff9e86054b80c60db65b85f5698b935f1b1f",
+    "camera_capture.log": "b1b11317802029973ca90542681b337b8100e10ed4cd2253a75bd624caef826e",
+    "camera_capture_after.cpp": "c79da37e42b203c09ea126526bca5aea9b3686d423e78653cc88680f48dc9054",
+    "camera_capture_after.log": "4e5b949f24dab0967a709cfff08022b288efa96a7ca1765a636ff3a82b37adcd",
+    "contract-examples.log": "4e6fbce58f58d8056fd63375053028a312a5577288f1f2df3a1e398f49b88919",
+    "fsr3_scene_plan_at_5d7ac39.h": "343022d37066d34c37c1164cfa841204c6118176be2d37d7b004771beba0e163",
+    "host-suite-final-test.patch": "4b1fd6e26694be7e1d2a6f984d8ae098f5d08a2267d71af4ea032707c5ec88e9",
+    "host-suite-final.log": "02103d98072653abe34c09003a3cc66872156146a8b6a4b8683987dba23ba50c",
+    "host-suite.log": "02103d98072653abe34c09003a3cc66872156146a8b6a4b8683987dba23ba50c",
+    "timing-recalculation.json": "e4e4db798ca5d9412d28b77bae0eb31d00d401554867300d7e5073385b909e22",
+    "viewport_capture.cpp": "30a55247410883bb2f9eed90072adde927788af35aa7aeded3b42b24a2777460",
+    "viewport_capture.log": "6ce6457587e04a3dc4da46fdf93eeeec4de0e2e98a0551cdddf02fba8a4ac598"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "source_log_sha256": "01538292fa94165552bd09327f5c200a0fb61cd21383adb3e85b4c39374f3d93",
+  "per_pass_ms": [
+    [
+      2.741,
+      0.705,
+      2.698,
+      0.234,
+      5.848,
+      0.815,
+      3.838,
+      0.788
+    ],
+    [
+      2.671,
+      0.752,
+      6.818,
+      0.345,
+      6.314,
+      0.933,
+      4.965,
+      0.799
+    ],
+    [
+      2.277,
+      0.678,
+      2.943,
+      0.241,
+      6.061,
+      1.172,
+      4.347,
+      0.917
+    ]
+  ],
+  "per_dispatch_sum_ms": [
+    17.667,
+    23.597,
+    18.636
+  ],
+  "median_of_dispatch_sums_ms": 18.636,
+  "validity": "Recorded timestamp values only; GPU disjoint and timestamp-counter validity were not captured."
+}

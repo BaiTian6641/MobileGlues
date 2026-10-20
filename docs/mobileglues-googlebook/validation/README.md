@@ -96,6 +96,18 @@ pack screen; the saved copies are evidence snapshots.
 | `2026-10-18-game-main-menu-old-plugin.png` | `0258b18ccaecd64433880e1463c0a1d329feda7fa17f45201f51d3224571c85e` | installed 2.0.0 renderer smoke before test plugin |
 | `2026-10-19-1.21.1-neoforge-21.1.262-world.png` | `c34d52587361c715b37394d21918f6a08a92c93a03d4c903d8e567e842cc766d` | staged 21.1.262 world rendered with the original pack and workspace renderer |
 | `2026-10-19-1.21.1-neoforge-21.1.262-title.png` | `3c45814f66152721724c054f4bf5b7f2cc265cad24062488194fba191267ddff` | title screen: Minecraft 1.21.1 / NeoForge 21.1.262 (9 mods), pack active |
+| `2026-10-19-auroralumen-mobile-night.png` | `5a098aab78b4191667eb76689595041c503f3c9dd74172585f2f8e0d1f397b7e` | private AuroraLumen Mobile pack: night world, aurora, stars, clouds, snow, block light |
+| `2026-10-19-auroralumen-mobile-f3.png` | `0f82f1a81bbd66a73de144f5a3897c62d3ff15dbdba31e2d4cec44a223c98c78` | F3: `AuroraLumen-Mobile-v2.zip`, Iris profile MOBILE, 33 FPS at 2880×1585, MobileGlues 2.0.0 |
+| `2026-10-19-auroralumen-mobile-world.log` | `1bc285e6882f51afaf62a89b0dc5c60f76fe2000cabf032bd4c9370f23042788` | Iris profile/pack/provider lines; no shader compile failures |
+| `2026-10-20-auroralumen-lut-nebula.png` | `5b92f114e59e1f089bfe9420f975052309b519dd12063e80093eebca90a50d1b` | night sky with baked procedural nebula LUT, aurora, stars |
+| `2026-10-20-auroralumen-lut-f3.png` | `fd49e0ac31fc583dbc688079d9f05ced596dea63db9cd9fca4378bea990f3de7` | F3: profile MOBILE, 55 FPS at 2880×1585, nebula LUT active |
+| `2026-10-20-auroralumen-lut-world.log` | `5aa5f02a4f0a516368e84ae811e64dd0007406e0282240644627c69ec23f5b44` | LUT build: profile/pack/provider, no shader compile failures |
+| `2026-10-20-auroralumen-mc-clouds.png` | `efeb983ace1a817d63283936d69d69ed98a47b7ae8d93553b41311f13137234b` | Minecraft-style semi-volumetric clouds: 12-block cells, 8-block slab |
+| `2026-10-20-auroralumen-mc-clouds-f3.png` | `d4143a3b6c9a4bb1de16bd2cdef0ca60fff0c437a1cb9faf192309f5138b2cd4` | F3: profile MOBILE_MC_CLOUDS, 40 FPS at 2880×1585 |
+| `2026-10-20-auroralumen-mc-clouds.log` | `8a4285d24415d648d007d8bf19b27231bc4b3c872b13682bc63653055d81e464` | MC-cloud build: profile/pack/provider, no shader compile failures |
+| `2026-10-20-auroralumen-wsr-act.png` | `a5be8a8eb7498a555c39fcd5c50be34b9e07a42a9176c4642d665390ecf220c8` | ACT 128 + WSR-only, 48-block cap, 0.85 smoothness cutoff |
+| `2026-10-20-auroralumen-wsr-act-f3.png` | `a9eba05ab7eed0ccebdfc9cd2d1c1a26f4b645b74adb8bca787a0f56d6f6bdd6` | F3: profile MOBILE_WSR, 29 FPS at 2880×1585 |
+| `2026-10-20-auroralumen-wsr-act.log` | `4e610ec0cac505787fb596b75018486dce7e88d471b5bddb83f5fe22b2db3b8e` | ACT+WSR build: profile/pack/provider, no shader compile errors |
 
 ## Wrapper harness reproduction
 

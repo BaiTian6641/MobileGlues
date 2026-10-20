@@ -12,9 +12,19 @@ distribution.
 | `audits/` | Worker source/runtime audit handoffs; `stable-profile.md` records the temporary history-off policy |
 | `validation/` | Device and host evidence (created when runs exist) |
 
-For the next implementation agent, start with the
+The immediate next phase is
+[scaled preset overlay correction](scaled-presets-prompts.md), starting with
+Experiment A and the confirmed NativeAA baseline. Its
+[diagnostic contract](design/scaled-presets-diagnostic-contract.md) specifies
+draw-time traces and separate gates for Quality, Balanced, Performance and
+Ultra Performance. Keep history off and motion zero during this phase.
+
+For the broader temporal integration roadmap, use the
 [handoff](agent-handoff.md) and paste the
 [main implementation prompt](agent-prompts.md#main-implementation-prompt).
+The [frame-generation rollout](design/framegen-experimental-rollout.md)
+records the present-path and CPU-assistance gates; it is not a capability claim.
+
 The [follow-up review](audits/2026-10-20-followup-review.md) addresses the
 reported menu/HUD scaling and world flicker, with shaders required.
 [Implementation notes](implementation-notes.md) include code examples and

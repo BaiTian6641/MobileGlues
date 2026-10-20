@@ -1,0 +1,4 @@
+capture=1 valid=1 has_previous=0 expected_previous=0
+capture=2 valid=1 has_previous=1 expected_previous=1
+capture=3 valid=1 has_previous=1 expected_previous=1
+continuity_contract=PASS

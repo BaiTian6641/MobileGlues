@@ -3,31 +3,40 @@
 Status: **design only. No scaled device pass yet.**
 
 Target: AuroraLumen private port on X1E/Adreno X1-85 through MobileGlues,
-Iris 1.8.14, ANGLE ES 3.2. The pack exposes a final pass but no gbuffer/deferred
-world pipeline that MobileGlues can use as a real reduced-resolution scene.
+Iris 1.8.14, ANGLE ES 3.2. The latest FSR record describes a final-pass-only
+pack. Verify its exact archive and compiled passes; Iris fallback shaders may
+still produce world/hand draws into scene FBOs.
 NativeAA is the current artifact-free fallback ([evidence](../validation/2026-10-20-x1e-nativeaa-final-pass.md)).
+
+Use the [next-phase prompts](../scaled-presets-prompts.md) and
+[diagnostic contract](scaled-presets-diagnostic-contract.md) for execution.
+They refine the trace and extend qualification to all four scaled presets.
 
 ## Failure being solved
 
-When Iris `RenderTargets` was scaled to 1694x932 while the pack still rendered
-hand/depth at native ownership, the user saw a translucent hand/light-shadow
-overlay. With the scene adapter disabled and NativeAA selected, the overlay
-disappeared and the star layer stayed world-locked. The overlay is therefore a
-target-ownership defect at the hand/light boundary, not a shader math defect.
+When Iris `RenderTargets` was scaled to 1694x932, the user saw a translucent
+hand/light-shadow overlay. Main depth still has separate external ownership.
+With the scene adapter disabled and NativeAA selected, the overlay
+disappeared and the star layer stayed world-locked. This supports investigating
+target ownership and coordinate domains at the hand/light boundary. The exact
+failing draw/copy or shader-coordinate operation still needs a trace.
 
 Iris details that constrain the fix:
 
-- `RenderTargets` creates scaled `colortex` targets, `depthtex0`, and the
-  `noHand`/`noTranslucents` depth copies at the constructor extent.
-- `copyPreHandDepth()` copies pre-hand depth into `noHandDestFb`; the FBO has
-  color attachment 0 plus the `noHand` depth texture. Whether Iris leaves that
-  FBO bound for the hand draw is a measured question, not an assumption: the
-  `noHand` texture must retain pre-hand depth semantics.
+- `RenderTargets` creates `colortex` targets and the `noHand`/`noTranslucents`
+  depth copies from its scene extent and pack overrides. `depthtex0` refers
+  to the externally supplied main depth; it is not resized by changing the
+  constructor width/height.
+- `copyPreHandDepth()` copies into the `noHand` texture. `noHandDestFb` has
+  color attachment 0 plus that depth texture, but not every copy strategy uses
+  the destination FBO. Whether any FBO remains bound for the hand draw is a
+  measured question; `noHand` must retain pre-hand depth semantics.
 - `HandRenderer.renderSolid()` and `renderTranslucent()` draw into the current
   FBO; they do not create their own target.
-- `finalizeLevelRendering()` runs the composite and final pass at native output.
-- Shadow/light targets are not the same `RenderTargets` object and must not be
-  scaled by the scene adapter.
+- `finalizeLevelRendering()` runs composites on their configured targets,
+  followed by the final pass at native output.
+- Fixed shadow/light-map resources retain their existing owners and extents.
+  Distinguish them from screen-space lighting targets and the Minecraft lightmap.
 - Iris viewport uniforms are used by world and composite shaders; the final
   pass and UI must see native dimensions.
 
@@ -51,8 +60,10 @@ phases), and the existing [pass-input audit](../audits/minecraft-iris-pass-input
 
 Invariant: no hand or world color write may bind a native-sized color/depth
 target while the rest of the scene is scaled. No final/UI write may bind a
-scaled target. The pre-hand copy must not leave a depth-only FBO bound, and
-the `noHand` texture must remain a pre-hand depth copy.
+scaled target. A depth-copy destination must not become the subsequent hand
+depth-write target, and the `noHand` texture must remain a pre-hand depth copy.
+Fixed shadow/light resources retain their pack-defined extents, not necessarily
+the window extent.
 
 ## Implementation plan (bounded, no behavior expansion)
 
@@ -61,24 +72,33 @@ the `noHand` texture must remain a pre-hand depth copy.
 Add a debug-only trace at:
 
 1. `RenderTargets` constructor/resize: scene color, depth, `noHand` size.
-2. `IrisRenderingPipeline.beginHand()` return: current FBO, color attachment
-   type/name, attachment texture size, viewport.
-3. `HandRenderer.renderSolid()` and `renderTranslucent()` return: same fields.
-4. `FinalPassRenderer.renderFinalPass()` HEAD/RETURN: current target and extent.
+2. `IrisRenderingPipeline.beginHand()` and the depth-copy operation HEAD/RETURN:
+   read/draw FBOs, color/depth attachment identity and extent, copy rectangles,
+   selected strategy, viewport/scissor.
+3. `HandRenderer.renderSolid()` and `renderTranslucent()` entry, actual
+   draw/batch execution, and return: the same fields plus program identity.
+   A shader's cleanup can rebind the main FBO; RETURN alone is insufficient.
+4. `FinalPassRenderer.renderFinalPass()` HEAD/draw/RETURN: current target,
+   extent and actual uploaded uniforms; distinguish bridge submit before/after.
+5. Actual world/sky and shadow/light draws used by the pack, plus HUD entry.
 
-Gate: hand FBO color/depth must equal the scaled scene extent. If they are
-native, the duplicate is a bind ownership bug, not a viewport bug. Remove the
-trace before any product build.
+Experiment A's gate is a trustworthy ordered trace that identifies actual
+draw ownership and the first mismatch, including skipped draws/unknown fields.
+A mismatch is useful diagnostic evidence; it does not prevent Experiment B
+from repairing that mismatch. The eventual product gate requires matched
+scene/hand color and depth. Compile trace code out of product builds.
 
 ### Experiment B — one scene extent for hand
 
 - Keep `RenderTargets` sizing at the quality extent.
-- Ensure the pre-hand copy restores the scaled scene color FBO used by the
-  hand; do not leave a depth-only copy FBO or a native main target bound.
-- Do not force the hand into the `noHand` copy: that would invert `depthtex1`
+- Correct the producer-stage transition identified by the trace so actual
+  hand draws use the scene target. Do not infer that the depth copy left its
+  destination bound, or override legitimate post-draw cleanup.
+- Do not force the hand into the `noHand` copy: that would invert `depthtex2`
   semantics and can create the light/shadow overlay this design is eliminating.
-- Apply the scene viewport at bind time; keep the native viewport only for the
-  final pass and FBO 0.
+- Apply the scene viewport at explicit scene transitions and the native
+  viewport at display transitions. Preserve arbitrary offscreen/subviewports;
+  a generic framebuffer bind is not a sufficient target-role signal.
 - Keep `noHand`/`noTranslucents` at the same scaled extent as the scene.
 - Keep the pack's shadow/light render targets untouched.
 - Keep viewport uniforms scene-scaled for world/composite and native during the
@@ -92,8 +112,11 @@ world-locked, and hand/menu alignment matches the NativeAA baseline.
 
 The scene adapter stays conditional on a scaled quality preset. The current
 final-pass-only pack defaults to NativeAA; selecting Balanced/Performance is
-the opt-in for this experiment. If any gate fails, the adapter must force
-NativeAA rather than ship a scaled artifact.
+the opt-in for this experiment. Quality and Ultra Performance are also
+unqualified until separately tested. If any gate fails, the adapter must use
+NativeAA coherently across allocation, uniforms and dispatch rather than ship
+a scaled artifact. This is required fallback behavior; the current default
+setting alone does not establish a complete automatic fallback implementation.
 
 ### Experiment C — isolate light/shadow if B still overlays
 
@@ -103,6 +126,8 @@ If B removes the hand duplicate but leaves a light/shadow overlay:
   `viewWidth/viewHeight`; if they do, scope the viewport-uniform override by
   program/pass rather than globally.
 - Verify no `ShadowRenderTargets` object passes through `RenderTargetsMixin`.
+- Check wrapper viewport adjustments as well: they can affect a shadow FBO
+  even when its Java target object never passes through that mixin.
 - Verify `depthtex1`/`depthtex2` are sampled as textures at scene extent, not
   as native window extents.
 - Do not mask the overlay with a blend or clear; that would hide an ownership
@@ -119,7 +144,7 @@ Gate: overlay absent with scaled scene and final pass at native.
 - Do not make Balanced the default until these gates pass. NativeAA remains
   the artifact-free default.
 - Do not treat the final-pass downsample alone as scene-resolution scaling;
-  it cannot reduce world geometry cost.
+  it does not reduce the original world draw's pixel work.
 
 ## Acceptance
 
@@ -135,4 +160,7 @@ Gate: overlay absent with scaled scene and final pass at native.
 | Pack bytes | unchanged |
 | Fallback | NativeAA on any gate failure |
 
-Performance is recorded separately; no FPS claim is made by this design.
+The size above is the Balanced example at the recorded output extent.
+Quality, Performance and Ultra Performance require their own draw and visual
+evidence, using the ladder in the diagnostic contract. Performance is recorded
+separately; no FPS claim is made by this design.

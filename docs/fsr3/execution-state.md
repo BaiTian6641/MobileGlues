@@ -10,7 +10,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | --- | --- |
 | Integration worktree | `/home/polar/MobileGlues` |
 | Branch | `googlebook/x1e-stage1-3` |
-| HEAD | `0a1e062`; installed pair APK `538455b7…`, core `5733b7bb…`, JAR `1f759cfe…`; NativeAA final-pass hand/star PASS |
+| Reviewed source | `fb0bd16`; recorded installed pair APK `538455b7…`, core `5733b7bb…`, JAR `1f759cfe…`; NativeAA final-pass hand/star PASS |
 | Origin | `git@github.com:BaiTian6641/MobileGlues.git` |
 | Upstream | `https://github.com/MobileGL-Dev/MobileGlues.git` |
 | Untouched user changes | modified `.gitignore`, `docs/mobileglues-googlebook/validation/README.md`; untracked `.vscode/`, FSR3 plan, recent validation docs |
@@ -55,7 +55,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | S2 backend feasibility | **PASS** | X1E RCAS exact vs CPU; 8-pass chain 2x/1.5x; independent X1E multi-frame evidence now present |
 | S2 game audit | **PASS (source)** | `docs/fsr3/audits/minecraft-iris-pass-input.md`: final TAA is `composite6`, jitter is partial, no velocity buffer in Iris 1.8.14 |
 | S3 native temporal backend | **PARTIAL** | Deterministic reset/history/reset probe PASS; per-pass Quality GPU timing ~17.7–23.6 ms total (PrepareReactivity ~6, Accumulate ~4–5); flat synthetic probe, game integration not qualified |
-| S4 first game path | **PARTIAL: NativeAA artifact-free PASS; scaled final-pass path FAILS ownership** | NativeAA night run: hand/light overlay gone, stars world-locked; Balanced/Performance reproduced translucent hand/light-shadow overlay on the final-pass-only pack; `validation/2026-10-20-x1e-nativeaa-final-pass.md` |
+| S4 first game path | **PARTIAL: NativeAA visual PASS; scaled path artifacts, exact mechanism pending trace** | NativeAA night run: hand/light overlay gone, stars world-locked; Balanced/Performance reproduced translucent hand/light-shadow overlay on the recorded final-pass-only pack; `validation/2026-10-20-x1e-nativeaa-final-pass.md` |
 | S5 Complementary | **BLOCKED** | source boundary mapped; ACT/WSR/r5.9.2 device qualification NOT RUN |
 | S6 qualification | **NOT RUN** | no matched benchmark/thermal qualification |
 
@@ -95,10 +95,15 @@ source of truth for the pre-FSR3 renderer/pack history.
 1. Keep NativeAA as the artifact-free default for the current final-pass-only
    pack; do not claim scaled FSR3 performance there.
 2. Implement Experiment A from `design/artifact-free-scaled-final-pass.md`
-   (debug extent/bind trace at pre-hand, hand return and final return) and have
-   the user operate one Balanced run.
-3. Only if the hand color/depth targets are proven scene-extent and `noHand`
-   remains pre-hand depth, implement Experiment B (one scene extent for hand).
+   using `scaled-presets-prompts.md` and
+   `design/scaled-presets-diagnostic-contract.md`: capture actual draw/batch
+   state as well as pre-hand, hand return and final return. Prepare the host
+   package first; one user-operated Balanced run is a separate device gate.
+3. Use that trace to identify the first mismatch, then implement Experiment B.
+   Its exit gate requires one coherent scene/hand color-depth extent with
+   `noHand`/`depthtex2` preserved as a pre-hand snapshot.
 4. Keep shadow/light targets unscaled; run Experiment C only if the overlay
    persists after B.
-5. Do not enable temporal history or motion for this boundary.
+5. Qualify Quality, Balanced, Performance and Ultra Performance separately,
+   preserving NativeAA fallback. Do not enable temporal history or motion for
+   this boundary. No new device result is implied by these prompt refinements.

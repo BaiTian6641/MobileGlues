@@ -3,6 +3,14 @@
 Updated: 2026-10-20. Owner: coordinator. Gate labels follow
 `docs/MobileGlues_FSR3_Research_and_Implementation_Plan.md`.
 
+The current S4 checkpoint is
+[scaled preset overlay correction](scaled-presets-prompts.md), starting from
+the confirmed NativeAA visual baseline. Keep history off and motion zero;
+earlier camera-on results below are historical evidence. Experiments A/B/C
+and separate preset gates are specified in the
+[diagnostic contract](design/scaled-presets-diagnostic-contract.md).
+No new device or performance gate is closed by the prompt update.
+
 | ID | Stage | Task | Owner | Paths | Status | Evidence / blocker |
 | --- | --- | --- | --- | --- | --- | --- |
 | FSR-S0-A | S0 | Lock actual core/plugin/device provenance | coordinator | `docs/fsr3/` | DONE | plugin 2.0.0 APK `f032e667…`; installed `libmobileglues.so` `dcb3493e…`; core source `8ac7036`; checkout `355d797` |
