@@ -188,13 +188,7 @@ void glBindFramebuffer(GLenum target, GLuint framebuffer) {
         // target. A bind of 0 while FSR1 owns no target -- before the first
         // build, or after it was disabled -- is the surface itself, and marking
         // that as primed would let ApplyFSR sample an empty render texture.
-        if (draw_fb != 0) {
-            FSR1_Context::g_dirty = true;
-            // Priming survives a rebuild, but one present is held while the new
-            // texture is still empty. A bind during that window means this frame
-            // draws into it before presentation, so the hold can be dropped.
-            FSR1_Context::g_skipNextPresent = false;
-        }
+        if (draw_fb != 0) FSR1_Context::g_dirty = true;
     }
 
     if (draw_fb != 0) {

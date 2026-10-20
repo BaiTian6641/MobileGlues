@@ -284,7 +284,6 @@ namespace FSR1_Context {
     GLsizei g_renderWidth = 0;
     GLsizei g_renderHeight = 0;
     bool g_dirty = false;
-    bool g_skipNextPresent = false;
 
     bool g_resolutionChanged = false;
     GLsizei g_pendingWidth = 0;
@@ -591,7 +590,6 @@ void InitFSRResources() {
         DestroyProgramAndQuad();
         FSR1_Context::g_initFailed = true;
         FSR1_Context::g_dirty = false;
-        FSR1_Context::g_skipNextPresent = false;
         FSR1_Context::g_initializing = false;
         LOG_W_FORCE("FSR1: resource creation failed; the spatial path is disabled for this context");
         return;
@@ -599,7 +597,6 @@ void InitFSRResources() {
 
     fsrInitialized = true;
     FSR1_Context::g_dirty = false;
-    FSR1_Context::g_skipNextPresent = false;
     FSR1_Context::g_initializing = false;
 
     // The guard restores the application's bindings and viewport, so there is
@@ -644,7 +641,6 @@ static bool RecreateFSRTargets() {
         state.framebuffer_recreated(oldEasuFBO, 0);
         state.framebuffer_recreated(oldTargetFBO, 0);
         FSR1_Context::g_dirty = false;
-        FSR1_Context::g_skipNextPresent = false;
         GLES.glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return false;
     }
@@ -667,14 +663,14 @@ static bool RecreateFSRTargets() {
     state.framebuffer_recreated(oldEasuFBO, FSR1_Context::g_easuFBO);
     state.framebuffer_recreated(oldTargetFBO, FSR1_Context::g_targetFBO);
 
-    // The new render texture has never been drawn into, but the application's
-    // drawing habit has not changed: if it was drawing into the old render
-    // target, it is still drawing into this one -- often without binding
-    // framebuffer 0 again. Keep priming so upscaling resumes, and hold exactly
-    // one present so the empty texture is not what gets shown. A redirect bind
-    // after the rebuild clears the hold (framebuffer.cpp), because that frame
-    // will draw into the new target before it is presented.
-    FSR1_Context::g_skipNextPresent = SkipPresentAfterRebuild(FSR1_Context::g_dirty);
+    // Priming deliberately survives the rebuild. The new render texture has not
+    // been drawn into yet, but the driver's draw binding is restored to it by
+    // the guard (or republished above), so the application's next frame -- which
+    // it draws before presenting, whether or not it binds framebuffer 0 again --
+    // fills it. There is no reliable "nothing was drawn" signal, and holding a
+    // present on "no bind" would throw away that valid frame, so the next
+    // presented frame is upscaled. An unprimed path stays unprimed and waits for
+    // its first redirect bind.
 
     LOG_D("FSR1 resources recreated: output %dx%d, render %dx%d", FSR1_Context::g_outputWidth,
           FSR1_Context::g_outputHeight, FSR1_Context::g_renderWidth, FSR1_Context::g_renderHeight);
@@ -702,11 +698,9 @@ void ApplyFSR() {
     // drawing, gl/framebuffer.cpp redirects every later draw of it to
     // g_renderFBO, and an application that binds only once keeps rendering into
     // the target without another bind. So ApplyFSR upscales every present after
-    // that point. g_skipNextPresent is the one exception: a rebuild produced
-    // empty storage, so the first present afterwards holds until the target is
-    // bound again or that present has passed.
-    switch (DecidePresent(FSR1_Context::g_dirty, FSR1_Context::g_skipNextPresent)) {
-    case PresentDecision::Wait: {
+    // that point, including the first frame after a rebuild -- the application
+    // has drawn into the replacement before it presents.
+    if (DecidePresent(FSR1_Context::g_dirty) == PresentDecision::Wait) {
         static bool warned = false;
         if (!warned) {
             warned = true;
@@ -714,15 +708,6 @@ void ApplyFSR() {
                         "and not claiming an upscale for this frame");
         }
         return;
-    }
-    case PresentDecision::SkipOne:
-        // The new render target has no content yet. Present the surface as it
-        // stands and resume upscaling on the next frame even if the application
-        // never binds framebuffer 0 again.
-        FSR1_Context::g_skipNextPresent = false;
-        return;
-    case PresentDecision::Upscale:
-        break;
     }
 
     GLStateGuard state(kApplyFSRState);
@@ -814,7 +799,6 @@ void CheckResolutionChange(EGLDisplay display, EGLSurface surface) {
         DestroyProgramAndQuad();
         FSR1_Context::g_initFailed = true;
         FSR1_Context::g_dirty = false;
-        FSR1_Context::g_skipNextPresent = false;
         fsrInitialized = false;
         LOG_W_FORCE("FSR1: resize to %dx%d failed; spatial upscaling disabled", FSR1_Context::g_outputWidth,
                     FSR1_Context::g_outputHeight);
@@ -877,11 +861,9 @@ struct fsr1_ctx_state_t {
     GLuint targetFBO = 0, targetTexture = 0, currentDrawFBO = 0;
     GLsizei outputWidth = 0, outputHeight = 0;
     GLsizei targetWidth = 0, targetHeight = 0, renderWidth = 0, renderHeight = 0;
-    // Whether this context's render texture has ever been bound for drawing, and
-    // whether one present is being held after a rebuild. They travel with the
-    // objects because they describe them.
+    // Whether this context's render texture has ever been bound for drawing.
+    // It travels with the objects because it describes them.
     bool dirty = false;
-    bool skipNextPresent = false;
     bool initialised = false;
     bool initFailed = false;
 };
@@ -918,7 +900,6 @@ void store_into(fsr1_ctx_state_t& d) {
     d.renderWidth = FSR1_Context::g_renderWidth;
     d.renderHeight = FSR1_Context::g_renderHeight;
     d.dirty = FSR1_Context::g_dirty;
-    d.skipNextPresent = FSR1_Context::g_skipNextPresent;
     d.initialised = fsrInitialized;
     d.initFailed = FSR1_Context::g_initFailed;
 }
@@ -946,7 +927,6 @@ void load_from(const fsr1_ctx_state_t& s) {
     FSR1_Context::g_renderWidth = s.renderWidth;
     FSR1_Context::g_renderHeight = s.renderHeight;
     FSR1_Context::g_dirty = s.dirty;
-    FSR1_Context::g_skipNextPresent = s.skipNextPresent;
     fsrInitialized = s.initialised;
     FSR1_Context::g_initFailed = s.initFailed;
     // Left alone deliberately: g_resolutionChanged and the pending size describe

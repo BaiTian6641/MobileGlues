@@ -246,30 +246,23 @@ constexpr uint32_t kRecreateState = STATE_TEXTURE | STATE_FRAMEBUFFER | STATE_RE
 // "Primed" is persistent: once the application has redirected a draw bind of
 // framebuffer 0 to the render target, it keeps drawing there every frame even
 // when it does not bind again, so ApplyFSR upscales on every present until the
-// object set is rebuilt or the path is disabled.
+// object set is built unusably or the path is disabled.
 //
-// A rebuild replaces the object names with fresh, empty storage. Priming is
-// preserved across it (otherwise a bind-once application would never upscale
-// again), but one present is held so an empty texture is not presented. A
-// redirect bind after the rebuild clears the hold: that frame will draw into
-// the new target before it is presented.
+// A rebuild replaces the object names with fresh storage. Priming survives it:
+// the driver's draw binding is restored to the replacement, so a bind-once
+// application draws a complete frame into it before the next present and an
+// application that binds again does so before drawing. There is no "was it
+// drawn" signal to consult, and holding a present on "no bind" would discard a
+// valid frame, so the next presented frame is upscaled whenever the path was
+// primed before the rebuild. An unprimed path stays unprimed and waits for its
+// first redirect bind.
 enum class PresentDecision : uint8_t {
-    Wait,     // never primed: present the surface as drawn
-    SkipOne,  // freshly rebuilt and not bound since: hold one present
-    Upscale,  // primed and ready
+    Wait,    // never primed: present the surface as drawn
+    Upscale, // primed: the render target is where the application draws
 };
 
-constexpr PresentDecision DecidePresent(bool primed, bool skip_present) {
-    if (!primed) return PresentDecision::Wait;
-    if (skip_present) return PresentDecision::SkipOne;
-    return PresentDecision::Upscale;
-}
-
-// The one state transition a rebuild performs: priming survives, and a primed
-// target holds exactly one present until it is bound or that present passes.
-// An unprimed target stays unprimed and has nothing to hold.
-constexpr bool SkipPresentAfterRebuild(bool primed) {
-    return primed;
+constexpr PresentDecision DecidePresent(bool primed) {
+    return primed ? PresentDecision::Upscale : PresentDecision::Wait;
 }
 
 } // namespace FSR1Plan
