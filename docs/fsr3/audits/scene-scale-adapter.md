@@ -36,6 +36,15 @@ adapter to request a real reduced scene.
 - No correctness/performance claim is made until the X1E run records the exact
   log lines and frames.
 
+## Package identity
+
+- Core `libmobileglues.so` SHA-256: `c6b4cd518c9d49b314e3ab8a2b20bb313724bc4ed58c77cafd352185fa563119`
+- APK SHA-256: `eeb3a2f26ecd8a1ba6a49d45acc32a8c638468f02332cf78fbb7d10453c29e50`
+- Bridge JAR SHA-256: `fdf7c1485340a18c520743cbe245b594f14dcfbcef546d031df9ac3ecf811f16`
+- APK: `arm64-v8a` only, 16 KB ELF/archive alignment, debug-key signature
+- Files: `/home/polar/MobileGlues-fixtures/MobileGlues-scene-arm64.apk` and
+  `/home/polar/MobileGlues-fixtures/mgfsr3bridge-0.1.0.jar`
+
 ## Test log signatures
 
 Expected when the adapter activates at Quality (1.5x) on a 2880x1800 surface:

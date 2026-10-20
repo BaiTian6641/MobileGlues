@@ -62,14 +62,15 @@ the scaled Iris targets. This avoids applying the quality ratio twice.
 
 ## Packaging
 
-Debug APK with the ARM64 core and slider:
-`/tmp/MobileGlues-quality-arm64.apk` (also copied to
-`/home/polar/MobileGlues-fixtures/MobileGlues-quality-arm64.apk`).
+Scene-adapter test package:
 
+- APK: `/home/polar/MobileGlues-fixtures/MobileGlues-scene-arm64.apk`
+- Bridge: `/home/polar/MobileGlues-fixtures/mgfsr3bridge-0.1.0.jar`
 - Package: `com.fcl.plugin.mobileglues`
 - ABI: `arm64-v8a` only
-- Core SHA-256: `1acf176ab1cafa90b3fe8e60c8e6fcadaaa6e8e0f6dc337dd7acb5e81db3bba8` (16 KB-aligned ELF, `LOAD ... 0x4000`)
-- APK SHA-256: `adb844c934c32f86a304cf1e36fe31634b9787a82c0f9efa73c2359a0c223b9d`
+- Core SHA-256: `c6b4cd518c9d49b314e3ab8a2b20bb313724bc4ed58c77cafd352185fa563119` (16 KB-aligned ELF)
+- APK SHA-256: `eeb3a2f26ecd8a1ba6a49d45acc32a8c638468f02332cf78fbb7d10453c29e50`
+- Bridge JAR SHA-256: `fdf7c1485340a18c520743cbe245b594f14dcfbcef546d031df9ac3ecf811f16`
 - Archive: `zipalign -P 16 4` + debug-key signature
 
 ## Next gate
