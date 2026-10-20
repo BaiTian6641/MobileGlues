@@ -4,8 +4,10 @@ Status: **host PASS; ARM64 build PASS; device NOT RUN; full S1 gate NOT CLAIMED*
 dependency, below).
 
 - Base commit: `355d797eeaf63d1ddfc8d2199671b061d9c6462f`
-- Result commit: `5f0c421fc934ec463530b395e0e951e91b755bef` (branch
-  `googlebook/fsr-core-s1`, worktree `/tmp/mg-fsr-core`)
+- Functional result commit: `5f0c421fc934ec463530b395e0e951e91b755bef`
+- Result commit: `0100e0fdaee26a34a749046924808ad8a8dc55ff` (the difference from the
+  functional commit is a guard-rationale comment only) on branch `googlebook/fsr-core-s1`,
+  worktree `/tmp/mg-fsr-core`
 - Scope: `MobileGlues-cpp/gl/FSR1/`, plus `MobileGlues-cpp/tests/fsr1_core_test.cpp` and the
   single test-runner line in `MobileGlues-cpp/tests/run.sh`.
 - No public FSR ABI was added or changed. ABI v1 remains
