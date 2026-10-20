@@ -563,6 +563,8 @@ void glBindBufferRange(GLenum target, GLuint index, GLuint buffer, GLintptr offs
     LOG()
     LOG_D("glBindBufferRange, target = %s, index = %d, buffer = %d, offset = %p, size = %zi", glEnumToString(target),
           index, buffer, (void*)offset, size)
+    // glBindBufferRange also updates the generic binding for this target.
+    set_bound_buffer_by_target(target, buffer);
 
     if (!has_buffer(buffer) || buffer == 0) {
         GLES.glBindBufferRange(target, index, buffer, offset, size);
@@ -582,6 +584,8 @@ void glBindBufferRange(GLenum target, GLuint index, GLuint buffer, GLintptr offs
 void glBindBufferBase(GLenum target, GLuint index, GLuint buffer) {
     LOG()
     LOG_D("glBindBufferBase, target = %s, index = %d, buffer = %d", glEnumToString(target), index, buffer)
+    // glBindBufferBase also updates the generic binding for this target.
+    set_bound_buffer_by_target(target, buffer);
 
     if (!has_buffer(buffer) || buffer == 0) {
         GLES.glBindBufferBase(target, index, buffer);
@@ -1108,13 +1112,39 @@ void glClearBufferSubData(GLenum target, GLenum internalformat, GLintptr offset,
         return;
     }
 
+    // BufferSubData is invalid against storage created without
+    // GL_DYNAMIC_STORAGE_BIT, and Iris creates its SSBOs with glBufferStorage
+    // flags=0. A copy from a zero-filled scratch buffer writes immutable storage
+    // legally, and does not depend on the sampler's generic binding shadow.
+    if (!GLES.glCopyBufferSubData || !GLES.glGenBuffers || !GLES.glBufferData) {
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        return;
+    }
+    GLint saved_read = 0, saved_write = 0;
+    GLES.glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &saved_read);
+    GLES.glGetIntegerv(GL_COPY_WRITE_BUFFER_BINDING, &saved_write);
+    GLuint zero_buffer = 0;
+    GLES.glGenBuffers(1, &zero_buffer);
     static thread_local std::vector<unsigned char> zeros(1u << 20, 0);
+    GLES.glBindBuffer(GL_COPY_READ_BUFFER, zero_buffer);
+    GLES.glBufferData(GL_COPY_READ_BUFFER, static_cast<GLsizeiptr>(zeros.size()), zeros.data(), GL_STREAM_COPY);
+    const GLuint real_buffer = find_real_buffer(buffer);
+    if (real_buffer == 0) {
+        GLES.glDeleteBuffers(1, &zero_buffer);
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        return;
+    }
+    GLES.glBindBuffer(GL_COPY_WRITE_BUFFER, real_buffer);
     size_t written = 0;
     while (written < static_cast<size_t>(size)) {
         const size_t chunk = std::min(zeros.size(), static_cast<size_t>(size) - written);
-        glBufferSubData(target, offset + static_cast<GLintptr>(written), static_cast<GLsizeiptr>(chunk), zeros.data());
+        GLES.glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0,
+                                 offset + static_cast<GLintptr>(written), static_cast<GLsizeiptr>(chunk));
         written += chunk;
     }
+    GLES.glBindBuffer(GL_COPY_READ_BUFFER, static_cast<GLuint>(saved_read));
+    GLES.glBindBuffer(GL_COPY_WRITE_BUFFER, static_cast<GLuint>(saved_write));
+    GLES.glDeleteBuffers(1, &zero_buffer);
 }
 
 void glClearBufferData(GLenum target, GLenum internalformat, GLenum format, GLenum type, const void* data) {
