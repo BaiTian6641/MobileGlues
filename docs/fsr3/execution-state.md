@@ -10,7 +10,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | --- | --- |
 | Integration worktree | `/home/polar/MobileGlues` |
 | Branch | `googlebook/x1e-stage1-3` |
-| HEAD | `1dced64` (scene adapter, review fixes, viewport plan tests); package evidence in `audits/scene-scale-adapter.md` |
+| HEAD | `83d0652` (scene adapter, camera-only motion, review fixes); package evidence in `audits/scene-scale-adapter.md` |
 | Origin | `git@github.com:BaiTian6641/MobileGlues.git` |
 | Upstream | `https://github.com/MobileGL-Dev/MobileGlues.git` |
 | Untouched user changes | modified `.gitignore`, `docs/mobileglues-googlebook/validation/README.md`; untracked `.vscode/`, FSR3 plan, recent validation docs |
@@ -52,7 +52,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | S2 backend feasibility | **PASS (compile/ops + one-pass/full-chain dispatch)** | X1E RCAS exact vs CPU; 8-pass chain executed at 2x/1.5x with host parity; independent Vulkan and multi-frame history NOT RUN |
 | S2 game audit | **PASS (source)** | `docs/fsr3/audits/minecraft-iris-pass-input.md`: final TAA is `composite6`, jitter is partial, no velocity buffer in Iris 1.8.14 |
 | S3 native temporal backend | **PARTIAL** | In-tree ABI/backend + optional bridge submit PASS; FSR3 quality presets + slider implemented; low-resolution scene and timing NOT RUN |
-| S4 first game path | **PARTIAL: adapter implemented, device NOT RUN** | Iris RenderTargets/viewport scaling and native final-pass reset implemented; previous native-scene run was 13 FPS vs 26 off |
+| S4 first game path | **PARTIAL: adapter + camera-only motion implemented, device NOT RUN** | Iris RenderTargets/viewport scaling, native final-pass reset, reflection matrix capture and reprojection shader; no independent-motion/jitter validation |
 | S5 Complementary | **BLOCKED** | waits for S4 |
 | S6 qualification | **NOT RUN** | no FSR3 installation exists |
 
