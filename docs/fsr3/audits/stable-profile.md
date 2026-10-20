@@ -15,14 +15,16 @@ changes pack lighting/depth; it is not a free hand fix.
 | --- | --- | --- |
 | Scene extent | Quality 1.5x (or Performance if needed) | any |
 | FSR3 history | **OFF** (`MG_FSR3_HISTORY` opt-in only) | ON |
-| Pack TAA | **ON** (single temporal owner) | OFF |
+| Pack TAA | if the pack exposes it; single temporal owner | OFF |
 | RCAS sharpness | 0.4 | 0.2 |
 | Direct post-HUD FSR | disabled when the bridge loads | developer diagnostic |
 | UI/HUD | native target viewport | native |
 | Hands | scene-owned, spatial only; softness accepted | ghost/reactive policy needed |
 
 History-off removes double-temporal ghosting. Pack TAA supplies smoothing and
-anti-flicker; FSR3 supplies scene-extent reconstruction and sharpening. The
+anti-flicker when exposed; the current AuroraLumen pack has no TAA option, so
+history-off is the only temporal control. FSR3 supplies scene-extent
+reconstruction and sharpening. The
 hand remains part of the scene and can be softer than native because it is
 spatially upscaled. No hand temporal/motion claim is made.
 
@@ -36,6 +38,11 @@ spatially upscaled. No hand temporal/motion claim is made.
   first stable point.
 
 ## Open hand decision
+
+Observed on 2026-10-20: the hand renders as two overlays, one scaled and one
+native. Iris has separate `HAND_SOLID` and `HAND_TRANSLUCENT` phases; a
+phase/FBO/viewport trace is installed to identify the mismatched target. This
+is a target-ownership defect, not pack TAA.
 
 If hand sharpness is unacceptable, the next profile must either:
 
