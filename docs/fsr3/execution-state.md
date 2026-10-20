@@ -10,7 +10,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | --- | --- |
 | Integration worktree | `/home/polar/MobileGlues` |
 | Branch | `googlebook/x1e-stage1-3` |
-| HEAD | `355d797` (`[Docs] Record X1E FP16 contract and ALU measurement`) |
+| HEAD | `d4479c1` (`[FSR3] (contract): freeze ABI v1 and record baseline provenance`) |
 | Origin | `git@github.com:BaiTian6641/MobileGlues.git` |
 | Upstream | `https://github.com/MobileGL-Dev/MobileGlues.git` |
 | Untouched user changes | modified `.gitignore`, `docs/mobileglues-googlebook/validation/README.md`; untracked `.vscode/`, FSR3 plan, recent validation docs |
@@ -47,9 +47,10 @@ source of truth for the pre-FSR3 renderer/pack history.
 | Gate | Status | Evidence |
 | --- | --- | --- |
 | S0 baseline/provenance | **PASS for identity; PARTIAL for regression baseline** | APK/core hashes, device tuple, host tests; white UI/ACT/WSR baseline not rerun in this lane |
-| S1 spatial foundation | **IN PROGRESS** | Core worker correcting FSR1 dataflow and output-first sizing |
+| S1 spatial foundation | **PARTIAL: host/build PASS, device NOT RUN** | Core branch `5f0c421` corrects dataflow/sizing; independent review running; adapter still needs to render the scene at the derived extent |
 | S2 contract | **PASS (frozen)** | `docs/fsr3/frame-contract.md` ABI v1 |
-| S2 backend feasibility | **IN PROGRESS / NOT RUN on device** | Pinned source and GLES operation spike assigned |
+| S2 backend feasibility | **IN PROGRESS / NOT RUN on device** | Pinned source, one of ten passes compiles as ESSL 3.20; full spike pending |
+| S2 game audit | **PASS (source)** | `docs/fsr3/audits/minecraft-iris-pass-input.md`: final TAA is `composite6`, jitter is partial, no velocity buffer in Iris 1.8.14 |
 | S3 native temporal backend | **BLOCKED** | waits for S2 decision |
 | S4 first game path | **BLOCKED** | waits for S1/S2/S3 |
 | S5 Complementary | **BLOCKED** | waits for S4 |
@@ -71,9 +72,10 @@ source of truth for the pre-FSR3 renderer/pack history.
 
 | Worker | Worktree/branch | Status | Handoff |
 | --- | --- | --- | --- |
-| FsrCoreAudit | `/tmp/mg-fsr-core`, `googlebook/fsr-core-s1` | running | `docs/fsr3/audits/core-fsr1.md` |
+| FsrCoreAudit | `/tmp/mg-fsr-core`, `googlebook/fsr-core-s1` | completed: host PASS/build PASS, device NOT RUN | `docs/fsr3/audits/core-fsr1.md` |
 | FsrBackendSpike | `/tmp/mg-fsr-backend`, `googlebook/fsr-backend-s2` | running | `docs/fsr3/audits/backend-feasibility.md` |
-| FsrGameAudit | `/tmp/mg-fsr-game`, `googlebook/fsr-game-audit` | running | `docs/fsr3/audits/minecraft-iris-pass-input.md` |
+| FsrGameAudit | `/tmp/mg-fsr-game`, `googlebook/fsr-game-audit` | completed: source audit PASS | `docs/fsr3/audits/minecraft-iris-pass-input.md` |
+| FsrCoreReview | review task | running | independent FSR1 defect review |
 
 ## Next executable action
 

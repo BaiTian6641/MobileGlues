@@ -68,3 +68,41 @@ Status: accepted.
 Qualification profiles are versioned integration metadata/transforms. A transformed pack is a
 distinct configuration, not evidence of universal unmodified-pack support. Complementary r5.9.3
 is the qualification target; r5.9.2 remains the regression lane.
+
+## D-FSR-008: FSR3 runs at the pack reconstruction boundary, not the EGL swap
+
+Status: accepted from the S2 game audit.
+
+For Complementary Reimagined r5.9.3/r5.9.2, final TAA is the pack's `composite6` pass. A
+swap-time upscale in `egl.cpp` is too late: Iris has already produced a native-resolution
+image and the HUD may be composed. The first supported profile must replace the `composite6`
+temporal resolve with MobileGlues reconstruction, then let `composite7`/`final` and the native
+HUD finish the image. An appended post-final upscale is not FSR3 integration.
+
+An HDR boundary after `composite1`, before bloom/tonemap, is a possible higher-quality profile
+but needs a display-resolution HDR target and separate validation. It is not the first profile.
+
+## D-FSR-009: The adapter must own a scene-wide jitter; pack jitter is not sufficient
+
+Status: accepted from the S2 game audit.
+
+Complementary's `TAAJitter` is applied inside selected vertex shaders only (terrain, water,
+clouds and similar); entities, hands and several textured/effect programs are not jittered.
+`gbufferProjection` is not jittered. Therefore the pack's 8-phase jitter cannot be reported as
+the FSR3 scene jitter. FSR3 requires one jitter value applied to all raster (and ray) geometry
+and the same value reported in the dispatch. Until the adapter establishes that ownership,
+FSR3 movement support is camera-only and experimental.
+
+## D-FSR-010: The GLES port needs explicit format and binding adaptations
+
+Status: accepted as S2 spike direction; device runtime not proven.
+
+The ANGLE provider rejects image load/store for `r8`, `r16f` and `rg16f`; FSR3.1.4 uses all
+of these internally. The port therefore maps internal storage to legal ESSL formats
+(`r32f`, `rgba16f`, `rgba8`, `rgba16f`, `r32ui`, `rgba32f`), with documented bandwidth and
+precision consequences. The Vulkan GLSL uses separate texture/sampler objects and
+`GL_EXT_samplerless_texture_functions`/`GL_EXT_shader_image_load_formatted`, neither exposed by
+this ANGE/GLES provider; generated ESSL must use combined samplers and explicit image formats.
+SPD's `FFX_SPD_NO_WAVE_OPERATIONS` LDS fallback avoids the unavailable subgroup-quad path.
+These are source-level port requirements, not evidence that the full algorithm runs on the
+device.
