@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "experiment": "B",
+  "status": "installed on C1L63708PZ; Balanced/Quality/Performance visual spot checks; no benchmark",
+  "source_head": "6f68a58",
+  "diagnostic_tuple": {
+    "apk_sha256": "9ca42b7377347a8ee8a27142cd6eda04f9f61de3161a630b6d267d4ea2bd600c",
+    "core_sha256": "6811d7f47bcd7543350cf121b868b8702eed4a21a9c5b6c0f45c7c79bf62204f",
+    "bridge_sha256": "2dd1d8015d776eaf18857e23fb4469161a4f4244ab49f81070fd9c7f71c68071"
+  },
+  "baseline_rollback": {
+    "apk_sha256": "538455b765ec680f52919ecd4e296513353108a539352626ba4f45b9c43a0c39",
+    "core_sha256": "5733b7bb70ddd7cfb2eb6ae790b8969512f1fa23021fa96e5b7c835245278f72",
+    "bridge_sha256": "1f759cfeca1f3091bf74befe366121e7cf080fe4b940e2696d3c7006460c5cad"
+  },
+  "pack": {
+    "name": "AuroraLumen-Mobile-v2.zip",
+    "profile_info": "Profile: MOBILE_WSR (+1 option changed by user)",
+    "archive_sha256": null
+  },
+  "settings": {
+    "shaders": "on",
+    "history_env_present": false,
+    "motion": "zero",
+    "rcas_sharpness": 0.4,
+    "tested_presets": ["Balanced", "Quality", "Performance"],
+    "untested_presets": ["NativeAA regression", "UltraPerformance"]
+  },
+  "ledger": {
+    "balanced_before": {
+      "world_color_extent": [1694, 932],
+      "world_depth_extent": [2880, 1585],
+      "hand_color_extent": [1694, 932],
+      "hand_depth_extent": [2880, 1585]
+    },
+    "balanced_after": {
+      "world_color_extent": [1694, 932],
+      "world_depth_extent": [1694, 932],
+      "hand_color_extent": [1694, 932],
+      "hand_depth_extent": [1694, 932],
+      "shadow_depth_extent": [1024, 1024],
+      "final_output_extent": [2880, 1585],
+      "final_viewport_uniforms": [1694, 932]
+    },
+    "fps_spot": {"Quality": 29, "Performance": 40},
+    "fps_note": "single F3 spot check at night; not a matched benchmark"
+  },
+  "evidence": {
+    "balanced_depth_trace": "/home/polar/MobileGlues-fixtures/experiment-b/balanced-depth-trace.jsonl",
+    "balanced_night": "/home/polar/MobileGlues-fixtures/experiment-b/balanced-night.png",
+    "quality_f3": "/home/polar/MobileGlues-fixtures/experiment-b/quality-f3.png",
+    "performance_f3": "/home/polar/MobileGlues-fixtures/experiment-b/performance-f3.png"
+  },
+  "open": [
+    "final pass still receives scene-sized viewWidth/viewHeight; override attempts did not fire",
+    "UltraPerformance and NativeAA regression not rerun in this checkpoint",
+    "pack archive SHA-256 and option map still missing",
+    "no matched frame-time, thermal or star-rotation recheck for this pair"
+  ]
+}
