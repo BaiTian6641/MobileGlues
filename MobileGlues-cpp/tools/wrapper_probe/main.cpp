@@ -24,6 +24,10 @@
 #include <unistd.h>
 #include <chrono>
 
+#ifndef GL_RGBA16
+#define GL_RGBA16 0x805B
+#endif
+
 namespace {
 
 void* g_lib = nullptr;
@@ -100,6 +104,7 @@ struct Api {
     PFNGLBINDIMAGETEXTUREPROC glBindImageTexture;
     PFNGLTEXSUBIMAGE3DPROC glTexSubImage3D;
     void (*glClearTexImage)(GLuint, GLint, GLenum, GLenum, const void*);
+    void (*glGetTexImage)(GLenum, GLint, GLenum, GLenum, void*);
     PFNGLGENSAMPLERSPROC glGenSamplers;
     PFNGLBINDSAMPLERPROC glBindSampler;
     PFNGLSAMPLERPARAMETERIPROC glSamplerParameteri;
@@ -1037,6 +1042,28 @@ void main() { outb.value = imageLoad(img, ivec3(0)).r; }
     if (read_program) api.glDeleteProgram(read_program);
     api.glDeleteBuffers(1, &buffer);
     api.glDeleteTextures(1, &tex);
+    return r;
+}
+
+Result test_image2d_mutable_bind() {
+    Result r;
+    float zeros[16] = {0};
+    GLuint tex = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 2, 2, 0, GL_RGBA, GL_FLOAT, zeros);
+    const GLenum tex_error = api.glGetError();
+    api.glBindImageTexture(0, tex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F);
+    const GLenum bind16_error = api.glGetError();
+    api.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 2, 2, 0, GL_RGBA, GL_FLOAT, zeros);
+    const GLenum redef_error = api.glGetError();
+    api.glBindImageTexture(0, tex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+    const GLenum bind32_error = api.glGetError();
+    api.glDeleteTextures(1, &tex);
+    r.ok = tex_error == GL_NO_ERROR && bind16_error == GL_NO_ERROR && redef_error == GL_NO_ERROR &&
+           bind32_error == GL_NO_ERROR;
+    r.detail = "tex=" + std::to_string(tex_error) + " bind16=" + std::to_string(bind16_error) +
+               " redef=" + std::to_string(redef_error) + " bind32=" + std::to_string(bind32_error);
     return r;
 }
 
@@ -3503,6 +3530,7 @@ int main(int argc, char** argv) {
     api.glBindImageTexture = sym<PFNGLBINDIMAGETEXTUREPROC>("glBindImageTexture");
     api.glTexSubImage3D = sym<PFNGLTEXSUBIMAGE3DPROC>("glTexSubImage3D");
     api.glClearTexImage = sym<void (*)(GLuint, GLint, GLenum, GLenum, const void*)>("glClearTexImage");
+    api.glGetTexImage = sym<void (*)(GLenum, GLint, GLenum, GLenum, void*)>("glGetTexImage");
     api.glGenSamplers = sym<PFNGLGENSAMPLERSPROC>("glGenSamplers");
     api.glBindSampler = sym<PFNGLBINDSAMPLERPROC>("glBindSampler");
     api.glSamplerParameteri = sym<PFNGLSAMPLERPARAMETERIPROC>("glSamplerParameteri");
@@ -3627,6 +3655,7 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "iteration_caps")) run("iteration_caps", test_iteration_caps);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
+    if (!strcmp(mode, "image2d_mutable")) run("image2d_mutable_bind", test_image2d_mutable_bind);
     if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);
     if (!strcmp(mode, "all") || !strcmp(mode, "duplicate_image")) run("duplicate_image_binding", test_duplicate_image_binding);
     if (!strcmp(mode, "all") || !strcmp(mode, "program_uniform_image")) run("program_uniform_image_binding", test_program_uniform_image_binding);
