@@ -38,14 +38,24 @@ namespace FSR1_Context {
     // as long as it lives. -1 for a name the linker dropped, which glUniform*
     // ignores.
     extern GLint g_inputTexLoc;
-    extern GLint g_const0Loc;
-    extern GLint g_viewportSizeLoc;
+    extern GLint g_passLoc;
+    extern GLint g_inputSizeLoc;
+    extern GLint g_outputSizeLoc;
+
+    // EASU writes here at target extent; RCAS reads it and writes g_targetTexture.
+    // Both are the same size and format so the second pass is a 1:1 sampling.
+    extern GLuint g_easuFBO;
+    extern GLuint g_easuTexture;
 
     extern GLuint g_targetFBO;
     extern GLuint g_targetTexture;
 
     extern GLuint g_currentDrawFBO;
     extern GLint g_viewport[4];
+    // Output-first: g_output* is the EGL surface and g_target* is exactly it.
+    // g_render* is derived from g_output* with the preset scale.
+    extern GLsizei g_outputWidth;
+    extern GLsizei g_outputHeight;
     extern GLsizei g_targetWidth;
     extern GLsizei g_targetHeight;
     extern GLsizei g_renderWidth;
