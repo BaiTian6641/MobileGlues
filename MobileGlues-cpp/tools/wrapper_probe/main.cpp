@@ -1040,6 +1040,46 @@ void main() { outb.value = imageLoad(img, ivec3(0)).r; }
     return r;
 }
 
+Result test_image2d_fbo_bind() {
+    Result r;
+    GLuint tex = 0, fbo = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16F, 2880, 1585);
+    api.glGenFramebuffers(1, &fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    api.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+    const GLenum fbo_error = api.glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE ? GL_NO_ERROR
+                                                                                                  : GL_INVALID_OPERATION;
+    api.glBindImageTexture(0, tex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F);
+    const GLenum bind_error = api.glGetError();
+    api.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    api.glDeleteFramebuffers(1, &fbo);
+    api.glDeleteTextures(1, &tex);
+    r.ok = fbo_error == GL_NO_ERROR && bind_error == GL_NO_ERROR;
+    r.detail = "fbo_error=" + std::to_string(fbo_error) + " bind_error=" + std::to_string(bind_error);
+    return r;
+}
+
+Result test_image2d_bind() {
+    Result r;
+    GLuint tex = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16F, 4, 4);
+    const GLenum storage_error = api.glGetError();
+    api.glBindImageTexture(0, tex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F);
+    const GLenum bind_error = api.glGetError();
+    api.glBindImageTexture(1, tex, 0, GL_TRUE, 0, GL_READ_WRITE, GL_RGBA16F);
+    const GLenum layered_error = api.glGetError();
+    api.glDeleteTextures(1, &tex);
+    r.ok = storage_error == GL_NO_ERROR && bind_error == GL_NO_ERROR && layered_error == GL_NO_ERROR;
+    r.detail = "storage_error=" + std::to_string(storage_error) + " bind_error=" + std::to_string(bind_error) +
+               " layered_error=" + std::to_string(layered_error);
+    return r;
+}
+
 Result test_explicit_image_binding() {
     Result r;
     // Both programs name unit 5 themselves and never call glUniform1i. If the
@@ -3568,6 +3608,8 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "geometry_stage")) run("geometry_stage", test_geometry_stage);
     if (!strcmp(mode, "all") || !strcmp(mode, "tessellation_stage")) run("tessellation_stage", test_tessellation_stage);
     if (!strcmp(mode, "all") || !strcmp(mode, "patch_defaults")) run("patch_default_levels", test_patch_default_levels);
+    if (!strcmp(mode, "all") || !strcmp(mode, "image2d_bind")) run("image2d_bind", test_image2d_bind);
+    if (!strcmp(mode, "all") || !strcmp(mode, "image2d_fbo_bind")) run("image2d_fbo_bind", test_image2d_fbo_bind);
     if (!strcmp(mode, "all") || !strcmp(mode, "clear_tex_level")) run("clear_tex_level", test_clear_tex_level);
     if (!strcmp(mode, "all") || !strcmp(mode, "clear_tex_volume")) run("clear_tex_volume", test_clear_tex_volume);
     if (!strcmp(mode, "clear_bench")) run("clear_bench", test_clear_bench);
