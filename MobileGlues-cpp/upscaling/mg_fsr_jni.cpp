@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstdlib>
+#include <sys/system_properties.h>
 #include <chrono>
 #include <cmath>
 #include <mutex>
