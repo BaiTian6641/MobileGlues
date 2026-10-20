@@ -32,6 +32,7 @@ void init_settings() {
     global_settings.custom_gl_version = {0, 0, 0}; // will go default
     global_settings.fsr1_setting = FSR1_Quality_Preset::Disabled;
     global_settings.fsr3_setting = FSR3_Mode::Disabled;
+    global_settings.fsr3_quality = FSR3_Quality_Preset::NativeAA;
     global_settings.hide_mg_env_level = HideMGEnvLevel::Disabled;
 
 #else
@@ -59,6 +60,9 @@ void init_settings() {
         success ? static_cast<FSR1_Quality_Preset>(config_get_int("fsr1Setting")) : FSR1_Quality_Preset::Disabled;
     FSR3_Mode fsr3Setting =
         success ? static_cast<FSR3_Mode>(config_get_int("fsr3Setting")) : FSR3_Mode::Disabled;
+    FSR3_Quality_Preset fsr3Quality =
+        success ? static_cast<FSR3_Quality_Preset>(config_get_int("fsr3Quality"))
+                : FSR3_Quality_Preset::NativeAA;
     HideMGEnvLevel hideMGEnvLevel =
         success ? static_cast<HideMGEnvLevel>(config_get_int("hideMGEnvLevel")) : HideMGEnvLevel::Disabled;
 
@@ -112,6 +116,10 @@ void init_settings() {
     if (static_cast<int>(fsr3Setting) < 0 ||
         static_cast<int>(fsr3Setting) >= static_cast<int>(FSR3_Mode::MaxValue)) {
         fsr3Setting = FSR3_Mode::Disabled;
+    }
+    if (static_cast<int>(fsr3Quality) < 0 ||
+        static_cast<int>(fsr3Quality) >= static_cast<int>(FSR3_Quality_Preset::MaxValue)) {
+        fsr3Quality = FSR3_Quality_Preset::NativeAA;
     }
     // The direct presentation path cannot provide both spatial and temporal
     // upscaling at once; FSR3, when selected, owns the swap.
@@ -228,6 +236,7 @@ void init_settings() {
     global_settings.custom_gl_version = customGLVersion;
     global_settings.fsr1_setting = fsr1Setting;
     global_settings.fsr3_setting = fsr3Setting;
+    global_settings.fsr3_quality = fsr3Quality;
     global_settings.hide_mg_env_level = hideMGEnvLevel;
 #endif
 
@@ -253,6 +262,7 @@ void init_settings() {
     }
     LOG_V("[MobileGlues] Setting: fsr1Setting                 = %i", static_cast<int>(global_settings.fsr1_setting))
     LOG_V("[MobileGlues] Setting: fsr3Setting                 = %i", static_cast<int>(global_settings.fsr3_setting))
+    LOG_V("[MobileGlues] Setting: fsr3Quality                 = %i", static_cast<int>(global_settings.fsr3_quality))
     LOG_V("[MobileGlues] Setting: hideMGEnvLevel              = %i",
           static_cast<int>(global_settings.hide_mg_env_level))
 
@@ -733,6 +743,7 @@ std::string dump_settings_string(std::string prefix) {
 
     ss << prefix << "Fsr3Setting: "
        << (global_settings.fsr3_setting == FSR3_Mode::Disabled ? "Disabled" : "Experimental") << "\n";
+    ss << prefix << "Fsr3Quality: " << static_cast<int>(global_settings.fsr3_quality) << "\n";
 
     ss << prefix << "Fsr1Setting: ";
 

@@ -156,3 +156,16 @@ A true low-resolution path needs a versioned scene-scale hook that keeps HUD at
 display resolution and scales all scene-dependent targets/viewports/depth
 coherently. Do not claim FSR3 performance support before that hook and its
 measurements exist.
+
+
+## D-FSR-015: FSR3 quality presets are reconstruction extents, not scene scale
+
+Status: accepted for the quality-control slice.
+
+`fsr3Quality` maps NativeAA/Quality/Balanced/Performance/Ultra Performance to
+1.0/1.5/1.7/2.0/3.0x output-to-render ratios. The native path and the optional
+Iris bridge downsample the final LDR image into the selected extent and
+reconstruct to native output. This lets the quality slider be tested and keeps
+the backend output-first, but it deliberately does not change application
+render-target allocation or viewports. The 13-versus-26 FPS native-scene result
+therefore remains a performance failure and D-FSR-014 remains the blocker.

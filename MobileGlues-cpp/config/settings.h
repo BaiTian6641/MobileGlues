@@ -194,6 +194,26 @@ typedef enum class FSR3_Mode : int {
     MaxValue = 2,
 };
 
+typedef enum class FSR3_Quality_Preset : int {
+    NativeAA = 0,
+    Quality = 1,       // 1.5x
+    Balanced = 2,      // 1.7x
+    Performance = 3,   // 2.0x
+    UltraPerformance = 4, // 3.0x
+    MaxValue = 5,
+};
+
+inline float fsr3_quality_scale(FSR3_Quality_Preset preset) {
+    switch (preset) {
+    case FSR3_Quality_Preset::Quality: return 1.5f;
+    case FSR3_Quality_Preset::Balanced: return 1.7f;
+    case FSR3_Quality_Preset::Performance: return 2.0f;
+    case FSR3_Quality_Preset::UltraPerformance: return 3.0f;
+    case FSR3_Quality_Preset::NativeAA:
+    default: return 1.0f;
+    }
+}
+
 constexpr int MD_ENTRY_COUNT = static_cast<int>(md_entry_t::MaxValue);
 constexpr int MD_BACKEND_COUNT = static_cast<int>(md_backend_t::MaxValue);
 
@@ -225,6 +245,7 @@ struct global_settings_t {
     Version custom_gl_version;
     FSR1_Quality_Preset fsr1_setting;
     FSR3_Mode fsr3_setting;
+    FSR3_Quality_Preset fsr3_quality;
     HideMGEnvLevel hide_mg_env_level;
 };
 

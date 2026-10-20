@@ -23,20 +23,28 @@
 
 #include <jni.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 namespace {
 
 struct JniState {
     void* session = nullptr;
     GLuint motion = 0;
+    GLuint color_input = 0;
+    GLuint depth_synth = 0;
+    GLuint input_fbo = 0;
     GLuint output_fbo = 0;
     GLuint attached_output = 0;
     int width = 0;
     int height = 0;
+    int render_width = 0;
+    int render_height = 0;
     uint64_t frame = 0;
     bool failed = false;
     bool warned = false;
@@ -78,29 +86,55 @@ bool attachment_texture(GLenum attachment, GLuint& texture, int& width, int& hei
     return true;
 }
 
-bool make_motion(JniState& s, int w, int h) {
+bool make_aux(JniState& s, int w, int h, int rw, int rh) {
     if (s.motion) GLES.glDeleteTextures(1, &s.motion);
+    if (s.color_input) GLES.glDeleteTextures(1, &s.color_input);
+    if (s.depth_synth) GLES.glDeleteTextures(1, &s.depth_synth);
+    if (s.input_fbo) GLES.glDeleteFramebuffers(1, &s.input_fbo);
+    s.motion = s.color_input = s.depth_synth = 0;
+    s.input_fbo = 0;
     GLES.glGenTextures(1, &s.motion);
-    if (!s.motion) return false;
+    GLES.glGenTextures(1, &s.color_input);
+    GLES.glGenTextures(1, &s.depth_synth);
+    if (!s.motion || !s.color_input || !s.depth_synth) return false;
+    auto setup = [&](GLuint tex, GLint internal) {
+        GLES.glBindTexture(GL_TEXTURE_2D, tex);
+        GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        GLES.glTexStorage2D(GL_TEXTURE_2D, 1, internal, rw, rh);
+    };
+    setup(s.motion, GL_RG16F);
+    setup(s.color_input, GL_RGBA8);
+    setup(s.depth_synth, GL_R32F);
+    std::vector<float> depth(static_cast<size_t>(rw) * rh, 0.5f);
+    std::vector<float> zero(static_cast<size_t>(rw) * rh * 2, 0.0f);
+    GLES.glBindTexture(GL_TEXTURE_2D, s.depth_synth);
+    GLES.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rw, rh, GL_RED, GL_FLOAT, depth.data());
     GLES.glBindTexture(GL_TEXTURE_2D, s.motion);
-    GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    GLES.glTexStorage2D(GL_TEXTURE_2D, 1, GL_RG16F, w, h);
-    std::vector<float> zero(static_cast<size_t>(w) * h * 2, 0.0f);
-    GLES.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RG, GL_FLOAT, zero.data());
+    GLES.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rw, rh, GL_RG, GL_FLOAT, zero.data());
     GLES.glBindTexture(GL_TEXTURE_2D, 0);
-    return GLES.glGetError() == GL_NO_ERROR;
+    GLES.glGenFramebuffers(1, &s.input_fbo);
+    GLES.glBindFramebuffer(GL_FRAMEBUFFER, s.input_fbo);
+    GLES.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s.color_input, 0);
+    const bool ok = GLES.glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+    GLES.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    return ok && GLES.glGetError() == GL_NO_ERROR;
 }
 
 void destroy_state(JniState& s) {
     if (s.session) mg_fsr_destroy_session(s.session);
     s.session = nullptr;
     if (s.motion) GLES.glDeleteTextures(1, &s.motion);
+    if (s.color_input) GLES.glDeleteTextures(1, &s.color_input);
+    if (s.depth_synth) GLES.glDeleteTextures(1, &s.depth_synth);
+    if (s.input_fbo) GLES.glDeleteFramebuffers(1, &s.input_fbo);
     if (s.output_fbo) GLES.glDeleteFramebuffers(1, &s.output_fbo);
-    s.motion = s.output_fbo = s.attached_output = 0;
+    s.motion = s.color_input = s.depth_synth = 0;
+    s.input_fbo = s.output_fbo = s.attached_output = 0;
     s.width = s.height = 0;
+    s.render_width = s.render_height = 0;
     s.failed = false;
 }
 
@@ -130,20 +164,25 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
         bridge_fail("no color texture attachment");
         return -1;
     }
-    if (!attachment_texture(GL_DEPTH_ATTACHMENT, depth, width, height)) {
-        bridge_fail("no depth texture attachment");
-        return -1;
-    }
+    int depth_width = 0, depth_height = 0;
+    const bool have_depth = attachment_texture(GL_DEPTH_ATTACHMENT, depth, depth_width, depth_height) &&
+                            depth_width == width && depth_height == height;
 
     std::lock_guard<std::mutex> lock(g_mutex);
     JniState& s = g_states[context_key];
-    if (!s.session || s.width != width || s.height != height) {
+    const float scale = fsr3_quality_scale(global_settings.fsr3_quality);
+    const int rw = std::max(64, static_cast<int>(std::lround(width / scale)));
+    const int rh = std::max(64, static_cast<int>(std::lround(height / scale)));
+    if (!s.session || s.width != width || s.height != height ||
+        s.render_width != rw || s.render_height != rh) {
         if (s.session) destroy_state(s);
         s.width = width;
         s.height = height;
-        if (!make_motion(s, width, height)) {
+        s.render_width = rw;
+        s.render_height = rh;
+        if (!make_aux(s, width, height, rw, rh)) {
             destroy_state(s);
-            bridge_fail("motion texture allocation failed");
+            bridge_fail("FSR bridge aux allocation failed");
             return -1;
         }
         s.session = mg_fsr_create_session();
@@ -156,6 +195,17 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
         s.frame = 0;
     }
     if (s.failed) return -1;
+    const bool scaled = (rw != width || rh != height);
+    if (scaled) {
+        GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(fbo));
+        GLES.glReadBuffer(GL_COLOR_ATTACHMENT0);
+        GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s.input_fbo);
+        GLES.glBlitFramebuffer(0, 0, width, height, 0, 0, rw, rh, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        GLES.glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(fbo));
+    } else if (!have_depth) {
+        bridge_fail("no depth texture attachment");
+        return -1;
+    }
 
     const auto now = std::chrono::steady_clock::now();
     float delta = std::chrono::duration<float>(now - s.last).count();
@@ -170,14 +220,15 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     desc.context_id = 0;
     desc.surface_id = 1;
     desc.resource_generation = 1;
-    desc.color = {color, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0, GL_RGBA8, 0, 1};
-    desc.depth = {depth, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0, GL_DEPTH_COMPONENT24, 0, 1};
+    desc.color = {scaled ? s.color_input : color, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0, GL_RGBA8, 0, 1};
+    desc.depth = {scaled ? s.depth_synth : depth, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0,
+                  static_cast<GLenum>(scaled ? GL_R32F : GL_DEPTH_COMPONENT24), 0, 1};
     desc.motion = {s.motion, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0, GL_RG16F, 0, 1};
-    desc.render_width = width;
-    desc.render_height = height;
-    desc.output_width = width;
-    desc.output_height = height;
-    desc.color_active = {0, 0, static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
+    desc.render_width = static_cast<uint32_t>(rw);
+    desc.render_height = static_cast<uint32_t>(rh);
+    desc.output_width = static_cast<uint32_t>(width);
+    desc.output_height = static_cast<uint32_t>(height);
+    desc.color_active = {0, 0, static_cast<uint32_t>(rw), static_cast<uint32_t>(rh)};
     desc.output_active = {0, 0, static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
     desc.color_space = MG_FSR_COLOR_LDR_PERCEPTUAL;
     desc.pre_exposure = 1.0f;
@@ -201,7 +252,8 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     }
     if (!s.warned) {
         s.warned = true;
-        LOG_W_FORCE("FSR3 bridge: experimental submit %dx%d; synthetic motion, pack final TAA retained", width, height);
+        LOG_W_FORCE("FSR3 bridge: experimental submit %dx%d -> %dx%d (render %dx%d); synthetic motion, scene native",
+                      rw, rh, width, height, rw, rh);
     }
     mg_fsr_resource_t out{};
     if (mg_fsr_get_output(s.session, &out) != MG_FSR_OK || out.handle == 0) {

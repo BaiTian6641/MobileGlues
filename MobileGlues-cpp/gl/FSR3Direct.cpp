@@ -41,6 +41,8 @@ struct ContextState {
     GLuint attached_output = 0;
     int width = 0;
     int height = 0;
+    int render_width = 0;
+    int render_height = 0;
     uint64_t frame_id = 0;
     bool failed = false;
     bool warned = false;
@@ -93,17 +95,22 @@ GLuint make_texture(GLenum internal, int w, int h) {
 bool create_resources(ContextState& state, int width, int height) {
     state.width = width;
     state.height = height;
-    state.color = make_texture(GL_RGBA8, width, height);
-    state.depth = make_texture(GL_R32F, width, height);
-    state.motion = make_texture(GL_RG16F, width, height);
+    const float scale = fsr3_quality_scale(global_settings.fsr3_quality);
+    state.render_width = std::max(64, static_cast<int>(std::lround(width / scale)));
+    state.render_height = std::max(64, static_cast<int>(std::lround(height / scale)));
+    const int rw = state.render_width;
+    const int rh = state.render_height;
+    state.color = make_texture(GL_RGBA8, rw, rh);
+    state.depth = make_texture(GL_R32F, rw, rh);
+    state.motion = make_texture(GL_RG16F, rw, rh);
     if (!state.color || !state.depth || !state.motion) return false;
 
-    std::vector<float> depth(static_cast<size_t>(width) * height, 0.5f);
-    std::vector<float> motion(static_cast<size_t>(width) * height * 2, 0.0f);
+    std::vector<float> depth(static_cast<size_t>(rw) * rh, 0.5f);
+    std::vector<float> motion(static_cast<size_t>(rw) * rh * 2, 0.0f);
     GLES.glBindTexture(GL_TEXTURE_2D, state.depth);
-    GLES.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RED, GL_FLOAT, depth.data());
+    GLES.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rw, rh, GL_RED, GL_FLOAT, depth.data());
     GLES.glBindTexture(GL_TEXTURE_2D, state.motion);
-    GLES.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RG, GL_FLOAT, motion.data());
+    GLES.glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rw, rh, GL_RG, GL_FLOAT, motion.data());
     GLES.glBindTexture(GL_TEXTURE_2D, 0);
 
     GLES.glGenFramebuffers(1, &state.input_fbo);
@@ -136,6 +143,7 @@ void destroy_resources(ContextState& state) {
     state.input_fbo = state.output_fbo = state.color = state.depth = state.motion = 0;
     state.attached_output = 0;
     state.width = state.height = 0;
+    state.render_width = state.render_height = 0;
 }
 
 bool surface_size(int& width, int& height) {
@@ -166,7 +174,11 @@ void ApplyFSR3Present() {
     g_in_present = true;
     std::lock_guard<std::mutex> lock(g_mutex);
     ContextState& state = g_states[context_key];
-    if (!state.session || state.width != width || state.height != height) {
+    const float selected_scale = fsr3_quality_scale(global_settings.fsr3_quality);
+    const int desired_render_w = std::max(64, static_cast<int>(std::lround(width / selected_scale)));
+    const int desired_render_h = std::max(64, static_cast<int>(std::lround(height / selected_scale)));
+    if (!state.session || state.width != width || state.height != height ||
+        state.render_width != desired_render_w || state.render_height != desired_render_h) {
         if (state.session) destroy_resources(state);
         if (!create_resources(state, width, height)) {
             destroy_resources(state);
@@ -185,8 +197,9 @@ void ApplyFSR3Present() {
     // texture; no scene target or semantic motion source exists here.
     GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
     GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, state.input_fbo);
-    GLES.glViewport(0, 0, width, height);
-    GLES.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    GLES.glViewport(0, 0, state.render_width, state.render_height);
+    GLES.glBlitFramebuffer(0, 0, width, height, 0, 0, state.render_width, state.render_height,
+                           GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
     const auto now = std::chrono::steady_clock::now();
     float delta = std::chrono::duration<float>(now - state.last_time).count();
@@ -204,11 +217,11 @@ void ApplyFSR3Present() {
     desc.color = {state.color, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0, GL_RGBA8, 0, 1};
     desc.depth = {state.depth, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0, GL_R32F, 0, 1};
     desc.motion = {state.motion, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0, GL_RG16F, 0, 1};
-    desc.render_width = width;
-    desc.render_height = height;
-    desc.output_width = width;
-    desc.output_height = height;
-    desc.color_active = {0, 0, static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
+    desc.render_width = static_cast<uint32_t>(state.render_width);
+    desc.render_height = static_cast<uint32_t>(state.render_height);
+    desc.output_width = static_cast<uint32_t>(width);
+    desc.output_height = static_cast<uint32_t>(height);
+    desc.color_active = {0, 0, static_cast<uint32_t>(state.render_width), static_cast<uint32_t>(state.render_height)};
     desc.output_active = {0, 0, static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
     desc.color_space = MG_FSR_COLOR_LDR_PERCEPTUAL;
     desc.output_alpha_mode = 0;
@@ -241,8 +254,8 @@ void ApplyFSR3Present() {
     static bool logged_active = false;
     if (!logged_active) {
         logged_active = true;
-        LOG_W_FORCE("FSR3 direct: experimental presentation active at %dx%d; synthetic depth/motion, no temporal-quality claim",
-                    width, height);
+        LOG_W_FORCE("FSR3 direct: experimental presentation %dx%d -> %dx%d; synthetic depth/motion, no scene-work claim",
+                    state.render_width, state.render_height, width, height);
     }
 
     mg_fsr_resource_t output{};
