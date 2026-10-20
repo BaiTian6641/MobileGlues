@@ -100,6 +100,8 @@ Device probe on `C1L63708PZ` (raw ANGLE ES context, not MobileGlues):
 - `GL_EXT_shader_explicit_arithmetic_types_float16` is **not** exposed.
 - X1-85 published peak: 4.61 TFLOPS FP32 / 9.22 TFLOPS FP16 for the 4.6 TFLOPS
   variant; X1E-80-100 is the lower 3.8/7.6-class SKU.
+- The Radeon 780M's FP16 rate is effectively FP32-rate (per target comparison),
+  so the X1E's FP16 advantage is relative, not merely architectural parity.
 - A dependent vec4 ALU loop (200k iterations) through ANGLE:
   - `highp`: **7.35 ms**
   - `mediump`: **3.19 ms**
