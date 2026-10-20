@@ -52,7 +52,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | S2 backend feasibility | **PASS (compile/ops + one-pass/full-chain dispatch)** | X1E RCAS exact vs CPU; 8-pass chain executed at 2x/1.5x with host parity; independent Vulkan and multi-frame history NOT RUN |
 | S2 game audit | **PASS (source)** | `docs/fsr3/audits/minecraft-iris-pass-input.md`: final TAA is `composite6`, jitter is partial, no velocity buffer in Iris 1.8.14 |
 | S3 native temporal backend | **PARTIAL** | In-tree ABI/backend + optional bridge submit PASS; FSR3 quality presets + slider implemented; low-resolution scene and timing NOT RUN |
-| S4 first game path | **PARTIAL: rendering PASS on X1E; performance/temporal NOT RUN** | Quality run: 1920x1057 -> 2880x1585, camera motion active, full world + native HUD; `validation/2026-10-20-scene-adapter-quality.md` |
+| S4 first game path | **PARTIAL: rendering PASS, performance FAIL** | Quality: 1920x1057 -> 2880x1585, camera motion active, full world + native HUD; F3 ~22 FPS vs ~30 FPS FSR3-off; `validation/2026-10-20-scene-adapter-quality.md` |
 | S5 Complementary | **BLOCKED** | waits for S4 |
 | S6 qualification | **NOT RUN** | no FSR3 installation exists |
 

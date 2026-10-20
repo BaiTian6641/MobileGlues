@@ -12,8 +12,9 @@ Status: **rendering PASS (single run); performance and temporal quality NOT RUN.
 - APK SHA-256: `858743c7012c80f3349dea9a2573ccd0d89096573f3e4907d10b796c10316707`.
 - Core SHA-256: `83372740ffceb7f2b0c95cc7daa42b2e9c73b8a02c393b42df40d8a3364c6a14`.
 - Bridge SHA-256: `a7b9263993208d33dba51fdc0809c35ec71f0bd3ec62fca6b9029f2295e836c8`.
-- Screenshot: `/home/polar/MobileGlues-fixtures/2026-10-20-fsr3-quality-camera-motion.png`
-- Log: `/home/polar/MobileGlues-fixtures/2026-10-20-fsr3-quality-camera-motion.log`
+- Screenshot FSR3 Quality: `/home/polar/MobileGlues-fixtures/2026-10-20-fsr3-quality-camera-motion.png`
+- Log FSR3 Quality: `/home/polar/MobileGlues-fixtures/2026-10-20-fsr3-quality-camera-motion.log`
+- Screenshot FSR3 off baseline: `/home/polar/MobileGlues-fixtures/2026-10-20-fsr3-off-baseline.png`
 
 ## Observed
 
@@ -28,7 +29,10 @@ FSR3 bridge: camera motion active at frame 2
 - World fills the full game view; no lower-left crop.
 - Hotbar/HUD are native-size and sharp; no observed HUD blur.
 - First frame reports `motion=0` (no previous camera); frame 2 reports camera motion active.
-- F3 overlay is present; no reliable frame-time baseline is recorded in this document.
+- F3 overlay is present. Matched-ish baseline at the same world/pack:
+  FSR3 off ~30 FPS; FSR3 Quality ~22 FPS. This is a **net performance
+  FAIL** for the current pass cost; the camera/time windows were not
+  frame-locked, so treat the values as a first A/B, not a benchmark matrix.
 
 ## What this proves
 
@@ -41,7 +45,8 @@ FSR3 bridge: camera motion active at frame 2
 
 - That the Iris scene targets themselves, rather than only the bridge inputs, are
   reduced; a one-time target-size log is still needed.
-- Net performance versus FSR3 off or native rendering.
+- Net performance versus FSR3 off. The first A/B is **negative** (~22 vs
+  ~30 FPS); FSR3 pass cost currently outweighs the scene reduction.
 - Temporal quality, ghosting, jitter ownership, independent entity motion.
 - Complementary or r5.9.2 behavior; ACT/WSR/player reflections.
 - Sustained thermals/lifecycle.
