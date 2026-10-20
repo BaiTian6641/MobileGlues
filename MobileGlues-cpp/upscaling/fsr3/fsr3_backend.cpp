@@ -980,12 +980,11 @@ bool Backend::dispatch(const Inputs& in) {
         }
         ~PassTiming() {
             if (!enabled) return;
-            while (marked < 9) mark();
             GLES.glFinish();
             GLuint64 ts[9]{};
-            for (int i = 0; i < 9; ++i)
+            for (int i = 0; i < marked; ++i)
                 GLES.glGetQueryObjectui64vEXT(queries[i], GL_QUERY_RESULT, &ts[i]);
-            for (int i = 0; i < 8; ++i)
+            for (int i = 0; i + 1 < marked; ++i)
                 std::fprintf(stderr, "FSR3 GPU pass %d %.3f ms\n", i,
                              static_cast<double>(ts[i + 1] - ts[i]) / 1000000.0);
             GLES.glDeleteQueries(9, queries);

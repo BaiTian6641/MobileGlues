@@ -404,11 +404,9 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeCamera(JNIEnv* env, jclass, jfloa
     env->GetDoubleArrayRegion(position, 0, 3, current_pos);
     std::lock_guard<std::mutex> lock(g_camera_mutex);
     const auto now = std::chrono::steady_clock::now();
-    if (g_camera.valid && g_camera.last_capture.time_since_epoch().count() != 0 &&
-        std::chrono::duration<float>(now - g_camera.last_capture).count() > 0.25f) {
-        g_camera.has_previous = false;
-    }
-    bool keep_previous = g_camera.valid && g_camera.has_previous;
+    const bool time_gap = g_camera.valid && g_camera.last_capture.time_since_epoch().count() != 0 &&
+                          std::chrono::duration<float>(now - g_camera.last_capture).count() > 0.25f;
+    bool keep_previous = g_camera.valid && !time_gap;
     if (g_camera.valid) {
         const double dx = current_pos[0] - g_camera.position[0];
         const double dy = current_pos[1] - g_camera.position[1];

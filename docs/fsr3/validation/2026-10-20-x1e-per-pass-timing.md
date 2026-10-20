@@ -23,8 +23,8 @@ Status: **PASS for per-pass GPU cost measurement; flat synthetic frame, not game
 | 6 Accumulate | 4.347 | 3.838–4.965 |
 | 7 RCAS | 0.799 | 0.788–0.917 |
 
-- Per-dispatch total by row sums: ~17.3, ~18.3, ~17.3 ms.
-- Raw: `2026-10-20-x1e-per-pass-timing.log` / `.json`.
+- Per-dispatch total by row sums: ~17.7, ~23.6, ~18.6 ms.
+- Raw per-pass log: `2026-10-20-x1e-per-pass-timing.log`. The adjacent JSON is the probe status object, not a per-pass timing record.
 
 Limits: flat synthetic color/depth/motion, no pack, no scene adapter, no
 output sampling; timestamps measure GPU work but not game frame time. Do not
