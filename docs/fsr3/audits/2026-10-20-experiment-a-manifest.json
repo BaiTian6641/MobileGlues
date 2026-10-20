@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "experiment": "A",
+  "status": "host package ready; device capture not run",
+  "source": {
+    "head": "b22f5e500a1d3b068e4ae476a8793a31ba296405",
+    "dirty_status_sha256": "d4724a0ae38e91be2586c09e05ed686003cfbf96565fa9c145e1480bc051dbf7",
+    "dirty_diff_sha256": "5eff55e74fe967d868d2bfb35bc1e1ed6457494f962fc1cbc8ae39cea5ceabf6",
+    "note": "Diagnostic source is committed; dirty files are user-authored prompt/docs changes, not part of this package."
+  },
+  "diagnostic_tuple": {
+    "apk": {
+      "path": "/home/polar/MobileGlues-fixtures/experiment-a/MobileGlues-expA-diag.apk",
+      "sha256": "42dabf4de0d9400c03fc083e7c2f3f7874874fdd197be84e5629314f0d774a3d"
+    },
+    "core": {
+      "sha256": "6811d7f47bcd7543350cf121b868b8702eed4a21a9c5b6c0f45c7c79bf62204f",
+      "build": "MG_FSR3_DIAGNOSTICS=1, Release, arm64-v8a, android-26, NDK 28.2.13676358"
+    },
+    "bridge_jar": {
+      "path": "/home/polar/MobileGlues-fixtures/experiment-a/mgfsr3bridge-0.1.0.jar",
+      "sha256": "9d8b90adb66e8552001e1a04896b379392fda8767de2846f07151457df205405"
+    },
+    "helper": {
+      "sha256": "6e6f79fb2c832f824bb3d0347d1555d19a2b6a0f97345be07cf4922376d0c502"
+    }
+  },
+  "baseline_rollback": {
+    "apk_sha256": "538455b765ec680f52919ecd4e296513353108a539352626ba4f45b9c43a0c39",
+    "core_sha256": "5733b7bb70ddd7cfb2eb6ae790b8969512f1fa23021fa96e5b7c835245278f72",
+    "bridge_sha256": "1f759cfeca1f3091bf74befe366121e7cf080fe4b940e2696d3c7006460c5cad",
+    "fixture_apk": "/home/polar/MobileGlues-fixtures/MobileGlues-scene-arm64.apk",
+    "fixture_bridge": "/home/polar/MobileGlues-fixtures/mgfsr3bridge-0.1.0.jar"
+  },
+  "iris": {
+    "jar_sha256": "60d5f8bf52f25e9986440f4a4270a6bd986d9cff994510e1108ac1547063b314",
+    "version": "1.8.14-beta.1",
+    "descriptor_check": "PASS",
+    "hud_hook": "optional 1.21.1 descriptor; unverified against a host Minecraft JAR"
+  },
+  "runtime_target": {
+    "minecraft": "1.21.1",
+    "loader": "NeoForge 21.1.262",
+    "iris": "1.8.14-beta.1",
+    "sodium": "0.8.13",
+    "device": "HP Googlebook 14 C1L63708PZ / X1E80100 / Adreno X1-85 / Android 17 API 37",
+    "provider": "ANGLE 2.1 over Vulkan 1.4.295"
+  },
+  "pack": {
+    "recorded_candidates": {
+      "AuroraLumen-Mobile-v2.zip": "93562b77c4cd0e67bdc02a459ed6201f199c5b9485c12aaecfc82ef53a0792ad",
+      "AuroraLumen-Mobile-v3.zip": "bab6822663a51f7965491f6225036343a79901c6c1068008198469ac6090afe6",
+      "AuroraLumen-Mobile.zip": "6e8e19423968245e89bb482b2ed2ac9f8f063b935c16beaf77a78f0d0d4502b4"
+    },
+    "active_archive_sha256": null,
+    "active_profile_info": null,
+    "active_option_map": null,
+    "missing": [
+      "active archive SHA-256 at capture time",
+      "Iris profile option map",
+      "runtime APK/JAR/helper hashes (host manifest is authoritative)"
+    ]
+  },
+  "trace": {
+    "marker": "mgfsr3-trace.arm in the game working directory",
+    "output": "mgfsr3-trace.jsonl in the game working directory",
+    "schema_version": 1,
+    "max_frames": 120,
+    "max_events": 3000,
+    "max_chars": 12582912,
+    "history_env_present_required": false,
+    "motion_required": "zero",
+    "shaders_required": "enabled",
+    "rcas_sharpness": 0.4,
+    "preset_required": "Balanced"
+  },
+  "host_checks": {
+    "host_suite": "PASS (including diagnostic_format and diagnostic_disabled)",
+    "hook_descriptors": "PASS against Iris 1.8.14-beta.1 delivery JAR",
+    "diagnostic_core_symbol": "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeTrace present",
+    "release_core_symbol": "absent; no mg_diag traversal",
+    "helper_forwarding": "Java_com_googlebook_fsrbridge_NativeBridge_trace present"
+  }
+}
