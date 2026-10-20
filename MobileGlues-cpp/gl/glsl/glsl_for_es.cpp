@@ -171,7 +171,9 @@ static TBuiltInResource InitResources() {
         Resources.maxFragmentImageUniforms =
             q(GL_MAX_FRAGMENT_IMAGE_UNIFORMS, Resources.maxFragmentImageUniforms);
         Resources.maxComputeImageUniforms = q(GL_MAX_COMPUTE_IMAGE_UNIFORMS, Resources.maxComputeImageUniforms);
-        if (g_gles_caps.GL_EXT_geometry_shader) {
+        // ESSL 3.20 makes geometry shaders core; a conformant ES 3.2 provider
+        // need not advertise the ES 3.1 extension strings.
+        if (g_gles_caps.GL_EXT_geometry_shader || hardware->es_version >= 320) {
             Resources.maxGeometryImageUniforms =
                 q(GL_MAX_GEOMETRY_IMAGE_UNIFORMS, Resources.maxGeometryImageUniforms);
             Resources.maxGeometryTextureImageUnits =
@@ -797,6 +799,82 @@ void inject_mg_macro_definition(std::string& glslCode) {
     glslCode.insert(insertionPos, macro_definitions);
 }
 
+static std::string rename_reserved_identifier(const std::string& glsl, const char* name, const char* replacement) {
+    // Desktop drivers accept identifiers the GLSL spec lists as reserved for
+    // future use (`active` is the one iterationRP emits). glslang enforces the
+    // reservation, so rename the identifier consistently before parsing.
+    std::string out;
+    out.reserve(glsl.size());
+    const size_t name_len = std::strlen(name);
+    for (size_t i = 0; i < glsl.size();) {
+        if (glsl.compare(i, name_len, name) == 0) {
+            const bool left_ok = i == 0 || !(std::isalnum(static_cast<unsigned char>(glsl[i - 1])) || glsl[i - 1] == '_');
+            const size_t after = i + name_len;
+            const bool right_ok =
+                after >= glsl.size() ||
+                !(std::isalnum(static_cast<unsigned char>(glsl[after])) || glsl[after] == '_');
+            if (left_ok && right_ok) {
+                out += replacement;
+                i = after;
+                continue;
+            }
+        }
+        out += glsl[i++];
+    }
+    return out;
+}
+
+static std::string lower_legacy_image_formats(std::string glsl) {
+    // ES 3.2 has no unorm16 image format qualifier. Desktop packs declare
+    // layout(rgba16)/layout(rg16) and rely on normalized 16-bit storage;
+    // rgba32f/rg32f preserve those values exactly. Only lines that also declare
+    // an image uniform are touched, so texture-format constants are unchanged.
+    size_t start = 0;
+    while (start < glsl.size()) {
+        const size_t end = glsl.find('\n', start);
+        const size_t length = (end == std::string::npos) ? glsl.size() - start : end - start;
+        std::string line = glsl.substr(start, length);
+        if (line.find("image") != std::string::npos && line.find("layout") != std::string::npos) {
+            replace_all(line, "rgba16", "rgba32f");
+            replace_all(line, "rg16", "rg32f");
+            glsl.replace(start, length, line);
+        }
+        if (end == std::string::npos) break;
+        start = end + 1;
+    }
+    return glsl;
+}
+
+static std::string lower_const_transpose(const std::string& glsl) {
+    // Iris emits `const mat3 name = transpose(constMat);`. glslang rejects
+    // transpose() in a global constant initializer because it is not a
+    // constant expression. Expand it to a constant matrix constructor:
+    // transpose(M)[c][r] == M[r][c], and constructor arguments are column-major.
+    static const std::regex pattern(
+        R"(const\s+(mat([234]))\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*transpose\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*;)");
+    std::string out;
+    size_t last = 0;
+    for (std::sregex_iterator it(glsl.begin(), glsl.end(), pattern), end; it != end; ++it) {
+        const std::smatch& m = *it;
+        const int n = *m[2].first - '0';
+        const std::string type(m[1].first, m[1].second);
+        const std::string name(m[3].first, m[3].second);
+        const std::string expr(m[4].first, m[4].second);
+        out.append(glsl, last, static_cast<size_t>(m.position()) - last);
+        out += "const " + type + " " + name + " = " + type + "(";
+        for (int c = 0; c < n; ++c) {
+            for (int r = 0; r < n; ++r) {
+                if (c || r) out += ", ";
+                out += expr + "[" + std::to_string(r) + "][" + std::to_string(c) + "]";
+            }
+        }
+        out += ");";
+        last = static_cast<size_t>(m.position() + m.length());
+    }
+    out.append(glsl, last, glsl.size() - last);
+    return out;
+}
+
 std::string preprocess_glsl(const std::string& glsl, GLenum shaderType) {
     std::string ret = glsl;
     // Remove lines beginning with `#line`
@@ -805,10 +883,9 @@ std::string preprocess_glsl(const std::string& glsl, GLenum shaderType) {
     replace_all(ret, "#ifdef GL_ARB_derivative_control", "#if 0");
     replace_all(ret, "#ifndef GL_ARB_derivative_control", "#if 1");
 
-    // Polyfill transpose()
-    replace_all(ret, "const mat3 rotInverse = transpose(rot);",
-                "const mat3 rotInverse = mat3(rot[0][0], rot[1][0], rot[2][0], rot[0][1], rot[1][1], rot[2][1], "
-                "rot[0][2], rot[1][2], rot[2][2]);");
+    ret = lower_legacy_image_formats(ret);
+    ret = lower_const_transpose(ret);
+    ret = rename_reserved_identifier(ret, "active", "mg_active");
 
     // GI_TemporalFilter injection
     inject_temporal_filter(ret);
