@@ -1,0 +1,50 @@
+Captured failure modes from the FSR3.1.4 GLES 3.2 compilation study
+Pin: c6efa6bf7f2027b3ec94f28578bb5965eabb9e55 (v1.1.4)
+
+1) Missing FFX_GLSL define
+$ glslangValidator -V --target-env vulkan1.1 -DFFX_GPU=1 -I... accumulate_pass.glsl
+ffx_core_gpu_common.h:48: '' :  syntax error, unexpected IDENTIFIER
+Fix: add -DFFX_GLSL=1 (SDK's Vulkan args also use --target-env vulkan1.2).
+
+2) Unadapted image formats through SPIRV-Cross
+$ spirv-cross accumulate.spv --es --version 320
+SPIRV-Cross threw an exception: Attempting to use image format not supported in ES profile.
+Reason: is_desktop_only_format() rejects r8/r16f (and the local SPIRV-Cross also treats r16f as desktop-only).
+Fix: expand R8_UNORM -> RGBA8, R16_FLOAT/R16G16_FLOAT -> RGBA16F in declarations and resources.
+
+3) ESSL read-write formatted image rule
+$ glslangValidator -S comp shader.comp
+ERROR: layout(rgba16f) uniform highp image2D img;
+       'rgba16f' : format requires readonly or writeonly memory qualifier
+Also fails for rgba8/rgba32f; r32f/r32ui read-write are accepted.
+Fix: split each such image into a coherent readonly alias and a coherent
+writeonly alias bound to different image units of the same texture. Host probe
+alias_read_write_image_units PASS.
+
+4) Formatless output image
+$ glslangValidator -S comp (layout(binding=0) writeonly image2D)
+ERROR: all image uniforms must have a format layout qualifier
+Same on Mesa GLES 3.2. GL_EXT_shader_image_load_formatted is not exposed by ANGLE.
+Fix: generate the output image declaration with the actual output format
+(rgba8 or rgba16f).
+
+5) Alias binding above gl_MaxCombinedTextureImageUnits
+$ glslangValidator -S comp accumulate_essl320.glsl
+ERROR: 'binding' : sampler binding not less than gl_MaxCombinedTextureImageUnits
+Fix: keep alias bindings <= 29 in the study; production must query limits and
+allocate bindings from the free image-unit range.
+
+6) R8/R16F/RG16F image qualifiers on Mesa ES
+$ fsr3_gles_probe
+image_r8_store: 'r8' unrecognized layout identifier
+image_r16f_store: 'r16f' unrecognized layout identifier
+image_rg16f_store: 'rg16f' unrecognized layout identifier
+This matches the target provider report that R16F/RG16F (and R8-family) images
+do not bind; it is the reason for substitution, not an FSR3-specific failure.
+
+7) Luma-history GLSL/host format mismatch in v1.1.4
+callbacks_glsl.h declares rw_luma_history with layout(rgba8), while
+ffx_fsr3upscaler.cpp allocates R16G16B16A16_FLOAT. HLSL uses an unformatted
+RWTexture2D. Port must declare rgba16f to match the allocation; study does so.
+
+No device execution was performed. Device results are NOT RUN.

@@ -1,0 +1,19 @@
+repo: https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK.git
+tag: v1.1.4
+tag_commit: c6efa6bf7f2027b3ec94f28578bb5965eabb9e55
+tag_commit_date: 2025-05-08 12:18:31 +0100
+tag_subject: AMD FidelityFX SDK 1.1.4
+sdk_version_macros:
+50:#define FFX_SDK_VERSION_MAJOR (1)
+55:#define FFX_SDK_VERSION_MINOR (1)
+60:#define FFX_SDK_VERSION_PATCH (4)
+fsr3_upscaler_version_macros:
+36:#define FFX_FSR3UPSCALER_VERSION_MAJOR      (3)
+41:#define FFX_FSR3UPSCALER_VERSION_MINOR      (1)
+46:#define FFX_FSR3UPSCALER_VERSION_PATCH      (4)
+fsr3_component_version_macros:
+36:#define FFX_FSR3_VERSION_MAJOR      (3)
+41:#define FFX_FSR3_VERSION_MINOR      (1)
+46:#define FFX_FSR3_VERSION_PATCH      (4)
+ls_remote:
+c6efa6bf7f2027b3ec94f28578bb5965eabb9e55	refs/tags/v1.1.4

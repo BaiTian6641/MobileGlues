@@ -1,0 +1,32 @@
+{
+"probe":"fsr3-gles-compute","schema":1,
+"renderer":"AMD Radeon Graphics (radeonsi, gfx1151, ACO, DRM 3.64, 7.0.0-38-generic)",
+"vendor":"AMD",
+"version":"OpenGL ES 3.2 Mesa 26.0.0-devel",
+"shading":"OpenGL ES GLSL ES 3.20",
+"extensions_of_interest":["GL_OES_shader_image_atomic","GL_EXT_texture_norm16"],
+"results":[
+{"name":"compute_limits","status":"PASS","detail":"workgroup_size=1024,1024,1024 invocations=1024 compute_image_uniforms=16 max_image_units=256 compute_ubo_blocks=15 compute_ssbo_blocks=16 atomic_counters=4096 ssbo_block_size=2147483647"},
+{"name":"highp_float_precision","status":"PASS","detail":"highp_float_range_min=127 max=127 precision=23"},
+{"name":"image_r8_store","status":"FAIL","detail":"compile/link: 0:3(8): error: unrecognized layout identifier `r8'\n compile_status=0 err=gl=0 "},
+{"name":"image_r8_load_ssbo","status":"FAIL","detail":"compile/link: 0:3(8): error: unrecognized layout identifier `r8'\n compile_status=0 err=gl=0 "},
+{"name":"image_r16f_store","status":"FAIL","detail":"compile/link: 0:3(8): error: unrecognized layout identifier `r16f'\n compile_status=0 err=gl=0 "},
+{"name":"image_r16f_load_ssbo","status":"FAIL","detail":"compile/link: 0:3(8): error: unrecognized layout identifier `r16f'\n compile_status=0 err=gl=0 "},
+{"name":"image_rg16f_store","status":"FAIL","detail":"compile/link: 0:3(8): error: unrecognized layout identifier `rg16f'\n compile_status=0 err=gl=0 "},
+{"name":"image_rg16f_load_ssbo","status":"FAIL","detail":"compile/link: 0:3(8): error: unrecognized layout identifier `rg16f'\n compile_status=0 err=gl=0 "},
+{"name":"image_rgba16f_roundtrip","status":"PASS","detail":"bind_err=gl=0 fbo_complete=1 read_err=0x0000 got=0.5000,0.2500,0.7500,1.0000 exp=0.5,0.25,0.75,1.0"},
+{"name":"image_rgba16f_load_ssbo","status":"PASS","detail":"bind_err=gl=0 got=0.5000,0.2500,0.7500,1.0000 exp_x=0.5"},
+{"name":"image_r32f_roundtrip","status":"PASS","detail":"bind_err=gl=0 fbo_complete=1 read_err=0x0000 got=0.5000,0.0000,0.0000,0.0000 exp=0.5,0.25,0.75,1.0"},
+{"name":"image_r32f_load_ssbo","status":"PASS","detail":"bind_err=gl=0 got=0.5000,0.0000,0.0000,1.0000 exp_x=0.5"},
+{"name":"image_rgba8_roundtrip","status":"PASS","detail":"bind_err=gl=0 fbo_complete=1 read_err=0x0000 got=0.5020,0.2510,0.7490,1.0000 exp=0.5,0.25,0.75,1.0"},
+{"name":"image_rgba8_load_ssbo","status":"PASS","detail":"bind_err=gl=0 got=0.5020,0.2510,0.7490,1.0000 exp_x=0.5"},
+{"name":"image_rgba32f_roundtrip","status":"PASS","detail":"bind_err=gl=0 fbo_complete=1 read_err=0x0000 got=0.5000,0.2500,0.7500,1.0000 exp=0.5,0.25,0.75,1.0"},
+{"name":"image_rgba32f_load_ssbo","status":"PASS","detail":"bind_err=gl=0 got=0.5000,0.2500,0.7500,1.0000 exp_x=0.5"},
+{"name":"r32ui_image_atomics_shared_ssbo","status":"PASS","detail":"bind_err=gl=0 add=256(max 256) max=255(255) min=0(0) ssbo_count=256(256) shared_sum=32640(32640)"},
+{"name":"alias_read_write_image_units","status":"PASS","detail":"bind_err=gl=0 read_err=0x0000 got=1.2500 expected=1.25"},
+{"name":"formatless_writeonly_image","status":"FAIL","detail":"compile/link: 0:3(1): error: all image uniforms must have a format layout qualifier\n compile_status=0 err=gl=0 "},
+{"name":"sampler_texelfetch_texturelod_ubo","status":"PASS","detail":"fetchv=1.000,1.000,1.000,1.000 lodv=1.000,1.000,1.000,1.000 size=2,2 ubov=12.000,0.500,3.500,1.000"},
+{"name":"subgroup_quad_swap","status":"FAIL","detail":"GL_KHR_shader_subgroup_quad absent in extension string"},
+{"name":"workgroup_256x1","status":"PASS","detail":"count=256 expected=256"}
+]
+}

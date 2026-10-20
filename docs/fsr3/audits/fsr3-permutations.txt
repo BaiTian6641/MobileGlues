@@ -1,0 +1,3 @@
+accumulate permutations_ok=64 permutations_fail=0
+prepare_inputs permutations_ok=64 permutations_fail=0
+luma_pyramid permutations_ok=64 permutations_fail=0
