@@ -537,12 +537,12 @@ TextureObject* mgGetTexObjectByID(unsigned texture) {
 // first. It matters only where an unsized internalformat has to be resolved: an
 // allocation's `type` describes nothing, so resolving storage from it means
 // resolving it from decoration.
-static GLenum mg_lower_unorm_image_storage(GLenum internal_format) {
+static GLenum mg_lower_16bit_image_storage(GLenum internal_format) {
     switch (internal_format) {
     case GL_RGBA16:
         return GL_RGBA32F;
     case GL_RG16:
-        return GL_RG32F;
+        return GL_RGBA32F;
     default:
         return internal_format;
     }
@@ -1056,10 +1056,10 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
     // render targets with glTexImage2D(level 0, null); use immutable storage
     // for that one-level allocation so glBindImageTexture can accept them.
     if (pixels == nullptr) {
-        const GLenum lowered = mg_lower_unorm_image_storage(internalFormat);
+        const GLenum lowered = mg_lower_16bit_image_storage(internalFormat);
         if (lowered != internalFormat) {
             internalFormat = static_cast<GLint>(lowered);
-            format = lowered == GL_RG32F ? GL_RG : GL_RGBA;
+            format = GL_RGBA;
             type = GL_FLOAT;
         }
     }
@@ -1142,10 +1142,10 @@ void glTexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
     // Immutable glTexStorage3D storage is the same allocation contract for
     // these one-level image textures and is known-good on the same backend.
     if (pixels == nullptr) {
-        const GLenum lowered = mg_lower_unorm_image_storage(internalFormat);
+        const GLenum lowered = mg_lower_16bit_image_storage(internalFormat);
         if (lowered != internalFormat) {
             internalFormat = static_cast<GLint>(lowered);
-            format = lowered == GL_RG32F ? GL_RG : GL_RGBA;
+            format = GL_RGBA;
             type = GL_FLOAT;
         }
     }
@@ -1236,7 +1236,7 @@ void glTexStorage2D(GLenum target, GLsizei levels, GLenum internalFormat, GLsize
           target, levels, internalFormat, width, height)
 
     internal_convert(&internalFormat, nullptr, nullptr, /*has_data=*/false);
-    internalFormat = mg_lower_unorm_image_storage(internalFormat);
+    internalFormat = mg_lower_16bit_image_storage(internalFormat);
     GLES.glTexStorage2D(target, levels, internalFormat, width, height);
 
     GET_TEXTURE_OBJECT(target);
@@ -1264,7 +1264,7 @@ void glTexStorage3D(GLenum target, GLsizei levels, GLenum internalFormat, GLsize
           target, levels, internalFormat, width, height, depth)
 
     internal_convert(&internalFormat, nullptr, nullptr, /*has_data=*/false);
-    internalFormat = mg_lower_unorm_image_storage(internalFormat);
+    internalFormat = mg_lower_16bit_image_storage(internalFormat);
 
     GLES.glTexStorage3D(target, levels, internalFormat, width, height, depth);
 

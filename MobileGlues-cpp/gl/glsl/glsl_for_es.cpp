@@ -875,7 +875,10 @@ std::string preprocess_glsl(const std::string& glsl, GLenum shaderType) {
     MgSubgroupLoweringResult subgroup = mg_lower_subgroup_constructs(ret, shaderType);
     ret = subgroup.source;
     if (subgroup.unsupported) {
-        LOG_E("Subgroup lowering unsupported: %s", subgroup.reason.c_str())
+        // LOG_E is compiled out in release; keep this failure visible because
+        // the #error reaches the driver as an opaque shader failure.
+        fprintf(stderr, "[MG-SUBGROUP] unsupported lowering: %s\n", subgroup.reason.c_str());
+        fflush(stderr);
     }
 
     // GI_TemporalFilter injection

@@ -255,6 +255,21 @@ namespace {
 void mg_lower_2d_image_layering(GLuint texture, GLboolean& layered, GLint& layer);
 }
 
+namespace {
+// compat_image turns write-only rgba16/rg16 declarations into formatless
+// writeonly images, so the unit format has to describe the texture's real
+// backing rather than the desktop logical format. That backing differs per
+// texture: null-allocated custom images are RGBA32F/RG32F while Bloom's alt
+// output is RGBA16F. Other formats keep the fixed widening (R16UI -> R32UI).
+GLenum image_unit_bind_format(GLenum logical_format, GLuint texture) {
+    if (logical_format == GL_RGBA16 || logical_format == GL_RG16) {
+        const TextureObject* tex = mgGetTexObjectByID(texture);
+        return mg_image_unit_format(logical_format, tex != nullptr ? tex->internal_format : 0);
+    }
+    return mg_image_backing_format(logical_format);
+}
+} // namespace
+
 void mg_materialize_image_bindings() {
     MgProgramObject* state = mg_find_program(gl_state->current_program);
     if (state == nullptr || state->image_uniform_units.empty()) return;
@@ -265,10 +280,11 @@ void mg_materialize_image_bindings() {
         auto it = state->image_unit_remap.find(logical);
         if (it != state->image_unit_remap.end()) physical = it->second;
         if (physical >= MG_TRACKED_IMAGE_UNITS) continue;
-        // The shader was compiled against the backing qualifier, not the
-        // desktop logical format.
+        // The shader was compiled against either a formatless writeonly image
+        // or the fallback float qualifier; both follow the texture's actual
+        // backing format.
         mg_image_binding_t desired = binding;
-        desired.format = mg_image_backing_format(binding.format);
+        desired.format = image_unit_bind_format(binding.format, binding.texture);
         mg_lower_2d_image_layering(desired.texture, desired.layered, desired.layer);
         if (gl_state->image_unit_shadow_valid[physical] &&
             image_binding_equal(gl_state->image_unit_shadow[physical], desired)) {
@@ -306,11 +322,11 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
     if (unit < MG_TRACKED_IMAGE_UNITS) {
         gl_state->image_bindings[unit] = {texture, level, layered, layer, access, format};
     }
-    // The shader was compiled against the backing qualifier, not the desktop
-    // logical format. Bind the same backing format the texture was allocated
-    // with; R8UI/R16UI become R32UI.
+    // A rgba16/rg16 declaration is formatless (write-only) once compat_image
+    // has lowered it, so bind the texture's actual storage format. Other
+    // formats keep the fixed backing mapping.
     const GLenum logical_format = format;
-    format = mg_image_backing_format(format);
+    format = image_unit_bind_format(logical_format, texture);
     GLboolean backend_layered = layered;
     GLint backend_layer = layer;
     mg_lower_2d_image_layering(texture, backend_layered, backend_layer);
@@ -328,6 +344,10 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
         const GLenum backend_error = GLES.glGetError();
         if (backend_error != GL_NO_ERROR) {
             gl_state->image_unit_shadow_valid[unit] = false;
+            const TextureObject* tex = mgGetTexObjectByID(texture);
+            fprintf(stderr, "[MG-IMG-ERROR] unit=%u texture=%u logical=0x%x bind=0x%x internal=0x%x err=0x%x\n",
+                    unit, texture, logical_format, format, tex ? tex->internal_format : 0, backend_error);
+            fflush(stderr);
             mg_set_gl_error(backend_error);
         } else {
             gl_state->image_unit_shadow[unit] = desired;

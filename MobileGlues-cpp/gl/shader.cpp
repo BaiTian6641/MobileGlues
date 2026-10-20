@@ -12,6 +12,7 @@
 #include "shader_state.h"
 #include "image_metadata.h"
 #include "image_bindings.h"
+#include "glsl/compat_image.h"
 
 #include <GL/gl.h>
 #include "getter.h"
@@ -77,7 +78,9 @@ void glShaderSource(GLuint shader, GLsizei count, const GLchar* const* string, c
     if (is_direct_shader(glsl_src.c_str())) {
         LOG_D("[INFO] [Shader] Direct shader source: ")
         LOG_D("%s", glsl_src.c_str())
-        essl_src = glsl_src;
+        // The translator path lowers these in preprocess_glsl; direct ESSL
+        // sources skip it and need the same target-aware lowering.
+        essl_src = mg_lower_legacy_image_formats(glsl_src);
     } else {
         int glsl_version = getGLSLVersion(glsl_src.c_str());
         LOG_D("[INFO] [Shader] Shader source: ")

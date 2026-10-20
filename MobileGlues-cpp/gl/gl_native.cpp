@@ -35,7 +35,19 @@ NATIVE_FUNCTION_HEAD(void, glClearColor, GLfloat red, GLfloat green, GLfloat blu
 NATIVE_FUNCTION_HEAD(void, glClearDepthf, GLfloat d) NATIVE_FUNCTION_END_NO_RETURN(void, glClearDepthf, d)
 NATIVE_FUNCTION_HEAD(void, glClearStencil, GLint s) NATIVE_FUNCTION_END_NO_RETURN(void, glClearStencil, s)
 NATIVE_FUNCTION_HEAD(void, glColorMask, GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha) NATIVE_FUNCTION_END_NO_RETURN(void, glColorMask, red,green,blue,alpha)
-NATIVE_FUNCTION_HEAD(void, glCompileShader, GLuint shader) NATIVE_FUNCTION_END_NO_RETURN(void, glCompileShader, shader)
+extern "C" GLAPI GLAPIENTRY void glCompileShader(GLuint shader) {
+    GLES.glCompileShader(shader);
+    GLint ok = GL_FALSE;
+    GLES.glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+    if (!ok) {
+        GLint type = 0;
+        GLES.glGetShaderiv(shader, GL_SHADER_TYPE, &type);
+        char info[4096] = {0};
+        GLES.glGetShaderInfoLog(shader, sizeof(info), nullptr, info);
+        fprintf(stderr, "[MG-SHADER-FAIL] compile shader=%u type=0x%x log=%.3000s\n", shader, type, info);
+        fflush(stderr);
+    }
+}
 NATIVE_FUNCTION_HEAD(void, glCompressedTexImage2D, GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data) NATIVE_FUNCTION_END_NO_RETURN(void, glCompressedTexImage2D, target,level,internalformat,width,height,border,imageSize,data)
 NATIVE_FUNCTION_HEAD(void, glCompressedTexSubImage2D, GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data) NATIVE_FUNCTION_END_NO_RETURN(void, glCompressedTexSubImage2D, target,level,xoffset,yoffset,width,height,format,imageSize,data)
 //NATIVE_FUNCTION_HEAD(void, glCopyTexImage2D, GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border) NATIVE_FUNCTION_END_NO_RETURN(void, glCopyTexImage2D, target,level,internalformat,x,y,width,height,border)

@@ -58,7 +58,7 @@ GLenum mg_image_backing_format(GLenum logical_format) {
     case GL_R16F:
         return GL_R32F;
     case GL_RG16F:
-        return GL_RG16F; // legal image qualifier on ES 3.10 where supported
+        return GL_RG16F;
     case GL_RGBA16F:
         return GL_RGBA16F;
     // ES 3.2 has no unorm16 image format qualifier. RGBA32F/RG32F preserve
@@ -67,11 +67,12 @@ GLenum mg_image_backing_format(GLenum logical_format) {
     case GL_RGBA16:
         return GL_RGBA32F;
     case GL_RG16:
-        return GL_RG32F;
+        return GL_RGBA32F;
     case GL_RGBA32F:
         return GL_RGBA32F;
     case GL_RG32F:
-        return GL_RG32F;
+        // ES image qualifiers do not include rg32f on the target provider.
+        return GL_RGBA32F;
     case GL_RGBA8:
         return GL_RGBA8;
     case GL_RGBA8_SNORM:
@@ -79,6 +80,17 @@ GLenum mg_image_backing_format(GLenum logical_format) {
     default:
         return logical_format;
     }
+}
+
+GLenum mg_image_unit_format(GLenum logical_format, GLenum texture_internal_format) {
+    // compat_image lowers desktop unorm rgba16/rg16 declarations to a legal
+    // qualifier. The image unit format must describe the backing the texture
+    // actually has: RGBA32F for null-allocated custom images, and the original
+    // RGBA16F for Bloom's colorimg8.
+    if ((logical_format == GL_RGBA16 || logical_format == GL_RG16) && texture_internal_format != 0) {
+        return texture_internal_format;
+    }
+    return mg_image_backing_format(logical_format);
 }
 
 const char* mg_image_qualifier(GLenum logical_format) {
@@ -95,8 +107,6 @@ const char* mg_image_qualifier(GLenum logical_format) {
         return "rgba16f";
     case GL_RGBA32F:
         return "rgba32f";
-    case GL_RG32F:
-        return "rg32f";
     case GL_RGBA8:
         return "rgba8";
     case GL_RGBA8_SNORM:
@@ -125,7 +135,12 @@ void mg_normalize_image_qualifiers(std::string& source, const std::unordered_map
         if (std::regex_match(line, match, image_decl)) {
             const std::string name = match[4].str();
             auto it = formats.find(name);
-            if (it != formats.end()) {
+            // rgba16/rg16 are handled by compat_image (mg_lower_legacy_image_formats),
+            // which chooses a formatless writeonly declaration or the float
+            // fallback based on the declaration's actual access. Rewriting them
+            // here would re-insert rgba32f after that pass and reintroduce the
+            // qualifier/backing mismatch this path exists to avoid.
+            if (it != formats.end() && it->second != GL_RGBA16 && it->second != GL_RG16) {
                 const char* qualifier = mg_image_qualifier(it->second);
                 if (qualifier != nullptr) {
                     const std::string layout_qualifier = std::string("layout(") + qualifier + ") ";

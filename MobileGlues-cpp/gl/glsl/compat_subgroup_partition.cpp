@@ -311,6 +311,315 @@ bool parse_candidate(const std::string& s, const Guard& guard, ParsedPattern& ou
     return true;
 }
 
+size_t skip_space_and_comments(const std::string& s, size_t i, size_t limit) {
+    if (limit > s.size()) limit = s.size();
+    for (;;) {
+        while (i < limit && is_space(s[i])) ++i;
+        size_t next = i;
+        if (!skip_trivia(s, next) || next == i) return i;
+        i = next;
+    }
+}
+
+// Whitespace- and comment-free view of a source fragment, for exact structural
+// comparisons that do not care about formatting.
+std::string compact_code(const std::string& s) {
+    std::string out;
+    size_t i = 0;
+    while (i < s.size()) {
+        if (skip_trivia(s, i)) continue;
+        if (!is_space(s[i])) out.push_back(s[i]);
+        ++i;
+    }
+    return out;
+}
+
+bool is_identifier(const std::string& s) {
+    if (s.empty() || (s[0] >= '0' && s[0] <= '9')) return false;
+    for (char c : s) {
+        if (!ident_char(c)) return false;
+    }
+    return true;
+}
+
+std::vector<std::string> split_top_level(const std::string& s, char separator) {
+    std::vector<std::string> parts;
+    int depth = 0;
+    size_t start = 0;
+    for (size_t i = 0; i < s.size(); ++i) {
+        const char c = s[i];
+        if (c == '(' || c == '[' || c == '{') {
+            ++depth;
+        } else if (c == ')' || c == ']' || c == '}') {
+            --depth;
+        } else if (c == separator && depth == 0) {
+            parts.push_back(s.substr(start, i - start));
+            start = i + 1;
+        }
+    }
+    parts.push_back(s.substr(start));
+    return parts;
+}
+
+size_t find_top_level(const std::string& s, const char* token, size_t begin, size_t end) {
+    const size_t len = std::strlen(token);
+    if (end > s.size()) end = s.size();
+    int depth = 0;
+    for (size_t i = begin; i + len <= end; ++i) {
+        const char c = s[i];
+        if (c == '(' || c == '[' || c == '{') {
+            ++depth;
+        } else if (c == ')' || c == ']' || c == '}') {
+            --depth;
+        } else if (depth == 0 && s.compare(i, len, token) == 0) {
+            return i;
+        }
+    }
+    return kNpos;
+}
+
+struct ForLoopInfo {
+    size_t for_pos = kNpos;
+    size_t header_open = kNpos;
+    size_t header_close = kNpos;
+    size_t body_open = kNpos;
+    size_t body_close = kNpos;
+};
+
+// Locates the innermost `for` loop starting before `pos` whose braced body
+// contains `pos`. Non-candidate loops simply report false.
+bool find_enclosing_for(const std::string& s, size_t pos, ForLoopInfo& out) {
+    bool found = false;
+    size_t search = 0;
+    while (true) {
+        const size_t f = find_token(s, "for", search, pos);
+        if (f == kNpos) break;
+        size_t open = f + 3;
+        while (open < s.size() && is_space(s[open])) ++open;
+        if (open < s.size() && s[open] == '(') {
+            const size_t close = matching_paren(s, open, s.size());
+            if (close != kNpos) {
+                size_t brace = close + 1;
+                while (brace < s.size() && is_space(s[brace])) ++brace;
+                if (brace < s.size() && s[brace] == '{') {
+                    const size_t body_close = matching_brace(s, brace);
+                    if (body_close != kNpos && brace < pos && pos < body_close) {
+                        out.for_pos = f;
+                        out.header_open = open;
+                        out.header_close = close;
+                        out.body_open = brace;
+                        out.body_close = body_close;
+                        found = true;
+                    }
+                }
+            }
+        }
+        search = f + 3;
+    }
+    return found;
+}
+
+bool parse_call_at(const std::string& s, size_t pos, size_t limit, const char* name,
+                   std::vector<std::string>& args, size_t& close_pos) {
+    const size_t len = std::strlen(name);
+    if (find_token(s, name, pos, limit) != pos) return false;
+    size_t open = pos + len;
+    while (open < limit && is_space(s[open])) ++open;
+    if (open >= limit || s[open] != '(') return false;
+    const size_t close = matching_paren(s, open, limit);
+    if (close == kNpos) return false;
+    args = split_args(s, open + 1, close);
+    close_pos = close;
+    return true;
+}
+
+// Recognizes the portable (KHR-only) duplicate-suppression loop emitted when
+// the NVIDIA branch has been preprocessed away:
+//
+//   for (uint u = 1u; u < gl_SubgroupSize; u = u << 1u) {
+//       if (key != subgroupShuffleXor(key, u)) {
+//           imageAtomicMax(image, coord, value);
+//           return;
+//       } else {
+//           if ((gl_SubgroupInvocationID & u) == u) return;
+//       }
+//   }
+//   imageAtomicMax(image, coord, value);
+//
+// The parsed span covers only the loop and its trailing write; the flush block
+// is emitted after the surrounding top-level conditional by the caller.
+bool parse_khr_candidate(const std::string& s, const ForLoopInfo& loop, ParsedPattern& out,
+                         std::string& why) {
+    const std::vector<std::string> header = split_top_level(
+        s.substr(loop.header_open + 1, loop.header_close - loop.header_open - 1), ';');
+    if (header.size() != 3) {
+        why = "KHR XOR loop header is not a for(init; condition; increment) triple";
+        return false;
+    }
+    const std::string init = compact_code(header[0]);
+    const std::string condition = compact_code(header[1]);
+    const std::string increment = compact_code(header[2]);
+    const size_t assign = init.find('=');
+    if (assign == kNpos || init.find('=', assign + 1) != kNpos ||
+        init.compare(0, 4, "uint") != 0) {
+        why = "KHR XOR loop header is not 'uint <var> = 1u'";
+        return false;
+    }
+    const std::string var = init.substr(4, assign - 4);
+    if (!is_identifier(var)) {
+        why = "KHR XOR loop variable is not a simple identifier";
+        return false;
+    }
+    const std::string one = init.substr(assign + 1);
+    if (one != "1u" && one != "1") {
+        why = "KHR XOR loop does not start at one";
+        return false;
+    }
+    if (condition != var + "<gl_SubgroupSize") {
+        why = "KHR XOR loop condition is not 'var < gl_SubgroupSize'";
+        return false;
+    }
+    if (increment != var + "=" + var + "<<1u" && increment != var + "=" + var + "<<1" &&
+        increment != var + "<<=1u" && increment != var + "<<=1") {
+        why = "KHR XOR loop increment is not a left shift by one";
+        return false;
+    }
+
+    size_t p = skip_space_and_comments(s, loop.body_open + 1, loop.body_close);
+    if (find_token(s, "if", p, loop.body_close) != p) {
+        why = "KHR XOR loop body does not begin with the duplicate-suppression if";
+        return false;
+    }
+    size_t cond_open = skip_space_and_comments(s, p + 2, loop.body_close);
+    if (cond_open >= loop.body_close || s[cond_open] != '(') {
+        why = "could not parse the KHR XOR loop's if condition";
+        return false;
+    }
+    const size_t cond_close = matching_paren(s, cond_open, loop.body_close);
+    if (cond_close == kNpos) {
+        why = "could not parse the KHR XOR loop's if condition";
+        return false;
+    }
+    const std::string compare = s.substr(cond_open + 1, cond_close - cond_open - 1);
+    const size_t neq = find_top_level(compare, "!=", 0, compare.size());
+    if (neq == kNpos || find_top_level(compare, "!=", neq + 2, compare.size()) != kNpos) {
+        why = "KHR XOR loop condition is not a single key != subgroupShuffleXor(key, var)";
+        return false;
+    }
+    const std::string key = trim_copy(compare.substr(0, neq));
+    if (key.empty()) {
+        why = "KHR XOR loop has an empty key expression";
+        return false;
+    }
+    const std::string shuffle_expected =
+        "subgroupShuffleXor(" + compact_code(key) + "," + var + ")";
+    if (compact_code(compare.substr(neq + 2)) != shuffle_expected) {
+        why = "KHR XOR loop does not compare the key against subgroupShuffleXor(key, var)";
+        return false;
+    }
+
+    size_t then_open = skip_space_and_comments(s, cond_close + 1, loop.body_close);
+    if (then_open >= loop.body_close || s[then_open] != '{') {
+        why = "KHR XOR loop's divergent if body is not braced";
+        return false;
+    }
+    const size_t then_close = matching_brace(s, then_open);
+    if (then_close == kNpos || then_close > loop.body_close) {
+        why = "could not parse the KHR XOR loop's divergent if body";
+        return false;
+    }
+
+    p = skip_space_and_comments(s, then_open + 1, then_close);
+    std::vector<std::string> args;
+    size_t call_close = kNpos;
+    if (!parse_call_at(s, p, then_close, "imageAtomicMax", args, call_close) || args.size() != 3) {
+        why = "KHR XOR loop branch does not begin with imageAtomicMax(image, coord, value)";
+        return false;
+    }
+    const std::string image = trim_copy(args[0]);
+    const std::string coord = trim_copy(args[1]);
+    const std::string value = trim_copy(args[2]);
+    if (image.empty() || coord.empty() || value.empty() ||
+        value.find("floatBitsToUint") == std::string::npos) {
+        why = "KHR XOR loop branch has an invalid image, coordinate or importance value";
+        return false;
+    }
+    p = skip_space_and_comments(s, call_close + 1, then_close);
+    if (p >= then_close || s[p] != ';') {
+        why = "KHR XOR loop branch imageAtomicMax is not a complete statement";
+        return false;
+    }
+    p = skip_space_and_comments(s, p + 1, then_close);
+    if (find_token(s, "return", p, then_close) != p) {
+        why = "KHR XOR loop branch does not return after imageAtomicMax";
+        return false;
+    }
+    p = skip_space_and_comments(s, p + 6, then_close);
+    if (p >= then_close || s[p] != ';') {
+        why = "KHR XOR loop branch return is not a complete statement";
+        return false;
+    }
+    p = skip_space_and_comments(s, p + 1, then_close);
+    if (p != then_close) {
+        why = "KHR XOR loop branch contains statements besides imageAtomicMax and return";
+        return false;
+    }
+
+    size_t else_pos = skip_space_and_comments(s, then_close + 1, loop.body_close);
+    if (find_token(s, "else", else_pos, loop.body_close) != else_pos) {
+        why = "KHR XOR loop's duplicate-suppression if has no else branch";
+        return false;
+    }
+    size_t else_open = skip_space_and_comments(s, else_pos + 4, loop.body_close);
+    if (else_open >= loop.body_close || s[else_open] != '{') {
+        why = "KHR XOR loop's else body is not braced";
+        return false;
+    }
+    const size_t else_close = matching_brace(s, else_open);
+    if (else_close == kNpos || else_close > loop.body_close) {
+        why = "could not parse the KHR XOR loop's else body";
+        return false;
+    }
+    const std::string expected_else =
+        "if((gl_SubgroupInvocationID&" + var + ")==" + var + ")return;";
+    if (compact_code(s.substr(else_open + 1, else_close - else_open - 1)) != expected_else) {
+        why = "KHR XOR loop's else body is not the lowest-invocation leader test";
+        return false;
+    }
+    if (skip_space_and_comments(s, else_close + 1, loop.body_close) != loop.body_close) {
+        why = "KHR XOR loop body contains statements after the duplicate-suppression if";
+        return false;
+    }
+
+    size_t trailing = skip_space_and_comments(s, loop.body_close + 1, s.size());
+    args.clear();
+    call_close = kNpos;
+    if (!parse_call_at(s, trailing, s.size(), "imageAtomicMax", args, call_close) ||
+        args.size() != 3) {
+        why = "KHR XOR loop is not followed by the leader imageAtomicMax write";
+        return false;
+    }
+    if (compact_code(trim_copy(args[0])) != compact_code(image) ||
+        compact_code(trim_copy(args[1])) != compact_code(coord) ||
+        compact_code(trim_copy(args[2])) != compact_code(value)) {
+        why = "KHR XOR loop's trailing imageAtomicMax differs from the branch write";
+        return false;
+    }
+    const size_t semicolon = skip_space_and_comments(s, call_close + 1, s.size());
+    if (semicolon >= s.size() || s[semicolon] != ';') {
+        why = "KHR XOR loop's trailing imageAtomicMax is not a complete statement";
+        return false;
+    }
+
+    out.start = loop.for_pos;
+    out.end = semicolon + 1;
+    out.key = key;
+    out.coord = coord;
+    out.value = value;
+    out.image = image;
+    return true;
+}
+
 // Returns the position of the `if` keyword whose braced body starts at `open`,
 // or npos when the brace does not open an if body.
 size_t owning_if_position(const std::string& s, size_t open) {
@@ -570,12 +879,49 @@ bool mg_lower_nv_partition_pattern(std::string& source, std::string* reason) {
 
     const std::vector<Guard> guards = collect_vendor_guards(source);
     std::vector<ParsedPattern> patterns;
+    std::vector<std::pair<size_t, size_t>> claimed_spans;
     for (const Guard& guard : guards) {
         if (find_token(source, "subgroupPartitionNV", guard.start, guard.end) == kNpos) continue;
         ParsedPattern parsed{};
         std::string why;
         if (!parse_candidate(source, guard, parsed, why)) return fail(why);
+        claimed_spans.emplace_back(parsed.start, parsed.end);
         patterns.push_back(parsed);
+    }
+
+    // When the NVIDIA branch is absent (Iris preprocesses it away on Adreno),
+    // the same duplicate suppression arrives as the portable XOR loop. Recognize
+    // and lower it with the same partition table. XOR uses that are not this
+    // loop are left alone; loops carrying the pattern's image write but with an
+    // unsafe shape are refused instead of being half-rewritten.
+    size_t shuffle_pos = 0;
+    while ((shuffle_pos = find_token(source, "subgroupShuffleXor", shuffle_pos)) != kNpos) {
+        bool claimed = false;
+        for (const auto& span : claimed_spans) {
+            if (shuffle_pos >= span.first && shuffle_pos < span.second) {
+                claimed = true;
+                break;
+            }
+        }
+        if (claimed) {
+            shuffle_pos += std::strlen("subgroupShuffleXor");
+            continue;
+        }
+        ForLoopInfo loop{};
+        if (!find_enclosing_for(source, shuffle_pos, loop)) {
+            shuffle_pos += std::strlen("subgroupShuffleXor");
+            continue;
+        }
+        if (find_token(source, "imageAtomicMax", loop.body_open, loop.body_close) == kNpos) {
+            shuffle_pos = loop.body_close + 1;
+            continue;
+        }
+        ParsedPattern parsed{};
+        std::string why;
+        if (!parse_khr_candidate(source, loop, parsed, why)) return fail(why);
+        claimed_spans.emplace_back(parsed.start, parsed.end);
+        patterns.push_back(parsed);
+        shuffle_pos = parsed.end;
     }
 
     if (patterns.empty()) {

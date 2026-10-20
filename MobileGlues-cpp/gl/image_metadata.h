@@ -38,6 +38,15 @@ std::unordered_map<std::string, GLenum> mg_image_metadata_take();
 GLenum mg_image_backing_format(GLenum logical_format);
 const char* mg_image_qualifier(GLenum logical_format);
 
+// Backing format for glBindImageTexture. Unorm16 application formats have no
+// ES image qualifier; their write-only declarations are made formatless by
+// compat_image, so the unit must be bound with the texture's real storage
+// format. Null-allocated RGBA16/RG16 become GL_RGBA32F/GL_RG32F
+// (gl/texture.cpp), while a float-backed image such as Bloom's RGBA16F alt
+// output keeps GL_RGBA16F. Every other format keeps the historical
+// mg_image_backing_format mapping (including R16UI -> R32UI).
+GLenum mg_image_unit_format(GLenum logical_format, GLenum texture_internal_format);
+
 // Rewrites formatless image declarations for which metadata exists. The
 // function is deliberately a no-op for declarations without metadata: an
 // unknown image format is a loader-contract failure, not a guess.
