@@ -90,3 +90,47 @@ At 1920×1200, record: shaders off, High, Balanced, and one-effect-off variants
 (shadows/light shafts/clouds/reflections), 10-minute steady state. Keep WSR and
 player reflections off for the X1E standard target; WSR128 remains the advanced
 staged target.
+
+## FP16 / mediump assessment
+
+Device probe on `C1L63708PZ` (raw ANGLE ES context, not MobileGlues):
+
+- `highp` contract: range 127, precision 23 (FP32).
+- `mediump` contract: range 15, precision 10 (FP16).
+- `GL_EXT_shader_explicit_arithmetic_types_float16` is **not** exposed.
+- X1-85 published peak: 4.61 TFLOPS FP32 / 9.22 TFLOPS FP16 for the 4.6 TFLOPS
+  variant; X1E-80-100 is the lower 3.8/7.6-class SKU.
+- A dependent vec4 ALU loop (200k iterations) through ANGLE:
+  - `highp`: **7.35 ms**
+  - `mediump`: **3.19 ms**
+  - ratio ≈ **2.3×**
+
+### What this means
+
+FP16 arithmetic is real and can reach the advertised ~2× ALU rate, but it is
+not a global switch:
+
+- Shaderpacks predominantly use `highp`/FP32. MobileGlues and SPIRV-Cross emit
+  highp for world-space math; changing that wholesale is unsafe.
+- FP16 has 10-bit mantissa and ±15 exponent range (~65504 max). It is unsafe
+  for world/view positions, depth reconstruction, shadow coordinates, matrices,
+  ray origins/directions, temporal history, ACT/WSR voxel indices, atomic
+  indices and packed-ID buffers.
+- Texture/fill/bandwidth-limited work does not speed up from FP16 ALU. RGBA16F
+  storage is already used by the packs; storage format is not the same as
+  arithmetic precision.
+- `mediump` is permission, not a guarantee; the compiler may promote some
+  expressions. Per-pass measurement is required.
+
+### Recommended implementation route
+
+1. Preserve shaderpack-authored `mediump`/`lowp`; do not force highp over it.
+2. Add an **opt-in precision mode** with an explicit allowlist: full-screen
+   color/tonemap/bloom/composite accumulation first; exclude vertex, depth,
+   shadows, TAA, SSR/WSR, ACT voxelization and packed-ID passes.
+3. Apply per-variable/per-expression `mediump` via AST or a validated source
+   pass; never rewrite all `highp` tokens.
+4. A/B each pass for FPS and visual reference; rollback per pass.
+5. Treat FP16 as a polish optimization, not a substitute for resolution,
+   shadow/cloud/SSR cuts. Expected overall gain is pass-dependent and below the
+   ALU ratio because High is also fill/texture-bound.
