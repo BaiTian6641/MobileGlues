@@ -10,7 +10,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | --- | --- |
 | Integration worktree | `/home/polar/MobileGlues` |
 | Branch | `googlebook/x1e-stage1-3` |
-| HEAD | `51b3eaa` plus install-fix evidence (scene adapter, camera/depth inputs, pipeline reset; package hashes in `audits/scene-scale-adapter.md`) |
+| HEAD | `f793190`; R1/R6/R7/R9 review fixes committed in `ae29d70`/`c65de12`; package `025850…` (see validation) |
 | Origin | `git@github.com:BaiTian6641/MobileGlues.git` |
 | Upstream | `https://github.com/MobileGL-Dev/MobileGlues.git` |
 | Untouched user changes | modified `.gitignore`, `docs/mobileglues-googlebook/validation/README.md`; untracked `.vscode/`, FSR3 plan, recent validation docs |
@@ -19,17 +19,16 @@ source of truth for the pre-FSR3 renderer/pack history.
 
 ### Provenance
 
-- Installed renderer: `com.fcl.plugin.mobileglues` **2.0.0**, APK SHA-256
-  `f032e6673dc8a626ef27775747b6cb0fdb4e5e48918ed3a62cc5d37a0a515a82`.
+- Installed renderer: `com.fcl.plugin.mobileglues` **2.0.0**, review-fix APK
+  SHA-256 `025850a0180eead1d4434d35cf9f9d5ac5bfd09503572b7bde8a927f3df64ce9`.
 - Installed ARM64 core: `lib/arm64-v8a/libmobileglues.so`, SHA-256
-  `dcb3493e240d82354ba7fc2db446ef25fd8d7c54f75d16bed164bd5e92c129a1`, Build ID
-  `d99046abb48428ea108f9f7aafff7a325548db24`.
-- Installed binary strings identify the plugin build tree
-  `/home/polar/MobileGlues-plugin/MobileGlues`; that submodule is at `8ac7036`
-  (2026-10-19 10:29:15 -0500). This is the actual installed-source lead, not the audited
-  `97558a6` upstream snapshot and not this checkout's `355d797`.
-- The installed header defines `MG_MOBILEGLUES_VERSION 2000`; it contains the FSR1 setting and
-  the same single-pass FSR1 shader as the checkout. No FSR3 symbols or shaders are installed.
+  `472576b7fe303d06362277a4e9f2864dd1077177bebfe54e615dc1a38816024f`.
+- Installed bridge JAR: `mgfsr3bridge-0.1.0.jar`, SHA-256
+  `7e171274b9e86619e1455ec8849a297ca244615c5d1244dfa6794babff9724dc`
+  (diagnostic scene-extent logging on top of the functional bridge).
+- The APK uses `extractNativeLibs=true`; direct `Android/data` replacement was
+  performed through the FCL file manager after a scoped-storage helper placed
+  the JAR in Downloads.
 
 ## Target tuple
 
@@ -47,26 +46,29 @@ source of truth for the pre-FSR3 renderer/pack history.
 | Gate | Status | Evidence |
 | --- | --- | --- |
 | S0 baseline/provenance | **PASS for identity; PARTIAL for regression baseline** | APK/core hashes, device tuple, host tests; white UI/ACT/WSR baseline not rerun in this lane |
-| S1 spatial foundation | **PARTIAL: host/build PASS, device NOT RUN** | Core branch `5f0c421` corrects dataflow/sizing; independent review running; adapter still needs to render the scene at the derived extent |
+| S1 spatial foundation | **PARTIAL: host/build PASS; FSR1 device NOT RUN** | Corrected two-pass EASU/RCAS and output-first sizing; host tests PASS; FSR1 not device-qualified |
 | S2 contract | **PASS (frozen)** | `docs/fsr3/frame-contract.md` ABI v1 |
-| S2 backend feasibility | **PASS (compile/ops + one-pass/full-chain dispatch)** | X1E RCAS exact vs CPU; 8-pass chain executed at 2x/1.5x with host parity; independent Vulkan and multi-frame history NOT RUN |
+| S2 backend feasibility | **PASS** | X1E RCAS exact vs CPU; 8-pass chain 2x/1.5x; independent X1E multi-frame evidence now present |
 | S2 game audit | **PASS (source)** | `docs/fsr3/audits/minecraft-iris-pass-input.md`: final TAA is `composite6`, jitter is partial, no velocity buffer in Iris 1.8.14 |
-| S3 native temporal backend | **PARTIAL** | In-tree ABI/backend PASS; X1E three-frame reset/history/reset probe deterministic (`validation/2026-10-20-x1e-backend-multiframe.md`); per-pass timing NOT RUN |
-| S4 first game path | **PARTIAL: rendering PASS; performance preliminary** | Quality: 1920x1057 -> 2880x1585, camera motion active, full world + HUD; spot off/Quality/Performance ~18/~20/~20 FPS, not frame-locked; `validation/2026-10-20-scene-adapter-quality.md` |
-| S5 Complementary | **BLOCKED** | waits for S4 |
-| S6 qualification | **NOT RUN** | no FSR3 installation exists |
+| S3 native temporal backend | **PARTIAL** | X1E three-frame reset/history/reset probe deterministic (`cf71d4b5…`); R1 unsigned-sampler and R6 init-state defects fixed; per-pass timing NOT RUN |
+| S4 first game path | **PARTIAL: rendering PASS; performance NOT QUALIFIED** | Quality 1920x1057 -> 2880x1585, camera_motion=1, full world + native HUD; spot ~18 off/~20 Quality/~20 Performance, not frame-locked; R2/R3/R5 boundary/jitter defects remain; `validation/2026-10-20-scene-adapter-quality.md` |
+| S5 Complementary | **BLOCKED** | source boundary mapped; ACT/WSR/r5.9.2 device qualification NOT RUN |
+| S6 qualification | **NOT RUN** | no matched benchmark/thermal qualification |
 
 ## Confirmed findings
 
-- Host semantic suite passes at `355d797`: `sh MobileGlues-cpp/tests/run.sh` (pixel, framebuffer,
-  shader source, depth filter, cache key, compat image, subgroup).
-- FSR1 in this checkout and in the installed binary computes EASU into `color`, then calls RCAS
-  on the original input texture and writes only `sharpenedColor`. The EASU result is dead.
-- FSR1 takes EGL surface width/height as render width/height, then multiplies by the preset to
-  create target dimensions. With FSR1 on, the application's framebuffer 0 redirect can therefore
-  enlarge scene work instead of reducing it.
-- FSR1 initializes render color as RGBA8, then recreates it as RGBA32F on resize.
-- The installed plugin is not an FSR3 build. Any FSR3 claim requires a new exact binary identity.
+- The integration review (`audits/2026-10-20-integration-review.md`) found
+  concrete defects. R1 (unsigned reconstructed-depth sampler), R6
+  initialization state, R7 camera continuity and R9 damage-swap routing are
+  fixed; R2 (final-image boundary), R3 (scene depth/screen grid), R4 (camera
+  precision), R5 (jitter/depth parameters/TAA), R8 (ABI validation) and R10
+  (steady-state cost) remain open.
+- R1 host reproduction after the fix shows the unsigned sampler on its own unit
+  with R32UI; all eight dispatch calls still succeed.
+- The X1E backend reset/history/reset probe is deterministic across two runs.
+- The first full-frame game run confirms the bridge loads, camera motion
+  activates, output is native and HUD is correct at the tested tuple.
+- No matched performance benchmark or Complementary/ACT/WSR qualification exists.
 
 ## Worker state
 
