@@ -12,10 +12,11 @@ Updated: 2026-10-20. Owner: coordinator. Gate labels follow
 | FSR-S1-B | S1 | Correct EASU→RCAS two-pass dataflow and format policy | FsrCoreAudit | `gl/FSR1/` | PARTIAL (host/build PASS; device NOT RUN) | RCAS reads EASU intermediate; one RGBA8 policy; shader validates GLSL 450 |
 | FSR-S1-C | S1 | Injected-pass state/lifecycle tests | FsrCoreAudit | `gl/FSR1/`, tests | PARTIAL (host PASS; device NOT RUN) | expanded state mask and tests; independent review running |
 | FSR-S2-A | S2 | Freeze ABI v1 frame contract | coordinator | `docs/fsr3/frame-contract.md` | DONE | frozen; requires version bump for changes |
-| FSR-S2-B | S2 | Pin AMD SDK v1.1.4 / FSR3.1.4 and audit licenses | FsrBackendSpike | `/tmp/mg-fsr-backend` | IN PROGRESS | worker assignment |
-| FSR-S2-C | S2 | GLES operation/format feasibility spike | FsrBackendSpike | `/tmp/fsr3-spike` | IN PROGRESS | worker assignment; device NOT RUN |
+| FSR-S2-B | S2 | Pin AMD SDK v1.1.4 / FSR3.1.4 and audit licenses | FsrBackendSpike | `docs/fsr3/audits/backend-feasibility.md` | PASS | commit `c6efa6b`; MIT upscaler path; 38-file manifest |
+| FSR-S2-C | S2 | GLES operation/format feasibility spike | FsrBackendSpike | `tools/fsr3_spike/` | PASS (compile/ops; dispatch NOT RUN) | X1E probe 14/22 with expected format/subgroup failures; 12/12 ESSL compile; 10/10 host SPIRV-Cross |
 | FSR-S2-D | S2 | Minecraft/Iris pass graph, jitter, motion audit | FsrGameAudit | `/tmp/mg-fsr-game` | PASS (source audit) | report `minecraft-iris-pass-input.md`; final TAA is pack `composite6`; jitter is partial; no engine motion/velocity in 1.8.14 |
-| FSR-S3-A | S3 | Minimal in-tree GLES backend and shader adaptations | backend | `MobileGlues-cpp/upscaling/` | BLOCKED | waits for S2 backend decision and integration owner |
+| FSR-S2-E | S2 | Execute one adapted pass, then the full 8-pass chain, against reference | backend/QA | spike harness | BLOCKED | next after S2 compile/ops; needs deterministic inputs and target dispatch |
+| FSR-S3-A | S3 | Minimal in-tree GLES backend and shader adaptations | backend | `MobileGlues-cpp/upscaling/` | BLOCKED | waits for S2 dispatch gate and integration owner |
 | FSR-S4-A | S4 | Adapter reduced-resolution scene + semantic inputs | game | game integration module | BLOCKED | waits for S1/S2 |
 | FSR-S4-B | S4 | Camera-only prototype, then moving objects | game | adapter/debug | BLOCKED | waits for S3 |
 | FSR-S5-A | S5 | Complementary r5.9.3 profile; r5.9.2 regression | game/QA | integration metadata | BLOCKED | waits for S4 |

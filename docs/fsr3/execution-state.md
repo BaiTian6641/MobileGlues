@@ -49,7 +49,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | S0 baseline/provenance | **PASS for identity; PARTIAL for regression baseline** | APK/core hashes, device tuple, host tests; white UI/ACT/WSR baseline not rerun in this lane |
 | S1 spatial foundation | **PARTIAL: host/build PASS, device NOT RUN** | Core branch `5f0c421` corrects dataflow/sizing; independent review running; adapter still needs to render the scene at the derived extent |
 | S2 contract | **PASS (frozen)** | `docs/fsr3/frame-contract.md` ABI v1 |
-| S2 backend feasibility | **IN PROGRESS / NOT RUN on device** | Pinned source, one of ten passes compiles as ESSL 3.20; full spike pending |
+| S2 backend feasibility | **PARTIAL: compile/ops PASS, dispatch NOT RUN** | X1E probe 14/22 with expected failures; 12/12 ESSL shaders compile; 10/10 host SPIRV-Cross; decision continue GLES |
 | S2 game audit | **PASS (source)** | `docs/fsr3/audits/minecraft-iris-pass-input.md`: final TAA is `composite6`, jitter is partial, no velocity buffer in Iris 1.8.14 |
 | S3 native temporal backend | **BLOCKED** | waits for S2 decision |
 | S4 first game path | **BLOCKED** | waits for S1/S2/S3 |
@@ -73,7 +73,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | Worker | Worktree/branch | Status | Handoff |
 | --- | --- | --- | --- |
 | FsrCoreAudit | `/tmp/mg-fsr-core`, `googlebook/fsr-core-s1` | completed: host PASS/build PASS, device NOT RUN | `docs/fsr3/audits/core-fsr1.md` |
-| FsrBackendSpike | `/tmp/mg-fsr-backend`, `googlebook/fsr-backend-s2` | running | `docs/fsr3/audits/backend-feasibility.md` |
+| FsrBackendSpike | `/tmp/mg-fsr-backend`, `googlebook/fsr-backend-s2` | completed: host + X1E compile/ops PASS, dispatch NOT RUN | `docs/fsr3/audits/backend-feasibility.md` |
 | FsrGameAudit | `/tmp/mg-fsr-game`, `googlebook/fsr-game-audit` | completed: source audit PASS | `docs/fsr3/audits/minecraft-iris-pass-input.md` |
 | FsrCoreReview | review task | running | independent FSR1 defect review |
 
@@ -81,7 +81,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 
 1. Review core FSR1 diff and evidence; integrate only after the off path and truthful failure
    checks are demonstrated.
-2. Review backend pin and operation matrix; make the S2 GLES/Vulkan decision.
+2. Execute one adapted FSR3 pass and then the full 8-pass chain against the reference.
 3. Reconcile the game audit with the frozen ABI, then assign the first vertical slice.
 4. Build the first FSR3-capable test binary and run the white UI/ACT/WSR baseline before any
    performance claim.
