@@ -9,8 +9,18 @@ distribution.
 | `task-ledger.md` | Gates, ownership, status and blockers |
 | `execution-state.md` | Exact repository/device provenance and current next action |
 | `decisions.md` | Architecture decisions with status and evidence |
-| `audits/` | Worker source/runtime audit handoffs |
+| `audits/` | Worker source/runtime audit handoffs; `stable-profile.md` records the temporary history-off policy |
 | `validation/` | Device and host evidence (created when runs exist) |
+
+For the next implementation agent, start with the
+[handoff](agent-handoff.md) and paste the
+[main implementation prompt](agent-prompts.md#main-implementation-prompt).
+The [follow-up review](audits/2026-10-20-followup-review.md) addresses the
+reported menu/HUD scaling and world flicker, with shaders required.
+[Implementation notes](implementation-notes.md) include code examples and
+acceptance checks; [primary references](references.md) records the web
+research. These are supporting instructions, not another execution ledger
+or a claim that the integration is complete.
 
 The [20 October integration review](audits/2026-10-20-integration-review.md)
 assesses both renderer-only and hybrid bridge paths, reconciled through source
