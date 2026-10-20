@@ -42,6 +42,14 @@ void mg_set_gl_error(GLenum error) {
 void glGetIntegerv(GLenum pname, GLint* params) {
     LOG()
     LOG_D("glGetIntegerv, pname: %s", glEnumToString(pname))
+    // Settings are parsed during library initialization, before the backend
+    // dispatch table is populated on a host loader. Re-entering this frontend
+    // through a null GLES slot used to recurse until the stack died.
+    if (!GLES.glGetIntegerv || GLES.glGetIntegerv == glGetIntegerv) {
+        if (params) *params = 0;
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        return;
+    }
     switch (pname) {
     case GL_NUM_EXTENSIONS + GL_BACKEND_GETTER_MG:
         GLES.glGetIntegerv(pname - GL_BACKEND_GETTER_MG, params);
