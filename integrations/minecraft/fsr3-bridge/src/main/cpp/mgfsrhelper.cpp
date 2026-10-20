@@ -17,6 +17,7 @@ using BridgeModeFn = void (*)(JNIEnv*, jclass);
 using TraceFn = jstring (*)(JNIEnv*, jclass, jint, jint, jint, jint);
 using FinalScopeFn = void (*)(JNIEnv*, jclass, jboolean);
 using SceneDepthFn = void (*)(JNIEnv*, jclass, jint);
+using SceneColorFn = void (*)(JNIEnv*, jclass, jint);
 AvailableFn g_available = nullptr;
 SubmitFn g_submit = nullptr;
 ScaleFn g_scale = nullptr;
@@ -27,6 +28,7 @@ BridgeModeFn g_bridge_mode = nullptr;
 TraceFn g_trace = nullptr;
 FinalScopeFn g_final_scope = nullptr;
 SceneDepthFn g_scene_depth = nullptr;
+SceneColorFn g_scene_color = nullptr;
 } // namespace
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -58,6 +60,8 @@ Java_com_googlebook_fsrbridge_NativeBridge_init(JNIEnv* env, jclass, jstring pat
         dlsym(g_core, "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeFinalScope"));
     g_scene_depth = reinterpret_cast<SceneDepthFn>(
         dlsym(g_core, "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSetSceneDepth"));
+    g_scene_color = reinterpret_cast<SceneColorFn>(
+        dlsym(g_core, "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSetSceneColor"));
     return (g_available && g_submit) ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -155,5 +159,14 @@ Java_com_googlebook_fsrbridge_NativeBridge_setSceneDepth(JNIEnv* env, jclass cla
     jclass target = env->FindClass("com/googlebook/fsrbridge/Fsr3Bridge");
     if (!target) return;
     g_scene_depth(env, target, texture);
+    env->DeleteLocalRef(target);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_googlebook_fsrbridge_NativeBridge_setSceneColor(JNIEnv* env, jclass clazz, jint texture) {
+    if (!g_scene_color) return;
+    jclass target = env->FindClass("com/googlebook/fsrbridge/Fsr3Bridge");
+    if (!target) return;
+    g_scene_color(env, target, texture);
     env->DeleteLocalRef(target);
 }

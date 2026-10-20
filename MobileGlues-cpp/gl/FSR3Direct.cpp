@@ -60,6 +60,7 @@ std::atomic<int> g_native_height{0};
 std::atomic<bool> g_bridge_mode{false};
 thread_local bool g_final_scope = false;
 thread_local unsigned int g_bridge_depth = 0;
+thread_local unsigned int g_bridge_color = 0;
 
 struct PresentGuard {
     GLint draw = 0, read = 0, active = GL_TEXTURE0, tex0 = 0, sampler0 = 0;
@@ -247,6 +248,8 @@ bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
 
 void FSR3SetBridgeDepthTexture(unsigned int texture) { g_bridge_depth = texture; }
 unsigned int FSR3BridgeDepthTexture() { return g_bridge_depth; }
+void FSR3SetBridgeColorTexture(unsigned int texture) { g_bridge_color = texture; }
+unsigned int FSR3BridgeColorTexture() { return g_bridge_color; }
 
 void FSR3SetFinalScope(bool active) { g_final_scope = active; }
 

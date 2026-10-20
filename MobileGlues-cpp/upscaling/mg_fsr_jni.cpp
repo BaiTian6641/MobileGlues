@@ -47,6 +47,7 @@ struct JniState {
     GLuint color_input = 0;
     GLuint depth_synth = 0;
     GLuint input_fbo = 0;
+    GLuint source_fbo = 0;
     GLuint output_fbo = 0;
     GLuint attached_output = 0;
     GLuint motion_program = 0;
@@ -355,8 +356,10 @@ bool make_aux(JniState& s, int w, int h, int rw, int rh) {
     if (s.color_input) GLES.glDeleteTextures(1, &s.color_input);
     if (s.depth_synth) GLES.glDeleteTextures(1, &s.depth_synth);
     if (s.input_fbo) GLES.glDeleteFramebuffers(1, &s.input_fbo);
+    if (s.source_fbo) GLES.glDeleteFramebuffers(1, &s.source_fbo);
     s.motion = s.color_input = s.depth_synth = 0;
     s.input_fbo = 0;
+    s.source_fbo = 0;
     GLES.glGenTextures(1, &s.motion);
     GLES.glGenTextures(1, &s.color_input);
     GLES.glGenTextures(1, &s.depth_synth);
@@ -394,6 +397,7 @@ void destroy_state(JniState& s) {
     if (s.color_input) GLES.glDeleteTextures(1, &s.color_input);
     if (s.depth_synth) GLES.glDeleteTextures(1, &s.depth_synth);
     if (s.input_fbo) GLES.glDeleteFramebuffers(1, &s.input_fbo);
+    if (s.source_fbo) GLES.glDeleteFramebuffers(1, &s.source_fbo);
     if (s.output_fbo) GLES.glDeleteFramebuffers(1, &s.output_fbo);
     s.motion = s.color_input = s.depth_synth = 0;
     s.input_fbo = s.output_fbo = s.attached_output = 0;
@@ -500,8 +504,15 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     if (fbo == 0) { bridge_fail("no draw framebuffer at final pass"); return -1; }
     GLuint color = 0, depth = 0;
     int width = 0, height = 0;
-    if (!attachment_texture(GL_COLOR_ATTACHMENT0, color, width, height) ||
-        width <= 0 || height <= 0) {
+    const GLuint bridge_color = FSR3BridgeColorTexture();
+    if (bridge_color != 0) {
+        color = bridge_color;
+        if (!texture_size_2d(color, width, height)) {
+            bridge_fail("no bridge color texture");
+            return -1;
+        }
+    } else if (!attachment_texture(GL_COLOR_ATTACHMENT0, color, width, height) ||
+               width <= 0 || height <= 0) {
         bridge_fail("no color texture attachment");
         return -1;
     }
@@ -553,9 +564,16 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     }
     if (s.failed) return -1;
 
-    // Downsample the pre-HUD final image into the scene color extent. The Iris
-    // targets were rendered at this extent; the final pass is native.
-    GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(fbo));
+    // Downsample the pre-HUD image into the scene color extent. When the
+    // bridge supplies the pre-final scene color, read that texture directly;
+    // otherwise read the current native final framebuffer.
+    if (bridge_color != 0) {
+        if (!s.source_fbo) GLES.glGenFramebuffers(1, &s.source_fbo);
+        GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, s.source_fbo);
+        GLES.glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0);
+    } else {
+        GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(fbo));
+    }
     GLES.glReadBuffer(GL_COLOR_ATTACHMENT0);
     GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s.input_fbo);
     GLES.glBlitFramebuffer(0, 0, width, height, 0, 0, rw, rh, GL_COLOR_BUFFER_BIT, GL_LINEAR);
@@ -669,6 +687,11 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
 extern "C" JNIEXPORT void JNICALL
 Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSetSceneDepth(JNIEnv*, jclass, jint texture) {
     FSR3SetBridgeDepthTexture(static_cast<unsigned int>(texture));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSetSceneColor(JNIEnv*, jclass, jint texture) {
+    FSR3SetBridgeColorTexture(static_cast<unsigned int>(texture));
 }
 
 extern "C" JNIEXPORT void JNICALL

@@ -161,14 +161,101 @@ public final class Fsr3Bridge {
     public static void beginFinalPass() { inFinalPass = true; }
     public static void endFinalPass() { inFinalPass = false; }
 
-    /** World/composite programs get the scene extent; the final pass gets native. */
+    /** World, composite and pre-final final programs use the scene extent. */
     public static int uniformWidth(int width) {
-        return inFinalPass ? width : sceneWidth(width);
+        return sceneWidth(width);
     }
 
     public static int uniformHeight(int height) {
-        return inFinalPass ? height : sceneHeight(height);
+        return sceneHeight(height);
     }
+
+    private static int managedFinalColor;
+    private static int managedFinalWidth;
+    private static int managedFinalHeight;
+    private static volatile boolean preFinalActive;
+
+    /**
+     * Scene-sized color target for the final shader. FSR3 consumes this before
+     * the native upscale instead of consuming an already-native final image.
+     * LWJGL is reached reflectively because the bridge compiles against Iris
+     * only, without Minecraft/LWJGL jars.
+     */
+    public static synchronized int sceneFinalColorTexture(int width, int height) {
+        if (!LOADED || width <= 0 || height <= 0) return 0;
+        if (managedFinalColor != 0 && managedFinalWidth == width && managedFinalHeight == height) {
+            return managedFinalColor;
+        }
+        try {
+            Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
+            Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
+            int texture = (int) gl11.getMethod("glGenTextures").invoke(null);
+            gl11.getMethod("glBindTexture", int.class, int.class).invoke(null, 0x0DE1, texture);
+            var parameter = gl11.getMethod("glTexParameteri", int.class, int.class, int.class);
+            parameter.invoke(null, 0x0DE1, 0x2801, 0x2601);
+            parameter.invoke(null, 0x0DE1, 0x2800, 0x2601);
+            parameter.invoke(null, 0x0DE1, 0x2802, 0x812F);
+            parameter.invoke(null, 0x0DE1, 0x2803, 0x812F);
+            gl30.getMethod("glTexStorage2D", int.class, int.class, int.class, int.class, int.class)
+                .invoke(null, 0x0DE1, 1, 0x8058, width, height);
+            gl11.getMethod("glBindTexture", int.class, int.class).invoke(null, 0x0DE1, 0);
+            int previous = managedFinalColor;
+            if (previous != 0) gl11.getMethod("glDeleteTextures", int.class).invoke(null, previous);
+            managedFinalColor = texture;
+            managedFinalWidth = width;
+            managedFinalHeight = height;
+            mark("scene final color " + width + "x" + height + " id=" + texture);
+            return texture;
+        } catch (Throwable t) {
+            warn("scene final color allocation failed: " + t);
+            return 0;
+        }
+    }
+
+    private static Object mainTarget() throws Exception {
+        Class<?> minecraft = Class.forName("net.minecraft.client.Minecraft");
+        Object client = minecraft.getMethod("getInstance").invoke(null);
+        return minecraft.getMethod("getMainRenderTarget").invoke(client);
+    }
+
+    public static int mainWidth() {
+        try { return (int) mainTarget().getClass().getField("width").get(mainTarget()); }
+        catch (Throwable t) { return 0; }
+    }
+
+    public static int mainHeight() {
+        try { return (int) mainTarget().getClass().getField("height").get(mainTarget()); }
+        catch (Throwable t) { return 0; }
+    }
+
+    public static int mainColorTextureId() {
+        try { return (int) mainTarget().getClass().getMethod("getColorTextureId").invoke(mainTarget()); }
+        catch (Throwable t) { return 0; }
+    }
+
+    public static void bindMainWrite() {
+        try {
+            Object target = mainTarget();
+            target.getClass().getMethod("bindWrite", boolean.class).invoke(target, false);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    public static void setViewport(int width, int height) {
+        try {
+            Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
+            gl11.getMethod("glViewport", int.class, int.class, int.class, int.class)
+                .invoke(null, 0, 0, width, height);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    public static synchronized int sceneFinalColorTextureId() {
+        return managedFinalColor;
+    }
+
+    public static void setPreFinalActive(boolean active) { preFinalActive = active; }
+    public static boolean preFinalActive() { return preFinalActive; }
 
     private static DepthTexture managedDepth;
     private static int managedWidth;
@@ -232,6 +319,15 @@ public final class Fsr3Bridge {
         }
         managedDepth = null;
         managedWidth = managedHeight = managedFormat = 0;
+        if (managedFinalColor != 0) {
+            try {
+                Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
+                gl11.getMethod("glDeleteTextures", int.class).invoke(null, managedFinalColor);
+            } catch (Throwable ignored) {
+            }
+            managedFinalColor = 0;
+            managedFinalWidth = managedFinalHeight = 0;
+        }
         if (managedDepthFbo != 0) {
             deleteFbo(managedDepthFbo);
             managedDepthFbo = 0;
