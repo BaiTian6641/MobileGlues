@@ -11,12 +11,14 @@ using AvailableFn = jboolean (*)(JNIEnv*, jclass);
 using SubmitFn = jint (*)(JNIEnv*, jclass);
 using ScaleFn = jfloat (*)(JNIEnv*, jclass);
 using ViewportFn = void (*)(JNIEnv*, jclass);
-using CameraFn = void (*)(JNIEnv*, jclass, jfloatArray, jfloatArray);
+using CameraFn = void (*)(JNIEnv*, jclass, jfloatArray, jfloatArray, jfloatArray);
+using CameraInvalidFn = void (*)(JNIEnv*, jclass);
 AvailableFn g_available = nullptr;
 SubmitFn g_submit = nullptr;
 ScaleFn g_scale = nullptr;
 ViewportFn g_viewport = nullptr;
 CameraFn g_camera = nullptr;
+CameraInvalidFn g_camera_invalid = nullptr;
 } // namespace
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -38,6 +40,8 @@ Java_com_googlebook_fsrbridge_NativeBridge_init(JNIEnv* env, jclass, jstring pat
         dlsym(g_core, "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeViewport"));
     g_camera = reinterpret_cast<CameraFn>(
         dlsym(g_core, "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeCamera"));
+    g_camera_invalid = reinterpret_cast<CameraInvalidFn>(
+        dlsym(g_core, "Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeCameraInvalid"));
     return (g_available && g_submit) ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -71,12 +75,22 @@ Java_com_googlebook_fsrbridge_NativeBridge_viewport(JNIEnv* env, jclass clazz) {
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_googlebook_fsrbridge_NativeBridge_invalidateCamera(JNIEnv* env, jclass clazz) {
+    if (!g_camera_invalid) return;
+    jclass target = env->FindClass("com/googlebook/fsrbridge/Fsr3Bridge");
+    if (!target) return;
+    g_camera_invalid(env, target);
+    env->DeleteLocalRef(target);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_googlebook_fsrbridge_NativeBridge_camera(JNIEnv* env, jclass clazz,
-                                                  jfloatArray modelView, jfloatArray projection) {
+                                                  jfloatArray modelView, jfloatArray projection,
+                                                  jfloatArray cameraPosition) {
     if (!g_camera) return;
     jclass target = env->FindClass("com/googlebook/fsrbridge/Fsr3Bridge");
     if (!target) return;
-    g_camera(env, target, modelView, projection);
+    g_camera(env, target, modelView, projection, cameraPosition);
     env->DeleteLocalRef(target);
 }
 

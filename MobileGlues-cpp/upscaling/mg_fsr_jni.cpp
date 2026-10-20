@@ -20,6 +20,7 @@
 #include "../gles/gles.h"
 #include "../gl/log.h"
 #include "../gl/FSR3Direct.h"
+#include "../gl/drawing.h"
 
 #include <EGL/egl.h>
 
@@ -48,6 +49,8 @@ struct JniState {
     GLint u_prev_vp = -1;
     GLint u_size = -1;
     GLint u_depth = -1;
+    GLint u_camera_delta = -1;
+    GLint u_has_prev = -1;
     bool motion_warned = false;
     bool motion_compile_failed = false;
     int width = 0;
@@ -68,65 +71,14 @@ struct CameraState {
     bool has_previous = false;
     float model_view[16]{};
     float projection[16]{};
+    float position[3]{};
     float previous_model_view[16]{};
     float previous_projection[16]{};
+    float previous_position[3]{};
+    std::chrono::steady_clock::time_point last_capture{};
 };
 CameraState g_camera;
 std::mutex g_camera_mutex;
-bool g_camera_warned = false;
-
-static void mat4_multiply(const float a[16], const float b[16], float out[16]) {
-    // JOML/Iris matrices are column-major.
-    for (int c = 0; c < 4; ++c) {
-        for (int r = 0; r < 4; ++r) {
-            out[c * 4 + r] = a[0 * 4 + r] * b[c * 4 + 0] +
-                             a[1 * 4 + r] * b[c * 4 + 1] +
-                             a[2 * 4 + r] * b[c * 4 + 2] +
-                             a[3 * 4 + r] * b[c * 4 + 3];
-        }
-    }
-}
-
-static bool mat4_invert(const float m[16], float out[16]) {
-    float inv[16];
-    inv[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15] +
-             m[9] * m[7] * m[14] + m[13] * m[6] * m[11] - m[13] * m[7] * m[10];
-    inv[4] = -m[4] * m[10] * m[15] + m[4] * m[11] * m[14] + m[8] * m[6] * m[15] -
-             m[8] * m[7] * m[14] - m[12] * m[6] * m[11] + m[12] * m[7] * m[10];
-    inv[8] = m[4] * m[9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15] +
-             m[8] * m[7] * m[13] + m[12] * m[5] * m[11] - m[12] * m[7] * m[9];
-    inv[12] = -m[4] * m[9] * m[14] + m[4] * m[10] * m[13] + m[8] * m[5] * m[14] -
-              m[8] * m[6] * m[13] - m[12] * m[5] * m[10] + m[12] * m[6] * m[9];
-    inv[1] = -m[1] * m[10] * m[15] + m[1] * m[11] * m[14] + m[9] * m[2] * m[15] -
-             m[9] * m[3] * m[14] - m[13] * m[2] * m[11] + m[13] * m[3] * m[10];
-    inv[5] = m[0] * m[10] * m[15] - m[0] * m[11] * m[14] - m[8] * m[2] * m[15] +
-             m[8] * m[3] * m[14] + m[12] * m[2] * m[11] - m[12] * m[3] * m[10];
-    inv[9] = -m[0] * m[9] * m[15] + m[0] * m[11] * m[13] + m[8] * m[1] * m[15] -
-             m[8] * m[3] * m[13] - m[12] * m[1] * m[11] + m[12] * m[3] * m[9];
-    inv[13] = m[0] * m[9] * m[14] - m[0] * m[10] * m[13] - m[8] * m[1] * m[14] +
-              m[8] * m[2] * m[13] + m[12] * m[1] * m[10] - m[12] * m[2] * m[9];
-    inv[2] = m[1] * m[6] * m[15] - m[1] * m[7] * m[14] - m[5] * m[2] * m[15] +
-             m[5] * m[3] * m[14] + m[13] * m[2] * m[7] - m[13] * m[3] * m[6];
-    inv[6] = -m[0] * m[6] * m[15] + m[0] * m[7] * m[14] + m[4] * m[2] * m[15] -
-             m[4] * m[3] * m[14] - m[12] * m[2] * m[7] + m[12] * m[3] * m[6];
-    inv[10] = m[0] * m[5] * m[15] - m[0] * m[7] * m[13] - m[4] * m[1] * m[15] +
-              m[4] * m[3] * m[13] + m[12] * m[1] * m[7] - m[12] * m[3] * m[5];
-    inv[14] = -m[0] * m[5] * m[14] + m[0] * m[6] * m[13] + m[4] * m[1] * m[14] -
-              m[4] * m[2] * m[13] - m[12] * m[1] * m[6] + m[12] * m[2] * m[5];
-    inv[3] = -m[1] * m[6] * m[11] + m[1] * m[7] * m[10] + m[5] * m[2] * m[11] -
-             m[5] * m[3] * m[10] - m[9] * m[2] * m[7] + m[9] * m[3] * m[6];
-    inv[7] = m[0] * m[6] * m[11] - m[0] * m[7] * m[10] - m[4] * m[2] * m[11] +
-             m[4] * m[3] * m[10] + m[8] * m[2] * m[7] - m[8] * m[3] * m[6];
-    inv[11] = -m[0] * m[5] * m[11] + m[0] * m[7] * m[9] + m[4] * m[1] * m[11] -
-              m[4] * m[3] * m[9] - m[8] * m[1] * m[7] + m[8] * m[3] * m[5];
-    inv[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] +
-              m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5];
-    const float det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
-    if (std::abs(det) < 1e-9f) return false;
-    const float inv_det = 1.0f / det;
-    for (int i = 0; i < 16; ++i) out[i] = inv[i] * inv_det;
-    return true;
-}
 
 std::atomic<bool> g_bridge_failed_logged{false};
 void bridge_fail(const char* why) {
@@ -184,20 +136,34 @@ const char* kMotionShader = R"(
 #version 320 es
 layout(local_size_x = 8, local_size_y = 8) in;
 layout(rgba16f, binding = 0) writeonly highp image2D uMotion;
+layout(r32f, binding = 1) writeonly highp image2D uDepthOut;
 layout(binding = 0) uniform highp sampler2D uDepth;
 uniform highp mat4 uInvVP;
 uniform highp mat4 uPrevVP;
 uniform highp vec2 uSize;
+uniform highp vec3 uCameraDelta;
+uniform int uHasPrev;
 void main() {
     ivec2 p = ivec2(gl_GlobalInvocationID.xy);
     if (p.x >= int(uSize.x) || p.y >= int(uSize.y)) return;
-    vec2 uv = (vec2(p) + 0.5) / uSize;
     float d = texelFetch(uDepth, p, 0).x;
+    imageStore(uDepthOut, p, vec4(d, 0.0, 0.0, 1.0));
+    if (uHasPrev == 0) {
+        imageStore(uMotion, p, vec4(0.0));
+        return;
+    }
+    vec2 uv = (vec2(p) + 0.5) / uSize;
     vec4 clip = uInvVP * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
-    if (abs(clip.w) < 1e-7) return;
+    if (abs(clip.w) < 1e-7) {
+        imageStore(uMotion, p, vec4(0.0));
+        return;
+    }
     vec3 world = clip.xyz / clip.w;
-    vec4 prev = uPrevVP * vec4(world, 1.0);
-    if (abs(prev.w) < 1e-7) return;
+    vec4 prev = uPrevVP * vec4(world + uCameraDelta, 1.0);
+    if (abs(prev.w) < 1e-7) {
+        imageStore(uMotion, p, vec4(0.0));
+        return;
+    }
     vec2 prev_uv = prev.xy / prev.w * 0.5 + 0.5;
     imageStore(uMotion, p, vec4((prev_uv - uv) * uSize, 0.0, 1.0));
 }
@@ -245,21 +211,50 @@ bool ensure_motion_program(JniState& s) {
     s.u_prev_vp = GLES.glGetUniformLocation(program, "uPrevVP");
     s.u_size = GLES.glGetUniformLocation(program, "uSize");
     s.u_depth = GLES.glGetUniformLocation(program, "uDepth");
-    return s.u_inv_vp >= 0 && s.u_prev_vp >= 0 && s.u_size >= 0 && s.u_depth >= 0;
+    s.u_camera_delta = GLES.glGetUniformLocation(program, "uCameraDelta");
+    s.u_has_prev = GLES.glGetUniformLocation(program, "uHasPrev");
+    return s.u_inv_vp >= 0 && s.u_prev_vp >= 0 && s.u_size >= 0 && s.u_depth >= 0 &&
+           s.u_camera_delta >= 0 && s.u_has_prev >= 0;
 }
 
+struct ImageUnitState {
+    GLint name = 0, level = 0, layered = 0, layer = 0, access = GL_READ_ONLY, format = GL_RGBA8;
+};
 struct MotionGuard {
     GLint program = 0;
     GLint active = GL_TEXTURE0;
     GLint texture = 0;
+    ImageUnitState images[2];
+    bool image_valid[2]{};
     MotionGuard() {
         GLES.glGetIntegerv(GL_CURRENT_PROGRAM, &program);
         GLES.glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
         GLES.glActiveTexture(GL_TEXTURE0);
         GLES.glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
+        if (GLES.glGetIntegeri_v) {
+            for (int i = 0; i < 2; ++i) {
+                GLint v = 0;
+                GLES.glGetIntegeri_v(GL_IMAGE_BINDING_NAME, i, &v); images[i].name = v;
+                GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LEVEL, i, &v); images[i].level = v;
+                GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LAYERED, i, &v); images[i].layered = v;
+                GLES.glGetIntegeri_v(GL_IMAGE_BINDING_LAYER, i, &v); images[i].layer = v;
+                GLES.glGetIntegeri_v(GL_IMAGE_BINDING_ACCESS, i, &v); images[i].access = v;
+                GLES.glGetIntegeri_v(GL_IMAGE_BINDING_FORMAT, i, &v); images[i].format = v;
+                image_valid[i] = true;
+            }
+        }
     }
     ~MotionGuard() {
-        GLES.glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA16F);
+        if (GLES.glBindImageTexture) {
+            for (int i = 0; i < 2; ++i) {
+                if (!image_valid[i]) continue;
+                GLES.glBindImageTexture(static_cast<GLuint>(i), static_cast<GLuint>(images[i].name),
+                                        images[i].level, images[i].layered ? GL_TRUE : GL_FALSE,
+                                        images[i].layer, static_cast<GLenum>(images[i].access),
+                                        static_cast<GLenum>(images[i].format));
+            }
+        }
+        mg_invalidate_image_binding_shadow();
         GLES.glActiveTexture(GL_TEXTURE0);
         GLES.glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture));
         GLES.glActiveTexture(static_cast<GLenum>(active));
@@ -267,32 +262,52 @@ struct MotionGuard {
     }
 };
 
-bool run_camera_motion(JniState& s, GLuint depth, int width, int height) {
+bool run_camera_motion(JniState& s, GLuint depth, int width, int height, bool& motion_active) {
+    motion_active = false;
     CameraState camera;
+    bool has_prev = false;
     {
         std::lock_guard<std::mutex> lock(g_camera_mutex);
-        if (!g_camera.valid || !g_camera.has_previous) return false;
-        camera = g_camera;
+        if (g_camera.valid) {
+            camera = g_camera;
+            has_prev = g_camera.has_previous;
+        }
     }
     if (!depth || width <= 0 || height <= 0 || !ensure_motion_program(s)) return false;
+
+    const float identity[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
     float current_vp[16], previous_vp[16], inverse_vp[16];
-    mg_fsr3_motion::multiply(camera.projection, camera.model_view, current_vp);
-    mg_fsr3_motion::multiply(camera.previous_projection, camera.previous_model_view, previous_vp);
-    if (!mg_fsr3_motion::invert(current_vp, inverse_vp)) return false;
+    float camera_delta[3] = {0, 0, 0};
+    if (has_prev) {
+        mg_fsr3_motion::multiply(camera.projection, camera.model_view, current_vp);
+        mg_fsr3_motion::multiply(camera.previous_projection, camera.previous_model_view, previous_vp);
+        if (!mg_fsr3_motion::invert(current_vp, inverse_vp)) return false;
+        camera_delta[0] = camera.position[0] - camera.previous_position[0];
+        camera_delta[1] = camera.position[1] - camera.previous_position[1];
+        camera_delta[2] = camera.position[2] - camera.previous_position[2];
+    } else {
+        std::copy(std::begin(identity), std::end(identity), std::begin(inverse_vp));
+        std::copy(std::begin(identity), std::end(identity), std::begin(previous_vp));
+    }
 
     MotionGuard guard;
     GLES.glUseProgram(s.motion_program);
     GLES.glUniformMatrix4fv(s.u_inv_vp, 1, GL_FALSE, inverse_vp);
     GLES.glUniformMatrix4fv(s.u_prev_vp, 1, GL_FALSE, previous_vp);
     GLES.glUniform2f(s.u_size, static_cast<float>(width), static_cast<float>(height));
+    GLES.glUniform3f(s.u_camera_delta, camera_delta[0], camera_delta[1], camera_delta[2]);
+    GLES.glUniform1i(s.u_has_prev, has_prev ? 1 : 0);
     GLES.glActiveTexture(GL_TEXTURE0);
     GLES.glBindTexture(GL_TEXTURE_2D, depth);
     GLES.glUniform1i(s.u_depth, 0);
     GLES.glBindImageTexture(0, s.motion, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+    GLES.glBindImageTexture(1, s.depth_synth, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F);
     GLES.glDispatchCompute(static_cast<GLuint>((width + 7) / 8), static_cast<GLuint>((height + 7) / 8), 1);
     GLES.glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    motion_active = has_prev;
     return GLES.glGetError() == GL_NO_ERROR;
 }
+
 
 bool make_aux(JniState& s, int w, int h, int rw, int rh) {
     if (s.motion) GLES.glDeleteTextures(1, &s.motion);
@@ -369,20 +384,42 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeAvailable(JNIEnv*, jclass) {
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeCamera(JNIEnv* env, jclass, jfloatArray mv, jfloatArray proj) {
-    if (!mv || !proj) return;
-    if (env->GetArrayLength(mv) < 16 || env->GetArrayLength(proj) < 16) return;
-    float current_mv[16], current_proj[16];
+Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeCameraInvalid(JNIEnv*, jclass) {
+    std::lock_guard<std::mutex> lock(g_camera_mutex);
+    g_camera.valid = false;
+    g_camera.has_previous = false;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeCamera(JNIEnv* env, jclass, jfloatArray mv, jfloatArray proj,
+                                                       jfloatArray position) {
+    if (!mv || !proj || !position) return;
+    if (env->GetArrayLength(mv) < 16 || env->GetArrayLength(proj) < 16 ||
+        env->GetArrayLength(position) < 3) return;
+    float current_mv[16], current_proj[16], current_pos[3];
     env->GetFloatArrayRegion(mv, 0, 16, current_mv);
     env->GetFloatArrayRegion(proj, 0, 16, current_proj);
+    env->GetFloatArrayRegion(position, 0, 3, current_pos);
     std::lock_guard<std::mutex> lock(g_camera_mutex);
+    const auto now = std::chrono::steady_clock::now();
+    if (g_camera.valid && g_camera.last_capture.time_since_epoch().count() != 0 &&
+        std::chrono::duration<float>(now - g_camera.last_capture).count() > 0.25f) {
+        g_camera.has_previous = false;
+    }
     if (g_camera.valid) {
+        const float dx = current_pos[0] - g_camera.position[0];
+        const float dy = current_pos[1] - g_camera.position[1];
+        const float dz = current_pos[2] - g_camera.position[2];
+        if (dx * dx + dy * dy + dz * dz > 64.0f * 64.0f) g_camera.has_previous = false;
         std::copy(std::begin(g_camera.model_view), std::end(g_camera.model_view), std::begin(g_camera.previous_model_view));
         std::copy(std::begin(g_camera.projection), std::end(g_camera.projection), std::begin(g_camera.previous_projection));
+        std::copy(std::begin(g_camera.position), std::end(g_camera.position), std::begin(g_camera.previous_position));
         g_camera.has_previous = true;
     }
     std::copy(std::begin(current_mv), std::end(current_mv), std::begin(g_camera.model_view));
     std::copy(std::begin(current_proj), std::end(current_proj), std::begin(g_camera.projection));
+    std::copy(std::begin(current_pos), std::end(current_pos), std::begin(g_camera.position));
+    g_camera.last_capture = now;
     g_camera.valid = true;
 }
 
@@ -407,13 +444,19 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     const bool have_depth = attachment_texture(GL_DEPTH_ATTACHMENT, depth, depth_width, depth_height) &&
                             depth_width == width && depth_height == height;
 
+    if (!have_depth) {
+        bridge_fail("no depth texture attachment");
+        return -1;
+    }
+
     std::lock_guard<std::mutex> lock(g_mutex);
     JniState& s = g_states[context_key];
-    // The scene adapter scales Iris RenderTargets. The bridge therefore consumes
-    // the native final image without a second downsample; the quality slider
-    // belongs to RenderTargetsMixin, not to this final-frame path.
-    const int rw = width;
-    const int rh = height;
+    // Scene targets are allocated at the quality extent. Build matching FSR3
+    // color/depth inputs from the final image and the scene sub-rect depth; the
+    // output remains native so HUD/final composition stay sharp.
+    const float scene_scale = fsr3_quality_scale(global_settings.fsr3_quality);
+    const int rw = std::max(64, static_cast<int>(std::lround(width / scene_scale)));
+    const int rh = std::max(64, static_cast<int>(std::lround(height / scene_scale)));
     if (!s.session || s.width != width || s.height != height ||
         s.render_width != rw || s.render_height != rh) {
         if (s.session) destroy_state(s);
@@ -436,19 +479,22 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
         s.frame = 0;
     }
     if (s.failed) return -1;
-    const bool scaled = (rw != width || rh != height);
-    if (scaled) {
-        GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(fbo));
-        GLES.glReadBuffer(GL_COLOR_ATTACHMENT0);
-        GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s.input_fbo);
-        GLES.glBlitFramebuffer(0, 0, width, height, 0, 0, rw, rh, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-        GLES.glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(fbo));
-    } else if (!have_depth) {
-        bridge_fail("no depth texture attachment");
-        return -1;
-    }
 
-    const bool camera_motion = run_camera_motion(s, scaled ? s.depth_synth : depth, rw, rh);
+    // Downsample the pre-HUD final image into the scene color extent. The Iris
+    // targets were rendered at this extent; the final pass is native.
+    GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(fbo));
+    GLES.glReadBuffer(GL_COLOR_ATTACHMENT0);
+    GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s.input_fbo);
+    GLES.glBlitFramebuffer(0, 0, width, height, 0, 0, rw, rh, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    GLES.glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(fbo));
+
+    bool motion_active = false;
+    const bool depth_input_ready = run_camera_motion(s, depth, rw, rh, motion_active);
+    const int input_w = depth_input_ready ? rw : width;
+    const int input_h = depth_input_ready ? rh : height;
+    const GLuint color_input = depth_input_ready ? s.color_input : color;
+    const GLuint depth_input = depth_input_ready ? s.depth_synth : depth;
+    const GLenum depth_format = depth_input_ready ? GL_R32F : GL_DEPTH_COMPONENT24;
 
     const auto now = std::chrono::steady_clock::now();
     float delta = std::chrono::duration<float>(now - s.last).count();
@@ -463,15 +509,14 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     desc.context_id = 0;
     desc.surface_id = 1;
     desc.resource_generation = 1;
-    desc.color = {scaled ? s.color_input : color, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0, GL_RGBA8, 0, 1};
-    desc.depth = {scaled ? s.depth_synth : depth, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0,
-                  static_cast<GLenum>(scaled ? GL_R32F : GL_DEPTH_COMPONENT24), 0, 1};
+    desc.color = {color_input, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0, GL_RGBA8, 0, 1};
+    desc.depth = {depth_input, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0, depth_format, 0, 1};
     desc.motion = {s.motion, MG_FSR_NS_GL_FRONTEND, GL_TEXTURE_2D, 0, 0, GL_RGBA16F, 0, 1};
-    desc.render_width = static_cast<uint32_t>(rw);
-    desc.render_height = static_cast<uint32_t>(rh);
+    desc.render_width = static_cast<uint32_t>(input_w);
+    desc.render_height = static_cast<uint32_t>(input_h);
     desc.output_width = static_cast<uint32_t>(width);
     desc.output_height = static_cast<uint32_t>(height);
-    desc.color_active = {0, 0, static_cast<uint32_t>(rw), static_cast<uint32_t>(rh)};
+    desc.color_active = {0, 0, static_cast<uint32_t>(input_w), static_cast<uint32_t>(input_h)};
     desc.output_active = {0, 0, static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
     desc.color_space = MG_FSR_COLOR_LDR_PERCEPTUAL;
     desc.pre_exposure = 1.0f;
@@ -480,12 +525,12 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     desc.camera_far = 1000.0f;
     desc.camera_fov_y_radians = 1.0471975511965976f;
     desc.motion_valid = 1;
-    desc.motion_confidence = camera_motion ? MG_FSR_MOTION_CAMERA_ONLY : MG_FSR_MOTION_NONE;
+    desc.motion_confidence = motion_active ? MG_FSR_MOTION_CAMERA_ONLY : MG_FSR_MOTION_NONE;
     desc.frame_delta_seconds = delta;
     // Camera-only motion is experimental: keep history only when reprojection
     // actually ran; otherwise reset every frame to avoid unbounded ghosting from
     // the zero-motion fallback.
-    desc.reset_history = (s.frame <= 1 || !camera_motion) ? 1 : 0;
+    desc.reset_history = (s.frame <= 1 || !motion_active) ? 1 : 0;
     desc.reset_reason = desc.reset_history ? MG_FSR_RESET_SESSION : MG_FSR_RESET_NONE;
 
     if (mg_fsr_dispatch(s.session, &desc) != MG_FSR_OK) {
@@ -499,7 +544,7 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     if (!s.warned) {
         s.warned = true;
         LOG_W_FORCE("FSR3 bridge: experimental submit %dx%d -> %dx%d (render %dx%d); camera_motion=%d, Iris scene adapter",
-                      rw, rh, width, height, rw, rh, camera_motion ? 1 : 0);
+                      rw, rh, width, height, rw, rh, motion_active ? 1 : 0);
     }
     mg_fsr_resource_t out{};
     if (mg_fsr_get_output(s.session, &out) != MG_FSR_OK || out.handle == 0) {
