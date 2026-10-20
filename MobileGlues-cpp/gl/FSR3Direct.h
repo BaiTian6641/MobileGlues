@@ -14,6 +14,20 @@
 // are synthetic, so this is not a supported temporal-quality path.
 void ApplyFSR3Present();
 
+// Minecraft/Iris scene adapter helpers. They are no-ops unless the experimental
+// FSR3 setting is enabled and the current draw target is smaller than the EGL
+// surface (i.e. Iris RenderTargets was created at the selected scene extent).
+bool FSR3AdjustViewport(int& x, int& y, int& width, int& height);
+bool FSR3GetSurfaceSize(int& width, int& height);
+void FSR3NativeViewport();
+
+// True when the optional Minecraft/Iris bridge has presented within the last
+// frame interval. The swap-path diagnostic present must then stay out of the
+// way: the bridge already ran before HUD composition, and running the direct
+// path would process (and blur) the HUD as well.
+void FSR3MarkBridgePresent();
+bool FSR3BridgeActiveRecently();
+
 // Drop the per-context resources when a context goes away. Called only after
 // the last current reference has been released; if no context is current the
 // GL objects are already gone and only the bookkeeping is erased.

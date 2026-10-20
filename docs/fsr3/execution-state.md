@@ -10,7 +10,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | --- | --- |
 | Integration worktree | `/home/polar/MobileGlues` |
 | Branch | `googlebook/x1e-stage1-3` |
-| HEAD | `413d3ab` plus quality-preset changes (see `audits/quality-presets.md`) |
+| HEAD | `fd17845` plus uncommitted scene-adapter changes (to be committed) |
 | Origin | `git@github.com:BaiTian6641/MobileGlues.git` |
 | Upstream | `https://github.com/MobileGL-Dev/MobileGlues.git` |
 | Untouched user changes | modified `.gitignore`, `docs/mobileglues-googlebook/validation/README.md`; untracked `.vscode/`, FSR3 plan, recent validation docs |
@@ -52,7 +52,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | S2 backend feasibility | **PASS (compile/ops + one-pass/full-chain dispatch)** | X1E RCAS exact vs CPU; 8-pass chain executed at 2x/1.5x with host parity; independent Vulkan and multi-frame history NOT RUN |
 | S2 game audit | **PASS (source)** | `docs/fsr3/audits/minecraft-iris-pass-input.md`: final TAA is `composite6`, jitter is partial, no velocity buffer in Iris 1.8.14 |
 | S3 native temporal backend | **PARTIAL** | In-tree ABI/backend + optional bridge submit PASS; FSR3 quality presets + slider implemented; low-resolution scene and timing NOT RUN |
-| S4 first game path | **PARTIAL / FAIL performance** | Config switch and optional Iris final-pass bridge work; scene remains native, 13 FPS vs 26 off |
+| S4 first game path | **PARTIAL: adapter implemented, device NOT RUN** | Iris RenderTargets/viewport scaling and native final-pass reset implemented; previous native-scene run was 13 FPS vs 26 off |
 | S5 Complementary | **BLOCKED** | waits for S4 |
 | S6 qualification | **NOT RUN** | no FSR3 installation exists |
 
@@ -81,7 +81,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 
 1. Install the quality-slider APK and capture F3 at NativeAA, Quality, Balanced,
    Performance, and Ultra Performance with FSR3 on, plus FSR3 off.
-2. Implement true low-resolution scene targets/viewports/depth for Minecraft/Iris; the current bridge does not reduce scene work.
+2. Device-run the scene-adapter APK + bridge pair. Verify scaled target extents, native HUD, no crop, and the direct-present skip before any performance claim.
 3. Reconcile the game audit with the frozen ABI, then assign the first vertical slice.
 4. Build the first FSR3-capable test binary and run the white UI/ACT/WSR baseline before any
    performance claim.

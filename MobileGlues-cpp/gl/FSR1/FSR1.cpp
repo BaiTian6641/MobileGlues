@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: LGPL-2.1-only
 // End of Source File Header
 #include "FSR1.h"
+#include "../FSR3Direct.h"
 #include "FSR1Plan.h"
 #include <mutex>
 #include <ska/flat_hash_map.hpp>
@@ -844,6 +845,7 @@ void glViewport(GLint x, GLint y, GLsizei w, GLsizei h) {
         }
     }
 
+    FSR3AdjustViewport(x, y, w, h);
     GLES.glViewport(x, y, w, h);
 }
 

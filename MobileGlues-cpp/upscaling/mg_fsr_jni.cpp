@@ -18,6 +18,7 @@
 #include "../egl/context.h"
 #include "../gles/gles.h"
 #include "../gl/log.h"
+#include "../gl/FSR3Direct.h"
 
 #include <EGL/egl.h>
 
@@ -140,6 +141,18 @@ void destroy_state(JniState& s) {
 
 } // namespace
 
+extern "C" JNIEXPORT jfloat JNICALL
+Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeScale(JNIEnv*, jclass) {
+    if (global_settings.fsr3_setting != FSR3_Mode::Experimental) return 1.0f;
+    return fsr3_quality_scale(global_settings.fsr3_quality);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeViewport(JNIEnv*, jclass) {
+    if (global_settings.fsr3_setting != FSR3_Mode::Experimental) return;
+    FSR3NativeViewport();
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeAvailable(JNIEnv*, jclass) {
     return (global_settings.fsr3_setting == FSR3_Mode::Experimental && GLES.glDispatchCompute &&
@@ -170,9 +183,11 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
 
     std::lock_guard<std::mutex> lock(g_mutex);
     JniState& s = g_states[context_key];
-    const float scale = fsr3_quality_scale(global_settings.fsr3_quality);
-    const int rw = std::max(64, static_cast<int>(std::lround(width / scale)));
-    const int rh = std::max(64, static_cast<int>(std::lround(height / scale)));
+    // The scene adapter scales Iris RenderTargets. The bridge therefore consumes
+    // the native final image without a second downsample; the quality slider
+    // belongs to RenderTargetsMixin, not to this final-frame path.
+    const int rw = width;
+    const int rh = height;
     if (!s.session || s.width != width || s.height != height ||
         s.render_width != rw || s.render_height != rh) {
         if (s.session) destroy_state(s);
@@ -277,6 +292,7 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(prev_read));
     GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(prev_draw));
     GLES.glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    FSR3MarkBridgePresent();
     return 0;
 }
 

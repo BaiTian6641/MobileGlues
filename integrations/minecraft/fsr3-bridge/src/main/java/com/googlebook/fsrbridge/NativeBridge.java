@@ -41,5 +41,9 @@ final class NativeBridge {
 
     static native boolean available();
 
+    static native float scale();
+
+    static native void viewport();
+
     static native int submit();
 }

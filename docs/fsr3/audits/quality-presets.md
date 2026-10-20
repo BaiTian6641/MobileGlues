@@ -30,21 +30,31 @@ with a linear blit. The eight-pass backend reconstructs to the native output
 extent, then presents that output. Depth is still synthetic constant depth and
 motion is zero.
 
-## Iris bridge path
+## Iris scene adapter
 
-The JNI bridge performs the same final-color downsample only when the selected
-extent is below the final target. At `NativeAA` it keeps the existing direct
-attachment path and does not allocate the extra color/depth textures. At lower
-presets it uses a synthetic depth texture with the same reduced extent.
+`RenderTargetsMixin` scales the Iris main scene targets at construction and at
+`resizeIfNeeded` using the same preset. Color, alternate-color and depth targets
+therefore share one extent. The core `glViewport`/`glScissor` wrappers scale a
+native-sized viewport only while the bound draw FBO has a smaller color
+attachment; native FBOs (final composition, HUD, shadows) are left alone. The
+final-pass hook resets the viewport to the EGL surface before Iris composes to
+the native main target.
+
+The JNI bridge no longer downsamples the final image. At this stage it consumes
+the native final image for the FSR experiment; the scene reduction comes from
+the scaled Iris targets. This avoids applying the quality ratio twice.
 
 ## Limits and claims
 
-- Neither path reduces Iris/Minecraft render-target allocation, viewports,
-  depth extents, or screen-size uniforms. Scene shading and fill remain at the
-  display resolution.
-- The downsampled final image is a **reconstruction-quality experiment**, not a
-  scene-performance feature. At lower presets, added downsample traffic can
-  make frame time worse even though the FSR3 internal chain is smaller.
+- The direct presentation path (no Iris adapter) still downsamples the final
+  image and does not reduce scene work.
+- The Iris scene adapter is implemented but **device-NOT-RUN**. It scales real
+  scene target allocation, color/depth extents, and matching viewports; screen
+  uniforms, decals/texelFetch consumers, and pack-specific jitter ownership are
+  still unverified.
+- The final image enters FSR3 at native extent in the bridge path. Therefore the
+  FSR3 temporal cost is additional; only the scene-target reduction can pay for
+  it. No performance claim is valid until the device matrix runs.
 - No temporal-quality claim: depth is constant, motion is zero, and the game
   final TAA remains enabled.
 - The previous native-scene measurement was 13 FPS with FSR3 on versus 26 FPS

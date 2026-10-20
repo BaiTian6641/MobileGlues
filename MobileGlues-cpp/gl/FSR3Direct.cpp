@@ -22,6 +22,8 @@
 
 #include <EGL/egl.h>
 
+#include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <mutex>
@@ -52,6 +54,7 @@ struct ContextState {
 std::mutex g_mutex;
 std::unordered_map<unsigned long long, ContextState> g_states;
 thread_local bool g_in_present = false;
+std::atomic<int64_t> g_bridge_last_present_ms{0};
 
 struct PresentGuard {
     GLint draw = 0, read = 0, active = GL_TEXTURE0, tex0 = 0, sampler0 = 0;
@@ -162,8 +165,73 @@ bool surface_size(int& width, int& height) {
 
 } // namespace
 
+bool FSR3GetSurfaceSize(int& width, int& height) {
+    return surface_size(width, height);
+}
+
+bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
+    if (global_settings.fsr3_setting != FSR3_Mode::Experimental) return false;
+    if (width <= 0 || height <= 0) return false;
+    int surface_w = 0, surface_h = 0;
+    if (!surface_size(surface_w, surface_h)) return false;
+    if (width != surface_w || height != surface_h) return false;
+
+    GLint fbo = 0;
+    GLES.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fbo);
+    if (fbo == 0) return false;
+    GLint type = 0;
+    GLES.glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                               GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, &type);
+    if (type != GL_TEXTURE) return false;
+    GLint tex = 0;
+    GLES.glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                               GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, &tex);
+    if (tex == 0) return false;
+    GLint prev_unit = GL_TEXTURE0, prev_tex = 0;
+    GLES.glGetIntegerv(GL_ACTIVE_TEXTURE, &prev_unit);
+    GLES.glActiveTexture(GL_TEXTURE0);
+    GLES.glGetIntegerv(GL_TEXTURE_BINDING_2D, &prev_tex);
+    GLES.glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(tex));
+    GLint target_w = 0, target_h = 0;
+    GLES.glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &target_w);
+    GLES.glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &target_h);
+    GLES.glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(prev_tex));
+    GLES.glActiveTexture(static_cast<GLenum>(prev_unit));
+    if (target_w <= 0 || target_h <= 0 || target_w >= surface_w || target_h >= surface_h) return false;
+
+    const float sx = static_cast<float>(target_w) / static_cast<float>(surface_w);
+    const float sy = static_cast<float>(target_h) / static_cast<float>(surface_h);
+    if (sx >= 0.999f && sy >= 0.999f) return false;
+    x = static_cast<GLint>(std::lround(x * sx));
+    y = static_cast<GLint>(std::lround(y * sy));
+    width = std::max(1, static_cast<int>(std::lround(width * sx)));
+    height = std::max(1, static_cast<int>(std::lround(height * sy)));
+    return true;
+}
+
+void FSR3NativeViewport() {
+    int width = 0, height = 0;
+    if (!surface_size(width, height)) return;
+    GLES.glViewport(0, 0, width, height);
+}
+
+void FSR3MarkBridgePresent() {
+    using namespace std::chrono;
+    g_bridge_last_present_ms.store(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count(),
+                                   std::memory_order_relaxed);
+}
+
+bool FSR3BridgeActiveRecently() {
+    using namespace std::chrono;
+    const int64_t last = g_bridge_last_present_ms.load(std::memory_order_relaxed);
+    if (last == 0) return false;
+    const int64_t now = duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
+    return now - last < 250;
+}
+
 void ApplyFSR3Present() {
     if (global_settings.fsr3_setting != FSR3_Mode::Experimental) return;
+    if (FSR3BridgeActiveRecently()) return;
     if (g_in_present) return;
     if (!GLES.glDispatchCompute || !GLES.glBindImageTexture) return;
     if (!g_current_ctx && (!GLES.glGetString || GLES.glGetString(GL_VERSION) == nullptr)) return;

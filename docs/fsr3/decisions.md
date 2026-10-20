@@ -169,3 +169,17 @@ reconstruct to native output. This lets the quality slider be tested and keeps
 the backend output-first, but it deliberately does not change application
 render-target allocation or viewports. The 13-versus-26 FPS native-scene result
 therefore remains a performance failure and D-FSR-014 remains the blocker.
+
+
+## D-FSR-016: The first scene adapter is Iris-specific and viewport-aware
+
+Status: experimental; implemented, device NOT RUN.
+
+The optional Minecraft/Iris adapter scales `RenderTargets` at construction and
+resize, then the core viewport/scissor wrappers scale a native-sized viewport
+only when the currently bound draw FBO has a smaller color attachment. The
+final pass resets to native and the swap-path direct present is suppressed for
+250 ms after a bridge submit, preventing a second FSR pass over the HUD. This is
+a bounded adapter, not a general renderer-scale feature. The ABI and backend
+remain core-owned. Screen uniforms, non-color passes, and independent motion are
+still unverified; do not advance S4 on compile evidence.

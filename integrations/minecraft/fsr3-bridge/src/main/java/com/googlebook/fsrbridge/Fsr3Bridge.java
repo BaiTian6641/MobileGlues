@@ -97,6 +97,46 @@ public final class Fsr3Bridge {
         }
     }
 
+    /**
+     * Scale an Iris scene target dimension. Returns the input unchanged unless
+     * FSR3 is enabled and a non-native quality preset is selected. Minecraft
+     * only: this is the optional adapter boundary, not a generic renderer hook.
+     */
+    public static int sceneWidth(int width) {
+        if (width <= 0 || !available()) return width;
+        try {
+            float scale = NativeBridge.scale();
+            if (scale <= 1.001f) return width;
+            return Math.max(64, Math.round(width / scale));
+        } catch (Throwable t) {
+            warn("scale failed: " + t);
+            return width;
+        }
+    }
+
+    /** Height is kept independent so odd window dimensions do not accumulate rounding. */
+    public static int sceneHeight(int height) {
+        if (height <= 0 || !available()) return height;
+        try {
+            float scale = NativeBridge.scale();
+            if (scale <= 1.001f) return height;
+            return Math.max(64, Math.round(height / scale));
+        } catch (Throwable t) {
+            warn("scale failed: " + t);
+            return height;
+        }
+    }
+
+    /** Set the viewport back to the native EGL surface before Iris' final pass. */
+    public static void resetNativeViewport() {
+        if (!LOADED) return;
+        try {
+            NativeBridge.viewport();
+        } catch (Throwable t) {
+            warn("native viewport failed: " + t);
+        }
+    }
+
     /** Called on the render thread immediately after Iris' final pass. */
     public static void submit() {
         if (!LOADED) return;
