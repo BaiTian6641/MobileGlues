@@ -56,7 +56,6 @@ public final class DiagnosticTrace {
             Runtime.getRuntime().addShutdownHook(new Thread(DiagnosticTrace::finish, "mgfsr3-trace-flush"));
         } catch (Throwable ignored) {
         }
-        tryArm();
     }
 
     public static boolean active() {
@@ -87,7 +86,13 @@ public final class DiagnosticTrace {
     }
 
     public static synchronized void phase(String phase) {
+        if (!enabled) tryArm();
         if (!active()) return;
+        // Hand, shadow, composite and final hooks own their role across the
+        // phase calls that occur inside those passes. Do not truncate them.
+        if (currentRole != null && (currentRole.startsWith("HAND_") ||
+                currentRole.startsWith("SHADOW") || currentRole.startsWith("COMPOSITE") ||
+                currentRole.startsWith("FINAL_"))) return;
         if (currentRole != null) {
             if (currentRoleCaptured) {
                 endRole(currentRole + "_END", null);

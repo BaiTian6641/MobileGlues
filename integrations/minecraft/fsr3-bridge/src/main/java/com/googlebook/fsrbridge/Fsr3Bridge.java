@@ -1,5 +1,8 @@
 package com.googlebook.fsrbridge;
 
+import net.irisshaders.iris.gl.texture.DepthBufferFormat;
+import net.irisshaders.iris.targets.DepthTexture;
+
 /**
  * Optional Minecraft/Iris connector. It owns no renderer logic: after Iris has
  * finished its final pass, the native MobileGlues library resolves the current
@@ -165,6 +168,79 @@ public final class Fsr3Bridge {
 
     public static int uniformHeight(int height) {
         return inFinalPass ? height : sceneHeight(height);
+    }
+
+    private static DepthTexture managedDepth;
+    private static int managedWidth;
+    private static int managedHeight;
+    private static int managedFormat;
+
+    /**
+     * Experiment B: give the scaled Iris color targets a matching scene depth.
+     * Minecraft's main depth remains native for the final/HUD surface; this
+     * texture is owned by the bridge and is not the noHand snapshot.
+     */
+    public static synchronized int sceneDepthTexture(int original, int width, int height) {
+        if (!LOADED || width <= 0 || height <= 0) return original;
+        try {
+            if (NativeBridge.scale() <= 1.001f) return original;
+            int format = queryTextureFormat(original);
+            if (format == 0) {
+                warn("scene depth format unavailable; keeping external depth");
+                return original;
+            }
+            if (managedDepth != null && managedWidth == width && managedHeight == height
+                    && managedFormat == format) {
+                return managedDepth.getTextureId();
+            }
+            DepthBufferFormat depthFormat = DepthBufferFormat.fromGlEnumOrDefault(format);
+            DepthTexture next = new DepthTexture("mgfsr3-scene-depth", width, height, depthFormat);
+            int nextId = next.getTextureId();
+            DepthTexture previous = managedDepth;
+            managedDepth = next;
+            managedWidth = width;
+            managedHeight = height;
+            managedFormat = format;
+            if (previous != null) {
+                try {
+                    previous.destroy();
+                } catch (Throwable ignored) {
+                }
+            }
+            mark("scene depth " + width + "x" + height + " id=" + nextId + " format=" + format);
+            return nextId;
+        } catch (Throwable t) {
+            warn("scene depth allocation failed: " + t);
+            return original;
+        }
+    }
+
+    public static synchronized void destroySceneDepth() {
+        if (managedDepth == null) return;
+        try {
+            managedDepth.destroy();
+        } catch (Throwable ignored) {
+        }
+        managedDepth = null;
+        managedWidth = managedHeight = managedFormat = 0;
+    }
+
+    private static int queryTextureFormat(int texture) {
+        if (texture == 0) return 0;
+        try {
+            Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
+            int[] binding = new int[1];
+            gl11.getMethod("glGetIntegerv", int.class, int[].class)
+                    .invoke(null, 0x8069, binding); // GL_TEXTURE_BINDING_2D
+            gl11.getMethod("glBindTexture", int.class, int.class).invoke(null, 0x0DE1, texture);
+            int[] format = new int[1];
+            gl11.getMethod("glGetTexLevelParameteriv", int.class, int.class, int.class, int[].class)
+                    .invoke(null, 0x0DE1, 0, 0x1003, format); // GL_TEXTURE_INTERNAL_FORMAT
+            gl11.getMethod("glBindTexture", int.class, int.class).invoke(null, 0x0DE1, binding[0]);
+            return format[0];
+        } catch (Throwable t) {
+            return 0;
+        }
     }
 
     public static int sceneWidth(int width) {

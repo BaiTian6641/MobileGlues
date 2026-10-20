@@ -24,6 +24,7 @@ public abstract class IrisRenderingPipelineMixin {
     @Inject(method = "destroy", at = @At("HEAD"))
     private void mgfsr3$destroyPipeline(CallbackInfo ci) {
         Fsr3Bridge.invalidateCamera();
+        Fsr3Bridge.destroySceneDepth();
         DiagnosticTrace.finish();
     }
 

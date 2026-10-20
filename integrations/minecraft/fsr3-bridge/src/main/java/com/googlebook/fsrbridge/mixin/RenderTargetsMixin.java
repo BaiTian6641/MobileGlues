@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Optional Minecraft/Iris scene adapter. The constructor and the per-frame
@@ -17,30 +18,49 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(RenderTargets.class)
 public abstract class RenderTargetsMixin {
+    private static int mgfsr3$argWidth;
+    private static int mgfsr3$argHeight;
+
     static {
         Fsr3Bridge.mark("RenderTargetsMixin loaded");
     }
 
     @ModifyVariable(method = "<init>", at = @At("HEAD"), argsOnly = true, ordinal = 0)
     private static int mgfsr3$constructorWidth(int width) {
+        mgfsr3$argWidth = width;
         return Fsr3Bridge.sceneWidth(width);
     }
 
     @ModifyVariable(method = "<init>", at = @At("HEAD"), argsOnly = true, ordinal = 1)
     private static int mgfsr3$constructorHeight(int height) {
+        mgfsr3$argHeight = height;
         return Fsr3Bridge.sceneHeight(height);
+    }
+
+    @ModifyVariable(method = "<init>", at = @At("HEAD"), argsOnly = true, ordinal = 2)
+    private static int mgfsr3$constructorDepth(int depthTexture) {
+        return Fsr3Bridge.sceneDepthTexture(depthTexture, Fsr3Bridge.sceneWidth(mgfsr3$argWidth),
+                Fsr3Bridge.sceneHeight(mgfsr3$argHeight));
     }
 
     // Iris 1.8.14 signature is (depthBufferVersion, depthTextureId, width, height, ...).
     // The first two ints are not dimensions; touching them corrupts resize state.
     @ModifyVariable(method = "resizeIfNeeded", at = @At("HEAD"), argsOnly = true, ordinal = 2)
     private int mgfsr3$resizeWidth(int width) {
+        mgfsr3$argWidth = width;
         return Fsr3Bridge.sceneWidth(width);
     }
 
     @ModifyVariable(method = "resizeIfNeeded", at = @At("HEAD"), argsOnly = true, ordinal = 3)
     private int mgfsr3$resizeHeight(int height) {
+        mgfsr3$argHeight = height;
         return Fsr3Bridge.sceneHeight(height);
+    }
+
+    @ModifyVariable(method = "resizeIfNeeded", at = @At("HEAD"), argsOnly = true, ordinal = 1)
+    private int mgfsr3$resizeDepth(int depthTexture) {
+        return Fsr3Bridge.sceneDepthTexture(depthTexture, Fsr3Bridge.sceneWidth(mgfsr3$argWidth),
+                Fsr3Bridge.sceneHeight(mgfsr3$argHeight));
     }
 
     @Inject(method = "<init>", at = @At("RETURN"), require = 0)
@@ -49,7 +69,7 @@ public abstract class RenderTargetsMixin {
     }
 
     @Inject(method = "resizeIfNeeded", at = @At("RETURN"), require = 0)
-    private void mgfsr3$traceResize(CallbackInfo ci) {
+    private void mgfsr3$traceResize(CallbackInfoReturnable<Boolean> cir) {
         DiagnosticTrace.irisTargets(this, "RESIZE");
     }
 
