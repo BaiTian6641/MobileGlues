@@ -171,8 +171,9 @@ typedef struct mg_fsr_caps_t {
   `motion_x == -2` at its current location, in render-pixel units when `motion_units == 0`.
 - Normalized UV units are allowed only with `motion_units == 1`; the backend converts using
   the declared render extents, never by guessing.
-- `jitter_*` is the actual offset applied to the scene camera this frame, in render pixels.
-  `motion_includes_jitter` states whether motion vectors already contain it.
+- `jitter_*` is the actual offset applied to the scene camera this frame, in render pixels,
+  using the same X-right/Y-up pixel convention as `gl_FragCoord`. One component must be non-zero
+  for a temporal frame. `motion_includes_jitter` states whether motion vectors already contain it.
 - One jitter owner only. The adapter and pack profile must not both jitter the scene.
 - Camera-only reconstruction is `motion_confidence == 1` and is experimental. Full support
   requires independently moving objects and deformation coverage; those are separate gates.
@@ -208,6 +209,23 @@ composition. For a pack profile the exact boundary is recorded in integration me
 replaces the final image TAA resolve; effect denoisers/histories remain unless separately
 audited. The output is then finished by the profile's display-stage effects and the HUD is
 composited at native resolution.
+
+### Complementary Reimagined r5.9.3/r5.9.2 primary boundary
+
+The audited primary profile replaces the pack's `composite6` final TAA pass. `composite7`
+(FXAA) and `final` remain after reconstruction, and vanilla HUD/inventory/chat are composed
+after the Iris finish at native resolution. The pack's `TAA` define must remain coherent so
+effect branches do not silently change; its partial vertex `TAAJitter` must not be reported as
+the scene jitter. The adapter owns one scene-wide jitter and supplies the actual value in
+`jitter_*`.
+
+An HDR boundary after `composite1`, before bloom/tonemap, is a separate profile: it requires a
+display-resolution HDR target and its own color/exposure validation. It is not the first
+supported boundary.
+
+A swap-time upscale in `egl.cpp` is not a valid integration point: Iris has already produced a
+native-resolution image and the HUD may already be composed. See
+`docs/fsr3/audits/minecraft-iris-pass-input.md`.
 
 ## 6. Backend ownership
 

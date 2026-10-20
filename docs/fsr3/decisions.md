@@ -102,7 +102,7 @@ of these internally. The port therefore maps internal storage to legal ESSL form
 (`r32f`, `rgba16f`, `rgba8`, `rgba16f`, `r32ui`, `rgba32f`), with documented bandwidth and
 precision consequences. The Vulkan GLSL uses separate texture/sampler objects and
 `GL_EXT_samplerless_texture_functions`/`GL_EXT_shader_image_load_formatted`, neither exposed by
-this ANGE/GLES provider; generated ESSL must use combined samplers and explicit image formats.
+this ANGLE/GLES provider; generated ESSL must use combined samplers and explicit image formats.
 SPD's `FFX_SPD_NO_WAVE_OPERATIONS` LDS fallback avoids the unavailable subgroup-quad path.
 These are source-level port requirements, not evidence that the full algorithm runs on the
 device.
