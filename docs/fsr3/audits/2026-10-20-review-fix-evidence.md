@@ -21,9 +21,10 @@ texture; integer textures use NEAREST filtering. Raw:
 
 `SessionStateGuard` now wraps backend initialize/resize, restoring program,
 active texture/unit 0, sampler, read/draw FBO, viewport, UBO, pixel-unpack
-buffer and unpack row/alignment/skip state. The host reproduction that links the
-backend directly does not exercise this wrapper-level guard; wrapper integration
-remains device-NOT-RUN.
+buffer and unpack row/alignment/skip state. X1E state probe:
+texture/UBO/FBO/viewport all PASS after first-use initialization and eight
+passes; see `validation/2026-10-20-x1e-state-restore.md`. Resize, two contexts
+and off-path remain open.
 
 ## R7 — camera continuity
 

@@ -48,6 +48,13 @@ struct Api {
     PFNGLFINISHPROC glFinish;
     PFNGLGETERRORPROC glGetError;
     PFNGLGETSTRINGPROC glGetString;
+    PFNGLGETINTEGERVPROC glGetIntegerv;
+    PFNGLACTIVETEXTUREPROC glActiveTexture;
+    PFNGLVIEWPORTPROC glViewport;
+    PFNGLGENBUFFERSPROC glGenBuffers;
+    PFNGLBINDBUFFERPROC glBindBuffer;
+    PFNGLBUFFERDATAPROC glBufferData;
+    PFNGLDELETEBUFFERSPROC glDeleteBuffers;
     PFNGLDELETETEXTURESPROC glDeleteTextures;
     PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
 
@@ -102,6 +109,13 @@ bool load(const char* path) {
     api.glFinish = sym<PFNGLFINISHPROC>("glFinish");
     api.glGetError = sym<PFNGLGETERRORPROC>("glGetError");
     api.glGetString = sym<PFNGLGETSTRINGPROC>("glGetString");
+    api.glGetIntegerv = sym<PFNGLGETINTEGERVPROC>("glGetIntegerv");
+    api.glActiveTexture = sym<PFNGLACTIVETEXTUREPROC>("glActiveTexture");
+    api.glViewport = sym<PFNGLVIEWPORTPROC>("glViewport");
+    api.glGenBuffers = sym<PFNGLGENBUFFERSPROC>("glGenBuffers");
+    api.glBindBuffer = sym<PFNGLBINDBUFFERPROC>("glBindBuffer");
+    api.glBufferData = sym<PFNGLBUFFERDATAPROC>("glBufferData");
+    api.glDeleteBuffers = sym<PFNGLDELETEBUFFERSPROC>("glDeleteBuffers");
     api.glDeleteTextures = sym<PFNGLDELETETEXTURESPROC>("glDeleteTextures");
     api.glDeleteFramebuffers = sym<PFNGLDELETEFRAMEBUFFERSPROC>("glDeleteFramebuffers");
 
@@ -241,10 +255,33 @@ int main(int argc, char** argv) {
     desc.reset_history = 1;
     desc.reset_reason = MG_FSR_RESET_SESSION;
 
+    // Application state that backend initialization/dispatch must preserve.
+    GLuint app_fbo = 0, app_ubo = 0;
+    api.glGenFramebuffers(1, &app_fbo);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, app_fbo);
+    api.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_tex, 0);
+    api.glGenBuffers(1, &app_ubo);
+    api.glBindBuffer(GL_UNIFORM_BUFFER, app_ubo);
+    const float ubo_seed[4] = {1, 2, 3, 4};
+    api.glBufferData(GL_UNIFORM_BUFFER, sizeof(ubo_seed), ubo_seed, GL_STATIC_DRAW);
+    api.glActiveTexture(GL_TEXTURE0);
+    api.glBindTexture(GL_TEXTURE_2D, color_tex);
+    api.glViewport(1, 2, 17, 19);
+
     std::fprintf(stderr, "probe: dispatch1 start\n");
     const int dispatch_rc = api.mg_fsr_dispatch(session, &desc);
     std::fprintf(stderr, "probe: dispatch1 rc=%d\n", dispatch_rc);
     checks.emplace_back("dispatch1", dispatch_rc == 0 ? "PASS" : "FAIL");
+    GLint state_tex = 0, state_ubo = 0, state_fbo = 0, state_viewport[4]{};
+    api.glGetIntegerv(GL_TEXTURE_BINDING_2D, &state_tex);
+    api.glGetIntegerv(GL_UNIFORM_BUFFER_BINDING, &state_ubo);
+    api.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &state_fbo);
+    api.glGetIntegerv(GL_VIEWPORT, state_viewport);
+    checks.emplace_back("state_texture", state_tex == static_cast<GLint>(color_tex) ? "PASS" : "FAIL");
+    checks.emplace_back("state_ubo", state_ubo == static_cast<GLint>(app_ubo) ? "PASS" : "FAIL");
+    checks.emplace_back("state_fbo", state_fbo == static_cast<GLint>(app_fbo) ? "PASS" : "FAIL");
+    checks.emplace_back("state_viewport", state_viewport[0] == 1 && state_viewport[1] == 2 &&
+                        state_viewport[2] == 17 && state_viewport[3] == 19 ? "PASS" : "FAIL");
     if (dispatch_rc != 0) {
         std::printf("{\"error\":\"dispatch1\",\"message\":\"%s\"}\n", api.mg_fsr_last_error(session));
         return 1;
@@ -300,6 +337,8 @@ int main(int argc, char** argv) {
 
     api.mg_fsr_destroy_session(session);
     api.glDeleteFramebuffers(1, &fbo);
+    api.glDeleteFramebuffers(1, &app_fbo);
+    api.glDeleteBuffers(1, &app_ubo);
     api.glDeleteTextures(1, &color_tex);
     api.glDeleteTextures(1, &depth_tex);
     api.glDeleteTextures(1, &motion_tex);

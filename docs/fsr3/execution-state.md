@@ -46,7 +46,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | Gate | Status | Evidence |
 | --- | --- | --- |
 | S0 baseline/provenance | **PASS for identity; PARTIAL for regression baseline** | APK/core hashes, device tuple, host tests; white UI/ACT/WSR baseline not rerun in this lane |
-| S1 spatial foundation | **PARTIAL: host/build PASS; FSR1 device NOT RUN** | Corrected two-pass EASU/RCAS and output-first sizing; host tests PASS; FSR1 not device-qualified |
+| S1 spatial foundation | **PARTIAL: host PASS + R6 state device PASS** | Corrected FSR1; X1E texture/UBO/FBO/viewport preservation PASS; FSR1 device/resize/context/off-path NOT RUN |
 | S2 contract | **PASS (frozen)** | `docs/fsr3/frame-contract.md` ABI v1 |
 | S2 backend feasibility | **PASS** | X1E RCAS exact vs CPU; 8-pass chain 2x/1.5x; independent X1E multi-frame evidence now present |
 | S2 game audit | **PASS (source)** | `docs/fsr3/audits/minecraft-iris-pass-input.md`: final TAA is `composite6`, jitter is partial, no velocity buffer in Iris 1.8.14 |
