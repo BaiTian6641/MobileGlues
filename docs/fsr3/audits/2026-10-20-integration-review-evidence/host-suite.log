@@ -1,0 +1,126 @@
+fsr1_core_test: all checks passed
+
+  ok   surface-sized viewport scales to Quality target
+  ok   surface-sized viewport scales to Performance target
+  ok   native target left alone
+  ok   already-scaled viewport left alone
+  ok   shadow/off-surface viewport left alone
+  ok   partial viewport left alone
+  ok   zero target left alone
+  ok   independent axes use their own ratio
+fsr3_viewport: all checks passed
+
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity inverse
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   identity multiply
+  ok   translation inverse x
+  ok   translation inverse y
+  ok   translation inverse z
+  ok   translation inverse w
+fsr3_motion_math: all checks passed
+
+component/packed sizes
+format enums are not in the type table
+internalformats are not in the format table
+bytes per pixel
+widthalign against the spec row formula
+widthalign degenerate alignments
+
+all checks passed (0 failures)
+
+1. identity order leaves everything alone
+2. swap: slot0 must receive colortex1, slot1 colortex0
+3. back to identity -- the regression a75f818 half-fixed
+4. single non-identity target -- the destination-victim case
+5. shuffle -> different shuffle, without an identity in between
+5b. invalidation follows the logical attachment through a shuffle
+6. a renderbuffer attachment survives a call that must not move it
+7. a record survives the table growing under it
+8. deleting the framebuffer drops its record
+9. republishing a replaced draw binding moves both trackers
+
+all checks passed (0 failures)
+
+shader source: all checks passed (0 failures)
+
+ok   mg_is_sized_depth_format(GL_DEPTH_COMPONENT16): got 1, want 1
+ok   mg_is_sized_depth_format(GL_DEPTH_COMPONENT24): got 1, want 1
+ok   mg_is_sized_depth_format(GL_DEPTH_COMPONENT32F): got 1, want 1
+ok   mg_is_sized_depth_format(GL_DEPTH24_STENCIL8): got 1, want 1
+ok   mg_is_sized_depth_format(GL_DEPTH32F_STENCIL8): got 1, want 1
+ok   mg_is_sized_depth_format(GL_DEPTH_COMPONENT): got 0, want 0
+ok   mg_is_sized_depth_format(GL_RGBA8): got 0, want 0
+ok   mg_is_sized_depth_format(0): got 0, want 0
+ok   mg_depth_pairing_incomplete(GL_DEPTH_COMPONENT32F, GL_NONE, GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST): got 1, want 1
+ok   mg_depth_pairing_incomplete(GL_DEPTH_COMPONENT32F, GL_NONE, GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST): got 0, want 0
+ok   mg_depth_pairing_incomplete(GL_DEPTH_COMPONENT24, GL_NONE, GL_NEAREST, GL_LINEAR): got 1, want 1
+ok   mg_depth_pairing_incomplete(GL_DEPTH_COMPONENT16, GL_NONE, GL_LINEAR_MIPMAP_LINEAR, GL_NEAREST): got 1, want 1
+ok   mg_depth_pairing_incomplete(GL_DEPTH_COMPONENT32F, GL_COMPARE_REF_TO_TEXTURE, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR): got 0, want 0
+ok   mg_depth_pairing_incomplete(GL_DEPTH_COMPONENT, GL_NONE, GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST): got 0, want 0
+ok   mg_depth_pairing_incomplete(GL_RGBA8, GL_NONE, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR): got 0, want 0
+ok   mg_depth_filter_make_legal(GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR): got 9984, want 9984
+ok   mg_depth_filter_make_legal(GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR): got 9984, want 9984
+ok   mg_depth_filter_make_legal(GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST): got 9984, want 9984
+ok   mg_depth_filter_make_legal(GL_TEXTURE_MIN_FILTER, GL_LINEAR): got 9728, want 9728
+ok   mg_depth_filter_make_legal(GL_TEXTURE_MIN_FILTER, GL_NEAREST): got 9728, want 9728
+ok   mg_depth_filter_make_legal(GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST): got 9984, want 9984
+ok   mg_depth_filter_make_legal(GL_TEXTURE_MAG_FILTER, GL_LINEAR): got 9728, want 9728
+ok   mg_depth_filter_make_legal(GL_TEXTURE_MAG_FILTER, GL_NEAREST): got 9728, want 9728
+ok   mg_filter_value_legal(GL_TEXTURE_MAG_FILTER, GL_NEAREST): got 1, want 1
+ok   mg_filter_value_legal(GL_TEXTURE_MAG_FILTER, GL_LINEAR): got 1, want 1
+ok   mg_filter_value_legal(GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST): got 0, want 0
+ok   mg_filter_value_legal(GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR): got 1, want 1
+ok   mg_filter_value_legal(GL_TEXTURE_MIN_FILTER, 1234): got 0, want 0
+ok   mg_filter_value_legal(GL_TEXTURE_COMPARE_MODE, GL_NONE): got 1, want 1
+ok   mg_filter_value_legal(GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE): got 1, want 1
+ok   mg_filter_value_legal(GL_TEXTURE_COMPARE_MODE, GL_NEAREST_MIPMAP_LINEAR): got 0, want 0
+depth_filter_test: all checks passed
+
+cache key: all identities distinct
+
+ok   rgba16
+ok   rg16
+ok   colorimg8-alt-output
+ok   binding-preserved
+ok   multiline
+ok   rgba16f-untouched
+ok   rg16f-untouched
+ok   r16f-untouched
+ok   rgba16ui-untouched
+ok   non-image-untouched
+ok   adjacent-lines
+ok   line-lengthening
+compat_image: all checks passed
+
+compat_subgroup: all checks passed
+
+fsr_contract: all checks passed

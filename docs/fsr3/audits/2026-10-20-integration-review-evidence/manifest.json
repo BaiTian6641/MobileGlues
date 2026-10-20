@@ -1,0 +1,41 @@
+{
+  "review_date": "2026-10-20",
+  "evidence_level": "host software GLES; not Android, X1E, full-wrapper integration, image-quality or performance qualification",
+  "provider": "llvmpipe (LLVM 20.1.8, 256 bits)",
+  "api": "OpenGL ES 3.2 Mesa 26.0.0-devel",
+  "host_kernel": "Linux 7.0.0-38-generic",
+  "compiler": "g++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0",
+  "host_suite": {
+    "command": "sh MobileGlues-cpp/tests/run.sh",
+    "exit_code": 0,
+    "executables": 11,
+    "raw_log": "host-suite.log",
+    "source_revision": "51b3eaa9a0be6dc358458caa693e3238dc622fce"
+  },
+  "backend_probe": {
+    "exit_code": 0,
+    "asserts_image_quality": false,
+    "observations": [
+      "initialization changed program, texture and generic UBO bindings to zero",
+      "unsigned reconstructed-depth sampler remained on unit 0, bound to RGBA16F motion",
+      "all eight compute dispatch calls returned success"
+    ],
+    "source_identical_at": [
+      "8f9df8d7eedd36e348156ed8f58e0905c45fe75b",
+      "51b3eaa9a0be6dc358458caa693e3238dc622fce"
+    ]
+  },
+  "sha256": {
+    "MobileGlues-cpp/upscaling/fsr3/fsr3_backend.cpp": "e01dfa7281f721847fe4647b2a0f852c78422f47366c8fcb310e20b4822a183b",
+    "MobileGlues-cpp/upscaling/fsr3/fsr3_backend.h": "811a069a60e29d8859ac51659427043c0e75a239244a2c730668c838ff3a6221",
+    "MobileGlues-cpp/upscaling/fsr3/fsr3_shaders.h": "369d6402dc48567c3f60e3a2114f4b8459ba34012c90d7fe43d5b7313010f1e3",
+    "MobileGlues-cpp/gles/gles.h": "5048353cad9499e856e2babd45fbfd21b5da108a55ae64ea3f8423e7ea80b668",
+    "docs/fsr3/audits/2026-10-20-integration-review-evidence/backend_review.cpp": "02dde39fe5e8805c6f74fb4d9180d417d90d6f567f45958fa1ed924687fbdc00",
+    "docs/fsr3/audits/2026-10-20-integration-review-evidence/backend_review.log": "606cf436e3ba0f5e0a1f14a3dc25ec6247eaf8457c11d68a6f4d329c4ddb74ea",
+    "docs/fsr3/audits/2026-10-20-integration-review-evidence/host-suite.log": "02103d98072653abe34c09003a3cc66872156146a8b6a4b8683987dba23ba50c"
+  },
+  "initial_manifest_head": "bb1e08b29386fbf06cbed53f7879230416057041",
+  "initial_review_head": "8f9df8d7eedd36e348156ed8f58e0905c45fe75b",
+  "source_reconciled_through": "51b3eaa9a0be6dc358458caa693e3238dc622fce",
+  "execution_records_reviewed_through": "87e289d0b10d2c7368e5002992d9e8aeade19722"
+}

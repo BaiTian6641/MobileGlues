@@ -19,12 +19,12 @@ public abstract class RenderTargetsMixin {
     }
 
     @ModifyVariable(method = "<init>", at = @At("HEAD"), argsOnly = true, ordinal = 0)
-    private int mgfsr3$constructorWidth(int width) {
+    private static int mgfsr3$constructorWidth(int width) {
         return Fsr3Bridge.sceneWidth(width);
     }
 
     @ModifyVariable(method = "<init>", at = @At("HEAD"), argsOnly = true, ordinal = 1)
-    private int mgfsr3$constructorHeight(int height) {
+    private static int mgfsr3$constructorHeight(int height) {
         return Fsr3Bridge.sceneHeight(height);
     }
 

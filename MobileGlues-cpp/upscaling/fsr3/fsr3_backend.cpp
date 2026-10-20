@@ -292,8 +292,12 @@ bool Backend::create_textures() {
         GLES.glGenTextures(1, &t.texture);
         if (!t.texture) return false;
         GLES.glBindTexture(GL_TEXTURE_2D, t.texture);
-        GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, levels > 1 ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
-        GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        const bool integer_format = internal == GL_R32UI || internal == GL_R32I ||
+                                    internal == GL_RGBA8UI || internal == GL_RGBA8I;
+        GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                             integer_format ? GL_NEAREST : (levels > 1 ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR));
+        GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+                             integer_format ? GL_NEAREST : GL_LINEAR);
         GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         GLES.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         GLES.glTexStorage2D(GL_TEXTURE_2D, levels, internal, w, h);
@@ -509,14 +513,15 @@ bool Backend::create_programs() {
             GLint size = 0;
             GLenum type = 0;
             GLES.glGetActiveUniform(p.program, static_cast<GLuint>(u), sizeof(name), &len, &size, &type, name);
-            if (type != GL_SAMPLER_2D) continue;
+            if (type != GL_SAMPLER_2D && type != GL_UNSIGNED_INT_SAMPLER_2D &&
+                type != GL_INT_SAMPLER_2D) continue;
             std::string full(name);
             std::string base = full;
             const char* pre = "SPIRV_Cross_Combined";
             if (starts_with(base, pre)) base = base.substr(std::strlen(pre));
             if (ends_with(base, "SPIRV_Cross_DummySampler")) base.resize(base.size() - std::strlen("SPIRV_Cross_DummySampler"));
             else if (ends_with(base, "s_LinearClamp")) base.resize(base.size() - std::strlen("s_LinearClamp"));
-            p.samplers.emplace_back(base, GLES.glGetUniformLocation(p.program, full.c_str()));
+            p.samplers.push_back({base, GLES.glGetUniformLocation(p.program, full.c_str()), type});
         }
         GLES.glUseProgram(0);
         p.compiled = true;
@@ -722,7 +727,9 @@ bool Backend::resolve_image(const std::string& name, Texture*& texture, int& lev
 
 bool Backend::bind_samplers(Program& p) {
     int unit = 0;
-    for (const auto& [base, location] : p.samplers) {
+    for (const auto& sampler : p.samplers) {
+        const std::string& base = sampler.base;
+        const GLint location = sampler.location;
         GLuint tex = 0;
         if (base == "r_input_color_jittered" || base == "r_input_color") tex = frame_color_;
         else if (base == "r_input_depth") tex = frame_depth_;

@@ -179,7 +179,12 @@ private:
         GLuint program = 0;
         const PassDesc* desc = nullptr;
         std::vector<std::pair<GLuint, std::string>> ubos;
-        std::vector<std::pair<std::string, GLint>> samplers;
+        struct SamplerBinding {
+            std::string base;
+            GLint location = -1;
+            GLenum type = GL_SAMPLER_2D;
+        };
+        std::vector<SamplerBinding> samplers;
         std::vector<ImageBinding> images;
         bool compiled = false;
     };

@@ -53,6 +53,8 @@ struct JniState {
     GLint u_has_prev = -1;
     bool motion_warned = false;
     bool motion_compile_failed = false;
+    bool output_logged = false;
+    bool motion_logged = false;
     int width = 0;
     int height = 0;
     int render_width = 0;
@@ -132,11 +134,10 @@ bool attachment_texture(GLenum attachment, GLuint& texture, int& width, int& hei
     return true;
 }
 
-const char* kMotionShader = R"(
-#version 320 es
+const char* kMotionShader = R"(#version 320 es
 layout(local_size_x = 8, local_size_y = 8) in;
-layout(rgba16f, binding = 0) writeonly highp image2D uMotion;
-layout(r32f, binding = 1) writeonly highp image2D uDepthOut;
+layout(rgba16f, binding = 0) uniform writeonly highp image2D uMotion;
+layout(r32f, binding = 1) uniform writeonly highp image2D uDepthOut;
 layout(binding = 0) uniform highp sampler2D uDepth;
 uniform highp mat4 uInvVP;
 uniform highp mat4 uPrevVP;
@@ -406,16 +407,17 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeCamera(JNIEnv* env, jclass, jfloa
         std::chrono::duration<float>(now - g_camera.last_capture).count() > 0.25f) {
         g_camera.has_previous = false;
     }
+    bool keep_previous = g_camera.valid && g_camera.has_previous;
     if (g_camera.valid) {
         const float dx = current_pos[0] - g_camera.position[0];
         const float dy = current_pos[1] - g_camera.position[1];
         const float dz = current_pos[2] - g_camera.position[2];
-        if (dx * dx + dy * dy + dz * dz > 64.0f * 64.0f) g_camera.has_previous = false;
+        if (dx * dx + dy * dy + dz * dz > 64.0f * 64.0f) keep_previous = false;
         std::copy(std::begin(g_camera.model_view), std::end(g_camera.model_view), std::begin(g_camera.previous_model_view));
         std::copy(std::begin(g_camera.projection), std::end(g_camera.projection), std::begin(g_camera.previous_projection));
         std::copy(std::begin(g_camera.position), std::end(g_camera.position), std::begin(g_camera.previous_position));
-        g_camera.has_previous = true;
     }
+    g_camera.has_previous = keep_previous;
     std::copy(std::begin(current_mv), std::end(current_mv), std::begin(g_camera.model_view));
     std::copy(std::begin(current_proj), std::end(current_proj), std::begin(g_camera.projection));
     std::copy(std::begin(current_pos), std::end(current_pos), std::begin(g_camera.position));
@@ -448,6 +450,7 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
         bridge_fail("no depth texture attachment");
         return -1;
     }
+    FSR3SetNativeExtent(width, height);
 
     std::lock_guard<std::mutex> lock(g_mutex);
     JniState& s = g_states[context_key];
@@ -543,14 +546,34 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     }
     if (!s.warned) {
         s.warned = true;
-        LOG_W_FORCE("FSR3 bridge: experimental submit %dx%d -> %dx%d (render %dx%d); camera_motion=%d, Iris scene adapter",
-                      rw, rh, width, height, rw, rh, motion_active ? 1 : 0);
+        int sw = 0, sh = 0;
+        FSR3GetSurfaceSize(sw, sh);
+        LOG_W_FORCE("FSR3 bridge: experimental submit %dx%d -> %dx%d (render %dx%d, surface %dx%d); camera_motion=%d, Iris scene adapter",
+                      rw, rh, width, height, rw, rh, sw, sh, motion_active ? 1 : 0);
     }
     mg_fsr_resource_t out{};
     if (mg_fsr_get_output(s.session, &out) != MG_FSR_OK || out.handle == 0) {
         s.failed = true;
         bridge_fail("no FSR output");
         return -1;
+    }
+    if (!s.output_logged) {
+        s.output_logged = true;
+        GLint prev_unit = 0, prev_tex = 0, ow = 0, oh = 0;
+        GLES.glGetIntegerv(GL_ACTIVE_TEXTURE, &prev_unit);
+        GLES.glActiveTexture(GL_TEXTURE0);
+        GLES.glGetIntegerv(GL_TEXTURE_BINDING_2D, &prev_tex);
+        GLES.glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(out.handle));
+        GLES.glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &ow);
+        GLES.glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &oh);
+        GLES.glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(prev_tex));
+        GLES.glActiveTexture(static_cast<GLenum>(prev_unit));
+        LOG_W_FORCE("FSR3 bridge: output %dx%d frame=%llu motion=%d", ow, oh,
+                    static_cast<unsigned long long>(s.frame), motion_active ? 1 : 0);
+    }
+    if (motion_active && !s.motion_logged) {
+        s.motion_logged = true;
+        LOG_W_FORCE("FSR3 bridge: camera motion active at frame %llu", static_cast<unsigned long long>(s.frame));
     }
     if (!s.output_fbo) GLES.glGenFramebuffers(1, &s.output_fbo);
     GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, s.output_fbo);

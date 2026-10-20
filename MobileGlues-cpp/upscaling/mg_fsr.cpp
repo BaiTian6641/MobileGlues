@@ -56,6 +56,55 @@ bool current_context_matches(const Session& s) {
     return s.context_id == g_current_ctx->id;
 }
 
+struct SessionStateGuard {
+    GLint program = 0;
+    GLint active_texture = GL_TEXTURE0;
+    GLint texture0 = 0;
+    GLint sampler0 = 0;
+    GLint read_fbo = 0;
+    GLint draw_fbo = 0;
+    GLint ubo = 0;
+    GLint unpack_buffer = 0;
+    GLint unpack_alignment = 4;
+    GLint unpack_row_length = 0;
+    GLint unpack_skip_rows = 0;
+    GLint unpack_skip_pixels = 0;
+    GLint viewport[4]{};
+
+    SessionStateGuard() {
+        GLES.glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+        GLES.glGetIntegerv(GL_ACTIVE_TEXTURE, &active_texture);
+        GLES.glActiveTexture(GL_TEXTURE0);
+        GLES.glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture0);
+        GLES.glGetIntegerv(GL_SAMPLER_BINDING, &sampler0);
+        GLES.glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read_fbo);
+        GLES.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw_fbo);
+        GLES.glGetIntegerv(GL_UNIFORM_BUFFER_BINDING, &ubo);
+        GLES.glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &unpack_buffer);
+        GLES.glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpack_alignment);
+        GLES.glGetIntegerv(GL_UNPACK_ROW_LENGTH, &unpack_row_length);
+        GLES.glGetIntegerv(GL_UNPACK_SKIP_ROWS, &unpack_skip_rows);
+        GLES.glGetIntegerv(GL_UNPACK_SKIP_PIXELS, &unpack_skip_pixels);
+        GLES.glGetIntegerv(GL_VIEWPORT, viewport);
+    }
+    ~SessionStateGuard() {
+        GLES.glUseProgram(static_cast<GLuint>(program));
+        GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(read_fbo));
+        GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(draw_fbo));
+        GLES.glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+        GLES.glBindBuffer(GL_UNIFORM_BUFFER, static_cast<GLuint>(ubo));
+        GLES.glBindBuffer(GL_PIXEL_UNPACK_BUFFER, static_cast<GLuint>(unpack_buffer));
+        GLES.glPixelStorei(GL_UNPACK_ALIGNMENT, unpack_alignment);
+        GLES.glPixelStorei(GL_UNPACK_ROW_LENGTH, unpack_row_length);
+        GLES.glPixelStorei(GL_UNPACK_SKIP_ROWS, unpack_skip_rows);
+        GLES.glPixelStorei(GL_UNPACK_SKIP_PIXELS, unpack_skip_pixels);
+        GLES.glActiveTexture(GL_TEXTURE0);
+        GLES.glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture0));
+        GLES.glBindSampler(0, static_cast<GLuint>(sampler0));
+        GLES.glActiveTexture(static_cast<GLenum>(active_texture));
+    }
+};
+
 int fail(Session* s, int code, std::string message) {
     if (s) s->error = std::move(message);
     return code;
@@ -220,19 +269,25 @@ MG_FSR_EXPORT int mg_fsr_dispatch(void* raw, const mg_fsr_dispatch_t* desc) {
     session->invalidate_requested = false;
 
     session->output = {};
-    if (!session->backend.ready()) {
-        if (!session->backend.initialize(in.render_width, in.render_height, in.output_width, in.output_height)) {
-            return fail(session, MG_FSR_ERROR_BACKEND, session->backend.error());
+    {
+        // Backend construction is not permitted to leak program/texture/UBO or
+        // unpack state into the application; the dispatch guard only covers the
+        // steady-state passes.
+        SessionStateGuard state_guard;
+        if (!session->backend.ready()) {
+            if (!session->backend.initialize(in.render_width, in.render_height, in.output_width, in.output_height)) {
+                return fail(session, MG_FSR_ERROR_BACKEND, session->backend.error());
+            }
+            ++session->generation;
+        } else if (session->backend.output_width() != in.output_width ||
+                   session->backend.output_height() != in.output_height ||
+                   session->backend.render_width() != in.render_width ||
+                   session->backend.render_height() != in.render_height) {
+            if (!session->backend.resize(in.render_width, in.render_height, in.output_width, in.output_height)) {
+                return fail(session, MG_FSR_ERROR_BACKEND, session->backend.error());
+            }
+            ++session->generation;
         }
-        ++session->generation;
-    } else if (session->backend.output_width() != in.output_width ||
-               session->backend.output_height() != in.output_height ||
-               session->backend.render_width() != in.render_width ||
-               session->backend.render_height() != in.render_height) {
-        if (!session->backend.resize(in.render_width, in.render_height, in.output_width, in.output_height)) {
-            return fail(session, MG_FSR_ERROR_BACKEND, session->backend.error());
-        }
-        ++session->generation;
     }
 
     if (!session->backend.dispatch(in)) return fail(session, MG_FSR_ERROR_BACKEND, session->backend.error());

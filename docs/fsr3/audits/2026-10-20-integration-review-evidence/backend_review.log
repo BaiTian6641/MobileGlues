@@ -1,0 +1,24 @@
+provider=llvmpipe (LLVM 20.1.8, 256 bits)
+version=OpenGL ES 3.2 Mesa 26.0.0-devel
+initialize=PASS error=
+state program 2->0 texture 1->0 ubo 1->0
+dispatch pass=0 groups=20,12,1
+dispatch pass=1 groups=3,2,1
+dispatch pass=2 groups=3,2,1
+dispatch pass=3 groups=10,6,1
+pass=4 program_validation=1 log=
+  sampler type=0x8b5e unit=0 texture=22 format=0x881a SPIRV_Cross_Combinedr_dilated_motion_vectorsSPIRV_Cross_DummySampler
+  sampler type=0x8b5e unit=1 texture=23 format=0x822e SPIRV_Cross_Combinedr_dilated_depthSPIRV_Cross_DummySampler
+  sampler type=0x8dd2 unit=0 texture=22 format=0x881a SPIRV_Cross_Combinedr_reconstructed_previous_nearest_depthSPIRV_Cross_DummySampler
+  sampler type=0x8b5e unit=2 texture=3 format=0x8229 SPIRV_Cross_Combinedr_reactive_maskSPIRV_Cross_DummySampler
+  sampler type=0x8b5e unit=3 texture=17 format=0x8058 SPIRV_Cross_Combinedr_shading_changes_LinearClamp
+  sampler type=0x8b5e unit=4 texture=4 format=0x8229 SPIRV_Cross_Combinedr_transparency_and_composition_maskSPIRV_Cross_DummySampler
+  sampler type=0x8b5e unit=5 texture=4 format=0x8229 SPIRV_Cross_Combinedr_transparency_and_composition_masks_LinearClamp
+  sampler type=0x8b5e unit=6 texture=6 format=0x8058 SPIRV_Cross_Combinedr_accumulations_LinearClamp
+  sampler type=0x8b5e unit=7 texture=8 format=0x881a SPIRV_Cross_Combinedr_current_lumaSPIRV_Cross_DummySampler
+  sampler type=0x8b5e unit=8 texture=2 format=0x822e SPIRV_Cross_Combinedr_input_exposureSPIRV_Cross_DummySampler
+dispatch pass=4 groups=20,12,1
+dispatch pass=5 groups=20,12,1
+dispatch pass=6 groups=40,23,1
+dispatch pass=7 groups=20,12,1
+dispatch_result=PASS error= passes=8 remaining_gl_error=0x0
