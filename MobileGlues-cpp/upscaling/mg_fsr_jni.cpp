@@ -545,7 +545,7 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     // Stable spatial profile: advertise no motion when history is off. The
     // backend always samples the motion texture, so zero it via uHasPrev=0
     // instead of feeding camera-only vectors for hands/sky.
-    static const bool history_enabled = std::getenv("MG_FSR3_HISTORY") != nullptr;
+    const bool history_enabled = history_requested();
     bool motion_active = false;
     const bool depth_input_ready = run_camera_motion(s, depth, rw, rh, history_enabled, motion_active);
     const int input_w = depth_input_ready ? rw : width;
