@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-20",
+  "device": "C1L63708PZ",
+  "soc": "Snapdragon X1E80100 / Adreno X1-85",
+  "provider": "ANGLE 2.1 / Vulkan 1.4.295",
+  "core": "cee91b637861924e5c0c7284bf632cdb0d39be369b54b9e6714ec468d9c352b1",
+  "build": "build/android-arm64-release/libmobileglues.so",
+  "isolation": "FCL and plugin force-stopped; below-wrapper probe on /data/local/tmp",
+  "guard_scan_bench": [
+    {"plain_ns": 527.638, "guard_ns": 779.85155, "delta_ns": 252.21355},
+    {"plain_ns": 421.9323, "guard_ns": 556.33595, "delta_ns": 134.40365},
+    {"plain_ns": 433.14585, "guard_ns": 552.0495, "delta_ns": 118.90365}
+  ],
+  "guard_best": {"plain_ns": 421.9323, "guard_ns": 552.0495, "delta_ns": 118.90365},
+  "image_rebind_bench": [
+    {"iterations": 100000, "ns_per_same_bind": 22.62448},
+    {"iterations": 100000, "ns_per_same_bind": 22.12812},
+    {"iterations": 100000, "ns_per_same_bind": 37.32656}
+  ],
+  "image_rebind_best": {"iterations": 100000, "ns_per_same_bind": 22.12812},
+  "notes": "Microbenchmarks only. No in-game FPS, power or thermal claim."
+}
