@@ -222,7 +222,7 @@ public final class Fsr3Bridge {
         if (!LOADED) return;
         try {
             int rc = NativeBridge.submit();
-            mark("submit rc=" + rc);
+            if (rc != 0) mark("submit rc=" + rc);
         } catch (Throwable t) {
             warn("nativeSubmit failed: " + t);
         }

@@ -87,7 +87,7 @@ This is the adoption record for the findings above, added after the review:
 | R7 camera continuity | **FIXED (source)** | `keep_previous` no longer overwritten; no dedicated device run |
 | R8 ABI field/capability validation | **OPEN** | motion scale/validity/generation and caps remain narrower than ABI |
 | R9 damage-swap route | **FIXED** | `presentSurfaceWithDamage` treats FSR3 as an upscaling route |
-| R10 steady-state cost | **OPEN** | per-frame `mark`, state queries, clears and barriers remain |
+| R10 steady-state cost | **PARTIAL** | per-frame bridge file logging removed in source; state queries/clears/barriers remain; not packaged/benchmarked |
 
 Do not use this review to claim performance upscaling. `docs/fsr3/audits/2026-10-20-review-fix-evidence.md` contains the fix evidence.
 

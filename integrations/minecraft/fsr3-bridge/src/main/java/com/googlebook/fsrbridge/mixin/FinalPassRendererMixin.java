@@ -29,7 +29,6 @@ public abstract class FinalPassRendererMixin {
 
     @Inject(method = "renderFinalPass", at = @At("RETURN"))
     private void mgfsr3$submitBeforeHud(CallbackInfo ci) {
-        com.googlebook.fsrbridge.Fsr3Bridge.mark("final pass hook");
         if (Fsr3Bridge.available()) {
             Fsr3Bridge.submit();
         }
