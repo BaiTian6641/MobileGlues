@@ -537,6 +537,24 @@ TextureObject* mgGetTexObjectByID(unsigned texture) {
 // first. It matters only where an unsized internalformat has to be resolved: an
 // allocation's `type` describes nothing, so resolving storage from it means
 // resolving it from decoration.
+static GLenum mg_lower_unorm_image_storage(GLenum internal_format) {
+    switch (internal_format) {
+    case GL_RGBA16:
+        return GL_RGBA32F;
+    case GL_RG16:
+        return GL_RG32F;
+    default:
+        return internal_format;
+    }
+}
+
+static bool mg_is_image_storage_format(GLenum internal_format) {
+    return internal_format == GL_R8UI || internal_format == GL_R16UI || internal_format == GL_R32UI ||
+           internal_format == GL_R8I || internal_format == GL_R16I || internal_format == GL_R32I ||
+           internal_format == GL_R32F || internal_format == GL_RGBA16F || internal_format == GL_RGBA32F ||
+           internal_format == GL_RG32F || internal_format == GL_RGBA8;
+}
+
 void internal_convert(GLenum* internal_format, GLenum* type, GLenum* format, bool has_data) {
     // GL_BGRA is deliberately not renamed here: a rename converts the enum and
     // not the data. Every pixel-transfer entry point routes through
@@ -1033,6 +1051,24 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
     internal_convert(&want_if, &want_type, &want_fmt, mg_upload_has_data(pixels));
     internalFormat = static_cast<GLint>(want_if);
 
+    // ANGLE rejects image load/store on mutable 2D storage, the same way it
+    // rejects it on mutable 3D storage. Iris allocates its 2D custom images and
+    // render targets with glTexImage2D(level 0, null); use immutable storage
+    // for that one-level allocation so glBindImageTexture can accept them.
+    if (pixels == nullptr) {
+        const GLenum lowered = mg_lower_unorm_image_storage(internalFormat);
+        if (lowered != internalFormat) {
+            internalFormat = static_cast<GLint>(lowered);
+            format = lowered == GL_RG32F ? GL_RG : GL_RGBA;
+            type = GL_FLOAT;
+        }
+    }
+    if (pixels == nullptr && level == 0 && target == GL_TEXTURE_2D && mg_is_image_storage_format(internalFormat)) {
+        glTexStorage2D(target, 1, internalFormat, width, height);
+        CHECK_GL_ERROR
+        return;
+    }
+
     mg_upload_fix_t fix(width, height, 1, format, type, pixels, want_fmt, /*three_d=*/false);
     // A conversion this layer refused -- a source it could not map, or dimensions
     // whose product does not fit in memory -- means the call has already raised its
@@ -1105,11 +1141,16 @@ void glTexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
     // GL_INVALID_OPERATION, and the subsequent descriptor setup can fault.
     // Immutable glTexStorage3D storage is the same allocation contract for
     // these one-level image textures and is known-good on the same backend.
-    const bool image_storage_format =
-        internalFormat == GL_R8UI || internalFormat == GL_R16UI || internalFormat == GL_R32UI ||
-        internalFormat == GL_R8I || internalFormat == GL_R16I || internalFormat == GL_R32I ||
-        internalFormat == GL_R32F || internalFormat == GL_RGBA16F || internalFormat == GL_RGBA32F;
-    if (pixels == nullptr && level == 0 && target == GL_TEXTURE_3D && image_storage_format) {
+    if (pixels == nullptr) {
+        const GLenum lowered = mg_lower_unorm_image_storage(internalFormat);
+        if (lowered != internalFormat) {
+            internalFormat = static_cast<GLint>(lowered);
+            format = lowered == GL_RG32F ? GL_RG : GL_RGBA;
+            type = GL_FLOAT;
+        }
+    }
+    if (pixels == nullptr && level == 0 && target == GL_TEXTURE_3D &&
+        mg_is_image_storage_format(internalFormat)) {
         glTexStorage3D(target, 1, internalFormat, width, height, depth);
         CHECK_GL_ERROR
         return;
@@ -1195,6 +1236,7 @@ void glTexStorage2D(GLenum target, GLsizei levels, GLenum internalFormat, GLsize
           target, levels, internalFormat, width, height)
 
     internal_convert(&internalFormat, nullptr, nullptr, /*has_data=*/false);
+    internalFormat = mg_lower_unorm_image_storage(internalFormat);
     GLES.glTexStorage2D(target, levels, internalFormat, width, height);
 
     GET_TEXTURE_OBJECT(target);
@@ -1222,6 +1264,7 @@ void glTexStorage3D(GLenum target, GLsizei levels, GLenum internalFormat, GLsize
           target, levels, internalFormat, width, height, depth)
 
     internal_convert(&internalFormat, nullptr, nullptr, /*has_data=*/false);
+    internalFormat = mg_lower_unorm_image_storage(internalFormat);
 
     GLES.glTexStorage3D(target, levels, internalFormat, width, height, depth);
 
@@ -1855,6 +1898,12 @@ void glDeleteTextures(GLsizei n, const GLuint* textures) {
         // name that no longer exists. The sibling contexts of the share group are
         // deliberately left alone: GL leaves their bindings as they are.
         if (textures[i] == 0) continue;
+        // A deleted texture is detached from every image unit. Drop the logical
+        // record as well as the physical shadow, or a later program switch
+        // replays a binding to a name that no longer exists.
+        for (mg_image_binding_t& binding : gl_state->image_bindings) {
+            if (binding.texture == textures[i]) binding = {};
+        }
         for (auto& unit : DriverTextureBindings) {
             for (GLuint& bound : unit) {
                 if (bound == textures[i]) bound = 0;

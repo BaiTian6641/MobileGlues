@@ -251,6 +251,10 @@ void mg_invalidate_image_binding_shadow() {
     for (GLuint unit = 0; unit < MG_TRACKED_IMAGE_UNITS; ++unit) gl_state->image_unit_shadow_valid[unit] = false;
 }
 
+namespace {
+void mg_lower_2d_image_layering(GLuint texture, GLboolean& layered, GLint& layer);
+}
+
 void mg_materialize_image_bindings() {
     MgProgramObject* state = mg_find_program(gl_state->current_program);
     if (state == nullptr || state->image_uniform_units.empty()) return;
@@ -265,6 +269,7 @@ void mg_materialize_image_bindings() {
         // desktop logical format.
         mg_image_binding_t desired = binding;
         desired.format = mg_image_backing_format(binding.format);
+        mg_lower_2d_image_layering(desired.texture, desired.layered, desired.layer);
         if (gl_state->image_unit_shadow_valid[physical] &&
             image_binding_equal(gl_state->image_unit_shadow[physical], desired)) {
             continue;
@@ -275,6 +280,20 @@ void mg_materialize_image_bindings() {
         gl_state->image_unit_shadow_valid[physical] = true;
     }
 }
+
+namespace {
+// Desktop GL accepts layered=TRUE on a plain 2D image and treats it as the whole
+// level. ES 3.2 rejects that combination, so bind the same level unlayered.
+void mg_lower_2d_image_layering(GLuint texture, GLboolean& layered, GLint& layer) {
+    if (!layered) return;
+    TextureObject* tex = mgGetTexObjectByID(texture);
+    if (tex && (tex->target == TextureTarget::TEXTURE_2D || tex->target == TextureTarget::TEXTURE_1D ||
+                tex->target == TextureTarget::TEXTURE_RECTANGLE)) {
+        layered = GL_FALSE;
+        layer = 0;
+    }
+}
+} // namespace
 
 void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access,
                         GLenum format) {
@@ -292,25 +311,30 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
     // with; R8UI/R16UI become R32UI.
     const GLenum logical_format = format;
     format = mg_image_backing_format(format);
-    const bool probe_backend_error = format != logical_format || mg_image_qualifier(logical_format) == nullptr;
+    GLboolean backend_layered = layered;
+    GLint backend_layer = layer;
+    mg_lower_2d_image_layering(texture, backend_layered, backend_layer);
     unit = mg_remap_image_unit(unit);
     if (unit < MG_TRACKED_IMAGE_UNITS) {
-        const mg_image_binding_t desired{texture, level, layered, layer, access, format};
+        const mg_image_binding_t desired{texture, level, backend_layered, backend_layer, access, format};
         if (gl_state->image_unit_shadow_valid[unit] && image_binding_equal(gl_state->image_unit_shadow[unit], desired)) {
             return;
         }
-        GLES.glBindImageTexture(unit, texture, level, layered, layer, access, format);
-        gl_state->image_unit_shadow[unit] = desired;
-        gl_state->image_unit_shadow_valid[unit] = true;
-    } else {
-        GLES.glBindImageTexture(unit, texture, level, layered, layer, access, format);
-    }
-    // A known backing format is accepted by this class of provider. Probe only
-    // when the wrapper lowered an ESSL-illegal format or the application named
-    // an unknown one; the common R32UI/RGBA path no longer pays a round trip.
-    if (probe_backend_error) {
+        GLES.glBindImageTexture(unit, texture, level, backend_layered, backend_layer, access, format);
+        // A rejected bind leaves the unit unbound. Recording it as valid makes
+        // every later replay skip the bind and the image stays missing. Probe
+        // the bind that changes state; the unchanged-tuple fast path above does
+        // not pay this round trip.
         const GLenum backend_error = GLES.glGetError();
-        if (backend_error != GL_NO_ERROR) mg_set_gl_error(backend_error);
+        if (backend_error != GL_NO_ERROR) {
+            gl_state->image_unit_shadow_valid[unit] = false;
+            mg_set_gl_error(backend_error);
+        } else {
+            gl_state->image_unit_shadow[unit] = desired;
+            gl_state->image_unit_shadow_valid[unit] = true;
+        }
+    } else {
+        GLES.glBindImageTexture(unit, texture, level, backend_layered, backend_layer, access, format);
     }
     CHECK_GL_ERROR
 }

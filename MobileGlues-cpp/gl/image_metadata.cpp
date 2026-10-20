@@ -61,8 +61,17 @@ GLenum mg_image_backing_format(GLenum logical_format) {
         return GL_RG16F; // legal image qualifier on ES 3.10 where supported
     case GL_RGBA16F:
         return GL_RGBA16F;
+    // ES 3.2 has no unorm16 image format qualifier. RGBA32F/RG32F preserve
+    // every normalized value exactly and are the backing formats the storage
+    // allocator uses for null-allocated image textures.
+    case GL_RGBA16:
+        return GL_RGBA32F;
+    case GL_RG16:
+        return GL_RG32F;
     case GL_RGBA32F:
         return GL_RGBA32F;
+    case GL_RG32F:
+        return GL_RG32F;
     case GL_RGBA8:
         return GL_RGBA8;
     case GL_RGBA8_SNORM:
@@ -86,6 +95,8 @@ const char* mg_image_qualifier(GLenum logical_format) {
         return "rgba16f";
     case GL_RGBA32F:
         return "rgba32f";
+    case GL_RG32F:
+        return "rg32f";
     case GL_RGBA8:
         return "rgba8";
     case GL_RGBA8_SNORM:
