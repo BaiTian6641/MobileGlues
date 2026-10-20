@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "experiment": "B",
-  "status": "installed on C1L63708PZ; depth-clear night visual PASS (static); temporal motion unverified",
+  "status": "installed; depth-clear and sync fixes installed; residual far-terrain ghost under TAA isolation",
   "source_head": "6997d078372ef8cfca8b07bf5e657af86adf6529",
   "diagnostic_tuple": {
-    "apk_sha256": "e7d655bd612970e982eb70b4e24cdd1f7752c5417567f51b290dedaa825cec28",
-    "core_sha256": "af74d6768b31f1eca9df8b5f833d173f55940eecce278cbcfb6a8972ed302aca",
-    "bridge_sha256": "cd2c27819b20231240af69447d2d9e1db0476a75859a17a16fe680b95d39a98d"
+    "apk_sha256": "b4d8e7511e1d8ac19bb4d93242fa15165185393377eed21adab6eb816244bb64",
+    "core_sha256": "28ca8677086d347918acc76711bf586840438e0d60b14e1cbcca5523e4050768",
+    "bridge_sha256": "1b229c26701b900a611ec9250e10da1daad8f9749963dd2dfde9b30aca8f4309"
   },
   "baseline_rollback": {
     "apk_sha256": "538455b765ec680f52919ecd4e296513353108a539352626ba4f45b9c43a0c39",
@@ -97,9 +97,10 @@
     "final_depth_trace": "/home/polar/MobileGlues-fixtures/experiment-b/final-depth-clear-trace.jsonl"
   },
   "open": [
-    "temporal motion/ghosting during camera and hand motion not yet tested",
-    "UltraPerformance and NativeAA regression not rerun in this checkpoint",
-    "active pack archive SHA-256 and option map still missing",
-    "no matched frame-time or thermal benchmark"
+    "residual far-terrain ghost; pack TAA is enabled and must be isolated by TAA_DEFINE=0",
+    "FSR3 history/motion still disabled",
+    "UltraPerformance/NativeAA regression pending",
+    "pack archive SHA/options missing",
+    "matched benchmark pending"
   ]
 }

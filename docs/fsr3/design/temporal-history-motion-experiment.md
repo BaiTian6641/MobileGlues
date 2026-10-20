@@ -11,6 +11,14 @@ particles, entities or transparent effects. The confirmed overlay was a
 scene-color/scene-depth ownership bug; it does not establish temporal
 correctness.
 
+## Current pack finding
+
+AuroraLumen `MOBILE_WSR` has `DETAIL_QUALITY=2`; with `TAA_DEFINE=-1` this
+auto-defines `TAA`, and `composite6` runs the pack TAA. PBR/WSR reflection
+history is also enabled. These are temporal owners independent of FSR3. Disable
+pack TAA (`TAA_DEFINE=0`) before attributing ghosting to FSR3 or enabling FSR3
+history.
+
 ## Required inputs before enabling
 
 1. **Scene jitter owner.** Apply the exact projection jitter before drawing
