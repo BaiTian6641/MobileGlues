@@ -12,6 +12,8 @@ $CXX -o /tmp/mg_fb_test     tests/framebuffer_shuffle_test.cpp gl/framebuffer.cp
 $CXX -o /tmp/mg_shader_src_test tests/shader_source_test.cpp  gl/shader_source.cpp
 $CXX -o /tmp/mg_depth_test  tests/depth_filter_test.cpp       gl/depth_filter.cpp
 $CXX -o /tmp/mg_cache_key_test tests/cache_key_test.cpp      gl/glsl/cache_key.cpp
+$CXX -o /tmp/mg_image_test tests/compat_image_test.cpp gl/glsl/compat_image.cpp
+$CXX -o /tmp/mg_subgroup_test tests/compat_subgroup_test.cpp gl/glsl/compat_subgroup.cpp gl/glsl/compat_subgroup_partition.cpp
 /tmp/mg_pixel_test
 echo
 /tmp/mg_fb_test
@@ -21,3 +23,7 @@ echo
 /tmp/mg_depth_test
 echo
 /tmp/mg_cache_key_test
+echo
+/tmp/mg_image_test
+echo
+/tmp/mg_subgroup_test
