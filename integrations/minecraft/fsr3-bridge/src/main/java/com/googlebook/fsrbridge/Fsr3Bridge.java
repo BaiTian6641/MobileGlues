@@ -218,14 +218,26 @@ public final class Fsr3Bridge {
         return minecraft.getMethod("getMainRenderTarget").invoke(client);
     }
 
+    private static int readIntField(Object target, String name) {
+        for (Class<?> c = target.getClass(); c != null; c = c.getSuperclass()) {
+            try {
+                var field = c.getDeclaredField(name);
+                field.setAccessible(true);
+                return field.getInt(target);
+            } catch (Throwable ignored) {
+            }
+        }
+        return 0;
+    }
+
     public static int mainWidth() {
-        try { return (int) mainTarget().getClass().getField("width").get(mainTarget()); }
-        catch (Throwable t) { return 0; }
+        try { Object t = mainTarget(); return readIntField(t, "width"); }
+        catch (Throwable ex) { warn("main width unavailable: " + ex); return 0; }
     }
 
     public static int mainHeight() {
-        try { return (int) mainTarget().getClass().getField("height").get(mainTarget()); }
-        catch (Throwable t) { return 0; }
+        try { Object t = mainTarget(); return readIntField(t, "height"); }
+        catch (Throwable ex) { warn("main height unavailable: " + ex); return 0; }
     }
 
     public static int mainColorTextureId() {

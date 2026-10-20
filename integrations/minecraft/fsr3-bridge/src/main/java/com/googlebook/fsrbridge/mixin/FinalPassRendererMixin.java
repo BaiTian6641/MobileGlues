@@ -35,6 +35,9 @@ public abstract class FinalPassRendererMixin {
             NativeBridge.finalScope(true);
             NativeBridge.setSceneDepth(Fsr3Bridge.sceneDepthTextureId());
             Fsr3Bridge.captureCamera();
+            Fsr3Bridge.mark("prefinal head main=" + Fsr3Bridge.mainWidth() + "x" + Fsr3Bridge.mainHeight()
+                + " scene=" + Fsr3Bridge.sceneWidth(Fsr3Bridge.mainWidth()) + "x"
+                + Fsr3Bridge.sceneHeight(Fsr3Bridge.mainHeight()));
         }
     }
 
@@ -52,6 +55,7 @@ public abstract class FinalPassRendererMixin {
         int width = Fsr3Bridge.sceneWidth(Fsr3Bridge.mainWidth());
         int height = Fsr3Bridge.sceneHeight(Fsr3Bridge.mainHeight());
         int color = Fsr3Bridge.sceneFinalColorTexture(width, height);
+        Fsr3Bridge.mark("prefinal redirect " + width + "x" + height + " color=" + color);
         if (color == 0) return;
         colorHolder.addColorAttachment(0, color);
         NativeBridge.setSceneColor(color);
