@@ -197,15 +197,13 @@ bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
     GLES.glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &target_h);
     GLES.glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(prev_tex));
     GLES.glActiveTexture(static_cast<GLenum>(prev_unit));
-    if (target_w <= 0 || target_h <= 0 || target_w >= surface_w || target_h >= surface_h) return false;
-
-    const float sx = static_cast<float>(target_w) / static_cast<float>(surface_w);
-    const float sy = static_cast<float>(target_h) / static_cast<float>(surface_h);
-    if (sx >= 0.999f && sy >= 0.999f) return false;
-    x = static_cast<GLint>(std::lround(x * sx));
-    y = static_cast<GLint>(std::lround(y * sy));
-    width = std::max(1, static_cast<int>(std::lround(width * sx)));
-    height = std::max(1, static_cast<int>(std::lround(height * sy)));
+    const FSR3ViewportPlan plan = FSR3PlanViewport(surface_w, surface_h, target_w, target_h,
+                                                    x, y, width, height);
+    if (!plan.adjust) return false;
+    x = plan.x;
+    y = plan.y;
+    width = plan.width;
+    height = plan.height;
     return true;
 }
 

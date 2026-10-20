@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cstdint>
+#include "FSR3ScenePlan.h"
 
 // Experimental native presentation path. It is called immediately before the
 // real EGL swap when the MobileGlues config selects FSR3 Experimental. It has
