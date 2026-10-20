@@ -237,13 +237,18 @@ public final class Fsr3Bridge {
     private static int createDepthFbo(int texture) {
         try {
             Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
+            Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
+            int[] previousDraw = new int[1], previousRead = new int[1];
+            gl11.getMethod("glGetIntegerv", int.class, int[].class).invoke(null, 0x8CA6, previousDraw);
+            gl11.getMethod("glGetIntegerv", int.class, int[].class).invoke(null, 0x8CAA, previousRead);
             int fbo = (Integer) gl30.getMethod("glGenFramebuffers").invoke(null);
-            gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8D40, fbo);
+            gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8CA9, fbo); // GL_DRAW_FRAMEBUFFER
             gl30.getMethod("glFramebufferTexture2D", int.class, int.class, int.class, int.class, int.class)
-                    .invoke(null, 0x8D40, 0x8D00, 0x0DE1, texture, 0);
+                    .invoke(null, 0x8CA9, 0x8D00, 0x0DE1, texture, 0);
             int status = (Integer) gl30.getMethod("glCheckFramebufferStatus", int.class)
-                    .invoke(null, 0x8D40);
-            gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8D40, 0);
+                    .invoke(null, 0x8CA9);
+            gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8CA9, previousDraw[0]);
+            gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8CA8, previousRead[0]); // GL_READ_FRAMEBUFFER
             if (status != 0x8CD5) {
                 warn("scene depth FBO incomplete: " + Integer.toHexString(status));
                 deleteFbo(fbo);
@@ -269,9 +274,11 @@ public final class Fsr3Bridge {
         try {
             Class<?> gl11 = Class.forName("org.lwjgl.opengl.GL11");
             Class<?> gl30 = Class.forName("org.lwjgl.opengl.GL30");
-            int[] previousFbo = new int[1];
+            int[] previousDraw = new int[1], previousRead = new int[1];
             gl11.getMethod("glGetIntegerv", int.class, int[].class)
-                    .invoke(null, 0x8CA6, previousFbo);
+                    .invoke(null, 0x8CA6, previousDraw);
+            gl11.getMethod("glGetIntegerv", int.class, int[].class)
+                    .invoke(null, 0x8CAA, previousRead);
             int[] scissor = new int[1];
             gl11.getMethod("glGetIntegerv", int.class, int[].class)
                     .invoke(null, 0x0C11, scissor);
@@ -281,7 +288,7 @@ public final class Fsr3Bridge {
             float[] clearDepth = new float[1];
             gl11.getMethod("glGetFloatv", int.class, float[].class)
                     .invoke(null, 0x0B73, clearDepth);
-            gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8D40, managedDepthFbo);
+            gl30.getMethod("glBindFramebuffer", int.class, int.class).invoke(null, 0x8CA9, managedDepthFbo);
             if (scissor[0] != 0) gl11.getMethod("glDisable", int.class).invoke(null, 0x0C11);
             gl11.getMethod("glDepthMask", boolean.class).invoke(null, true);
             gl11.getMethod("glClearDepth", double.class).invoke(null, 1.0d);
@@ -290,7 +297,9 @@ public final class Fsr3Bridge {
             gl11.getMethod("glDepthMask", boolean.class).invoke(null, depthMask[0] != 0);
             if (scissor[0] != 0) gl11.getMethod("glEnable", int.class).invoke(null, 0x0C11);
             gl30.getMethod("glBindFramebuffer", int.class, int.class)
-                    .invoke(null, 0x8D40, previousFbo[0]);
+                    .invoke(null, 0x8CA9, previousDraw[0]);
+            gl30.getMethod("glBindFramebuffer", int.class, int.class)
+                    .invoke(null, 0x8CAA, previousRead[0]);
         } catch (Throwable t) {
             warn("scene depth clear failed: " + t);
         }
