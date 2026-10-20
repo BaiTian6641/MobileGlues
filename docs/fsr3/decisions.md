@@ -183,3 +183,17 @@ final pass resets to native and the swap-path direct present is suppressed for
 a bounded adapter, not a general renderer-scale feature. The ABI and backend
 remain core-owned. Screen uniforms, non-color passes, and independent motion are
 still unverified; do not advance S4 on compile evidence.
+
+
+## D-FSR-017: Integration review is a gate, not a performance pass
+
+Status: accepted 2026-10-20.
+
+The independent integration review found concrete backend and boundary defects.
+R1 (unsigned reconstructed-depth sampler/filter), R6 initialization state,
+R7 camera continuity and R9 damage-swap routing were fixed and host/device
+smoke-tested. R2 (final-image reconstruction boundary), R3 (scene depth and
+screen-unit grid), R4 (float camera precision), R5 (jitter/depth/TAA
+ownership), R8 (ABI field/capability validation) and R10 (steady-state cost)
+remain open. The first full-frame game run proves rendering/HUD/camera-motion
+plumbing only; it is not a matched performance or image-quality qualification.

@@ -72,6 +72,25 @@ Evidence checked in this turn:
 Reproduction source, raw log, commands, and hashes are in
 [`2026-10-20-integration-review-evidence/`](2026-10-20-integration-review-evidence/).
 
+## Post-review implementation status (2026-10-20)
+
+This is the adoption record for the findings above, added after the review:
+
+| Finding | Status | Evidence |
+| --- | --- | --- |
+| R1 unsigned reconstructed-depth sampler/filter | **FIXED** | `backend_review_after_fix.log`: unsigned sampler on unit 2, R32UI, integer filtering NEAREST; 8/8 dispatch PASS |
+| R2 final-image reconstruction boundary | **OPEN** | bridge still submits after the pack final pass |
+| R3 scene depth/screen-unit grid | **OPEN** | main depth and view/screen uniforms remain native-sized |
+| R4 camera float precision | **OPEN** | doubles still cast before delta |
+| R5 jitter/depth parameters/TAA ownership | **OPEN** | jitter zero; near/far/FOV hardcoded; pack final TAA still active |
+| R6 initialization state | **FIXED (source)** | `SessionStateGuard` in `mg_fsr.cpp`; wrapper-level device test NOT RUN |
+| R7 camera continuity | **FIXED (source)** | `keep_previous` no longer overwritten; no dedicated device run |
+| R8 ABI field/capability validation | **OPEN** | motion scale/validity/generation and caps remain narrower than ABI |
+| R9 damage-swap route | **FIXED** | `presentSurfaceWithDamage` treats FSR3 as an upscaling route |
+| R10 steady-state cost | **OPEN** | per-frame `mark`, state queries, clears and barriers remain |
+
+Do not use this review to claim performance upscaling. `docs/fsr3/audits/2026-10-20-review-fix-evidence.md` contains the fix evidence.
+
 ## Path comparison
 
 | Path | Actual current behavior | Review conclusion |
