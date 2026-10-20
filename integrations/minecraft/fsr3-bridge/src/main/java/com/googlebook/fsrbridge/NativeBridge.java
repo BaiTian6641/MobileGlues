@@ -49,5 +49,7 @@ final class NativeBridge {
 
     static native void invalidateCamera();
 
+    static native void bridgeMode();
+
     static native int submit();
 }

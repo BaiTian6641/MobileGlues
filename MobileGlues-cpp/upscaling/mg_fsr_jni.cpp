@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstdlib>
 #include <chrono>
 #include <cmath>
 #include <mutex>
@@ -364,6 +365,11 @@ void destroy_state(JniState& s) {
 
 } // namespace
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeBridgeMode(JNIEnv*, jclass) {
+    FSR3SetBridgeMode();
+}
+
 extern "C" JNIEXPORT jfloat JNICALL
 Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeScale(JNIEnv*, jclass) {
     if (global_settings.fsr3_setting != FSR3_Mode::Experimental) return 1.0f;
@@ -532,7 +538,11 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     // Camera-only motion is experimental: keep history only when reprojection
     // actually ran; otherwise reset every frame to avoid unbounded ghosting from
     // the zero-motion fallback.
-    desc.reset_history = (s.frame <= 1 || !motion_active) ? 1 : 0;
+    // Temporal history stays off until scene jitter, depth parameters and the
+    // pack TAA boundary are owned coherently. MG_FSR3_HISTORY is a developer
+    // opt-in for that later experiment.
+    static const bool history_enabled = std::getenv("MG_FSR3_HISTORY") != nullptr;
+    desc.reset_history = (s.frame <= 1 || !motion_active || !history_enabled) ? 1 : 0;
     desc.reset_reason = desc.reset_history ? MG_FSR_RESET_SESSION : MG_FSR_RESET_NONE;
 
     if (mg_fsr_dispatch(s.session, &desc) != MG_FSR_OK) {

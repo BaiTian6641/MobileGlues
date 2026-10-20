@@ -946,7 +946,7 @@ bool Backend::dispatch(const Inputs& in) {
 
     RcasConsts rcas{};
     rcas.rcasConfig[0] = 0; // set below
-    const float sharpness = 0.2f;
+    const float sharpness = 0.4f;
     const float remapped = -2.0f * sharpness + 2.0f;
     const float con = std::exp2(-remapped);
     uint32_t bits = 0;
