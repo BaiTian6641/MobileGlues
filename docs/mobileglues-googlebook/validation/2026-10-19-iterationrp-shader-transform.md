@@ -38,6 +38,11 @@ Target: Android 17 / X1E80100 / Adreno X1-85 / ANGLE Vulkan / ES 3.2.
   pre-pass bug (`rgba16f` became `rgba32ff` because the replacement matched a
   prefix). It is fixed and covered by `compat_image_test`; device confirmation
   remains the next gate.
+- Known semantic gap: `rgba16` is lowered to `rgba32f`, but a pack can declare
+  `rgba16` over a target that is actually `RGBA16F` (original Bloom's
+  `FBIMG_ALT_OUTPUT`). The qualifier and backing format then disagree. The next
+  fix is target-aware format resolution or a write-only formatless image path;
+  do not claim pack support until it is device-tested.
 
 ## Coverage against common shaderpack needs
 
