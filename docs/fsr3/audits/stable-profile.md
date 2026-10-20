@@ -13,7 +13,7 @@ changes pack lighting/depth; it is not a free hand fix.
 
 | Item | Stable profile | Research profile |
 | --- | --- | --- |
-| Scene extent | Quality 1.5x (or Performance if needed) | any |
+| Scene extent | **NativeAA for final-pass-only packs**; scaled extents only for gbuffer packs | any |
 | FSR3 history | **OFF** (`MG_FSR3_HISTORY` opt-in only) | ON |
 | Pack TAA | if the pack exposes it; single temporal owner | OFF |
 | RCAS sharpness | 0.4 | 0.2 |
@@ -21,12 +21,17 @@ changes pack lighting/depth; it is not a free hand fix.
 | UI/HUD | native target viewport | native |
 | Hands | scene-owned, spatial only; softness accepted | ghost/reactive policy needed |
 
-History-off removes double-temporal ghosting. Pack TAA supplies smoothing and
-anti-flicker when exposed; the current AuroraLumen pack has no TAA option, so
-history-off is the only temporal control. FSR3 supplies scene-extent
-reconstruction and sharpening. The
-hand remains part of the scene and can be softer than native because it is
-spatially upscaled. No hand temporal/motion claim is made.
+History-off removes double-temporal ghosting. The current AuroraLumen pack has
+no TAA option, so history-off is the only temporal control. With history off,
+motion vectors are zeroed; camera-attached hands and the sky are not
+reprojected. FSR3 supplies spatial reconstruction and sharpening.
+
+For a final-pass-only pack, scaling Iris `RenderTargets` changed hand/depth
+ownership and produced a translucent hand/light-shadow overlay. NativeAA
+leaves the targets native and removes it. NativeAA therefore has no scene
+resolution gain on that pack; the faster scaled presets are not artifact-free
+there. Scaled extents remain conditional for gbuffer packs, where the scene
+target is actually reduced.
 
 ## Implemented routing
 
@@ -34,21 +39,18 @@ spatially upscaled. No hand temporal/motion claim is made.
 - History defaults off; `MG_FSR3_HISTORY=1` is developer-only.
 - Native-target viewport reset keeps menus/HUD/hand composition out of the
   lower-left scene viewport.
-- FSR3 quality preset remains user-selectable; Quality is the recommended
-  first stable point.
+- `ViewportUniformsMixin` reports the scene extent to world/composite programs
+  and the native extent during the final pass.
+- FSR3 quality preset remains user-selectable. NativeAA is the artifact-free
+  point for the current final-pass-only pack; Quality/Balanced reproduced the
+  hand/light-shadow overlay there.
 
-## Open hand decision
+## Resolved observation (2026-10-20)
 
-Observed on 2026-10-20: the hand renders as two overlays, one scaled and one
-native. Iris has separate `HAND_SOLID` and `HAND_TRANSLUCENT` phases; a
-phase/FBO/viewport trace is installed to identify the mismatched target. This
-is a target-ownership defect, not pack TAA.
+The previously reported two-overlay hand was the scaled final-pass-pack hand
+path, not a missing hand mesh. NativeAA + final-pass-scoped viewport uniforms
+removed the translucent overlay and fixed world-locked stars. Evidence:
+[`validation/2026-10-20-x1e-nativeaa-final-pass.md`](../validation/2026-10-20-x1e-nativeaa-final-pass.md).
 
-If hand sharpness is unacceptable, the next profile must either:
-
-1. accept hand ghosting with history on and a profile-qualified reactive mask;
-2. render hands after reconstruction at native resolution while proving pack
-   lighting/occlusion; or
-3. use NativeAA/no scene reduction for hand-critical scenes.
-
-None is implemented or qualified.
+A hand-sharpening or final-pass-pack performance profile still requires the
+separate boundary work below; it is not implemented or qualified.

@@ -10,7 +10,7 @@ source of truth for the pre-FSR3 renderer/pack history.
 | --- | --- |
 | Integration worktree | `/home/polar/MobileGlues` |
 | Branch | `googlebook/x1e-stage1-3` |
-| HEAD | `45cf989`; installed pair APK `57749f…`, core `6184…`, JAR `b97c56…` (history off); stable profile documented |
+| HEAD | `7c51dd3`; installed pair APK `538455b7…`, core `5733b7bb…`, JAR `1f759cfe…`; NativeAA final-pass hand/star PASS |
 | Origin | `git@github.com:BaiTian6641/MobileGlues.git` |
 | Upstream | `https://github.com/MobileGL-Dev/MobileGlues.git` |
 | Untouched user changes | modified `.gitignore`, `docs/mobileglues-googlebook/validation/README.md`; untracked `.vscode/`, FSR3 plan, recent validation docs |
