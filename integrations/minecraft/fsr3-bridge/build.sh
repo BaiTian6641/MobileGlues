@@ -13,6 +13,19 @@ mkdir -p "$HERE/build/classes" "$HERE/build/native/arm64-v8a"
 find "$HERE/src/main/java" -name '*.java' > "$HERE/build/sources.txt"
 javac --release 17 -proc:none -cp "$IRIS_JAR:$MIXIN_JAR" -d "$HERE/build/classes" @"$HERE/build/sources.txt"
 cp -R "$HERE/src/main/resources/." "$HERE/build/classes/"
+ROOT=$(CDPATH= cd -- "$HERE/../../.." && pwd)
+SOURCE_HEAD=$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)
+SOURCE_STATUS=$(git -C "$ROOT" status --porcelain 2>/dev/null | sha256sum | cut -d' ' -f1)
+SOURCE_DIFF=$(git -C "$ROOT" diff 2>/dev/null | sha256sum | cut -d' ' -f1)
+IRIS_HASH=$(sha256sum "$IRIS_JAR" | cut -d' ' -f1)
+cat > "$HERE/build/classes/trace-build.properties" <<EOF
+schema_version=1
+source_head=$SOURCE_HEAD
+source_status_sha256=$SOURCE_STATUS
+source_diff_sha256=$SOURCE_DIFF
+iris_jar_sha256=$IRIS_HASH
+built_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+EOF
 "$CXX" -O2 -std=c++17 -fPIC -shared -static-libstdc++ \
   -o "$HERE/build/native/arm64-v8a/libmgfsrhelper.so" "$HERE/src/main/cpp/mgfsrhelper.cpp" -ldl
 mkdir -p "$HERE/build/classes/native/arm64-v8a"

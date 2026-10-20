@@ -52,4 +52,6 @@ final class NativeBridge {
     static native void bridgeMode();
 
     static native int submit();
+
+    static native String trace(int op, int role, int frame, int event);
 }

@@ -21,6 +21,8 @@
 #include "../gl/log.h"
 #include "../gl/FSR3Direct.h"
 #include "../gl/drawing.h"
+#include "../gl/diagnostic.h"
+#include "fsr3/fsr3_backend.h"
 
 #include <EGL/egl.h>
 
@@ -32,6 +34,7 @@
 #include <chrono>
 #include <cmath>
 #include <mutex>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -600,5 +603,106 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     FSR3MarkBridgePresent();
     return 0;
 }
+
+
+#ifdef MG_FSR3_DIAGNOSTICS
+namespace {
+
+const char* fsr3_quality_name(FSR3_Quality_Preset preset) {
+    switch (preset) {
+    case FSR3_Quality_Preset::NativeAA: return "NativeAA";
+    case FSR3_Quality_Preset::Quality: return "Quality";
+    case FSR3_Quality_Preset::Balanced: return "Balanced";
+    case FSR3_Quality_Preset::Performance: return "Performance";
+    case FSR3_Quality_Preset::UltraPerformance: return "UltraPerformance";
+    default: return "unknown";
+    }
+}
+
+const char* fsr3_setting_name(FSR3_Mode mode) {
+    switch (mode) {
+    case FSR3_Mode::Disabled: return "Disabled";
+    case FSR3_Mode::Experimental: return "Experimental";
+    default: return "unknown";
+    }
+}
+
+std::string trace_config_json() {
+    const bool history = std::getenv("MG_FSR3_HISTORY") != nullptr;
+    int surface_w = 0, surface_h = 0;
+    FSR3GetSurfaceSize(surface_w, surface_h);
+    std::string out = "{";
+    bool first = true;
+    auto field = [&](const char* name) {
+        if (!first) out.push_back(',');
+        first = false;
+        out.push_back('"');
+        out += name;
+        out += "\":";
+    };
+    field("fsr_mode");
+    out += "\"";
+    out += fsr3_setting_name(global_settings.fsr3_setting);
+    out += "\"";
+    field("requested_preset");
+    out += "\"";
+    out += fsr3_quality_name(global_settings.fsr3_quality);
+    out += "\"";
+    field("effective_preset");
+    out += "\"";
+    out += fsr3_quality_name(global_settings.fsr3_quality);
+    out += "\"";
+    field("scale");
+    out += std::to_string(global_settings.fsr3_setting == FSR3_Mode::Experimental
+                              ? fsr3_quality_scale(global_settings.fsr3_quality)
+                              : 1.0f);
+    field("history_env_present");
+    out += history ? "true" : "false";
+    field("motion");
+    out += history ? "\"camera\"" : "\"zero\"";
+    field("bridge_mode");
+    out += FSR3BridgeMode() ? "true" : "false";
+    field("surface_width");
+    out += std::to_string(surface_w);
+    field("surface_height");
+    out += std::to_string(surface_h);
+    field("rcas_sharpness");
+    out += std::to_string(mg_fsr3::kRcasSharpness);
+    out += '}';
+    return out;
+}
+
+} // namespace
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeTrace(JNIEnv* env, jclass, jint op, jint role,
+                                                     jint frame, jint event) {
+    switch (op) {
+    case 0: // enable
+        mg_diag_set_enabled(role != 0);
+        return nullptr;
+    case 1: // role start
+        mg_diag_role_start(role, frame, event);
+        return nullptr;
+    case 2: { // snapshot
+        std::string json = mg_diag_snapshot_json();
+        return json.empty() ? nullptr : env->NewStringUTF(json.c_str());
+    }
+    case 3: { // role end
+        std::string json = mg_diag_role_end_json();
+        return json.empty() ? nullptr : env->NewStringUTF(json.c_str());
+    }
+    case 4: { // config
+        std::string json = trace_config_json();
+        return env->NewStringUTF(json.c_str());
+    }
+    case 5: // reset
+        mg_diag_reset();
+        return nullptr;
+    default:
+        return nullptr;
+    }
+}
+#endif // MG_FSR3_DIAGNOSTICS
 
 #endif // __ANDROID__

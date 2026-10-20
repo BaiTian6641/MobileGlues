@@ -13,6 +13,7 @@
 #include "texture.h"
 #include "image_metadata.h"
 #include "image_bindings.h"
+#include "diagnostic.h"
 #include "shader_state.h"
 #include "../egl/context.h"
 
@@ -198,6 +199,7 @@ void setupBufferTextureUniforms(GLuint program) {
 
 mg_depth_draw_guard prepareForDraw() {
     LOG_D("prepareForDraw...")
+    mg_diag_on_draw();
     if (hardware->emulate_texture_buffer) {
         setupBufferTextureUniforms(gl_state->current_program);
     }

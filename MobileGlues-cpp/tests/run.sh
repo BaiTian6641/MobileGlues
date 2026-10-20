@@ -18,11 +18,15 @@ $CXX -o /tmp/mg_fsr_contract_test tests/fsr_contract_test.cpp
 $CXX -o /tmp/mg_fsr1_core_test tests/fsr1_core_test.cpp
 $CXX -o /tmp/mg_fsr3_viewport_test tests/fsr3_viewport_test.cpp
 $CXX -o /tmp/mg_fsr3_motion_math_test tests/fsr3_motion_math_test.cpp 
+$CXX -o /tmp/mg_diagnostic_format_test tests/diagnostic_format_test.cpp
+$CXX -o /tmp/mg_diagnostic_disabled_test tests/diagnostic_disabled_test.cpp
 /tmp/mg_fsr1_core_test
 echo
 /tmp/mg_fsr3_viewport_test
 echo
 /tmp/mg_fsr3_motion_math_test
+/tmp/mg_diagnostic_format_test
+/tmp/mg_diagnostic_disabled_test
 echo
 /tmp/mg_pixel_test
 echo

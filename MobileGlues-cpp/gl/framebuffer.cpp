@@ -249,6 +249,25 @@ void mg_framebuffer_republish_draw_binding(GLuint framebuffer) {
     set_gl_state_current_draw_fbo(framebuffer);
     current_draw_fbo = framebuffer;
 }
+
+void mg_framebuffer_binding_ids(GLuint& draw, GLuint& read) {
+    draw = current_draw_fbo;
+    read = current_read_fbo;
+}
+
+bool mg_framebuffer_color_attachment_record(GLuint framebuffer, GLuint index, attach_kind_t& kind,
+                                            GLuint& texture, GLint& level, GLint& layer) {
+    const auto it = framebuffers.find(framebuffer);
+    if (it == framebuffers.end() || !it->second) return false;
+    const framebuffer_t& fbo = *it->second;
+    if (index >= fbo.color_attachments.size()) return false;
+    const attachment_t& attachment = fbo.color_attachments[index];
+    kind = attachment.kind;
+    texture = attachment.texture;
+    level = attachment.level;
+    layer = attachment.layer;
+    return true;
+}
 // Only the outermost scope on a thread touches the binding.
 //
 // The tracked read binding stays 0 the whole time one of these is active -- the

@@ -107,6 +107,12 @@ void InitFramebufferMap(size_t expectedSize);
 // directly from another translation unit.
 bool mg_draw_framebuffer_all_none();
 
+// Diagnostic-only reads of the wrapper's per-context bindings and attachment
+// records. These do not touch GL or create entries for unknown names.
+void mg_framebuffer_binding_ids(GLuint& draw, GLuint& read);
+bool mg_framebuffer_color_attachment_record(GLuint framebuffer, GLuint index, attach_kind_t& kind,
+                                            GLuint& texture, GLint& level, GLint& layer);
+
 // Point both draw-framebuffer trackers -- this file's per-context binding and
 // gl_state->current_draw_fbo -- at `framebuffer`, without a backend bind.
 //

@@ -1,10 +1,13 @@
 package com.googlebook.fsrbridge.mixin;
 
+import com.googlebook.fsrbridge.DiagnosticTrace;
 import com.googlebook.fsrbridge.Fsr3Bridge;
 import net.irisshaders.iris.targets.RenderTargets;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Optional Minecraft/Iris scene adapter. The constructor and the per-frame
@@ -38,5 +41,35 @@ public abstract class RenderTargetsMixin {
     @ModifyVariable(method = "resizeIfNeeded", at = @At("HEAD"), argsOnly = true, ordinal = 3)
     private int mgfsr3$resizeHeight(int height) {
         return Fsr3Bridge.sceneHeight(height);
+    }
+
+    @Inject(method = "<init>", at = @At("RETURN"), require = 0)
+    private void mgfsr3$traceAllocation(CallbackInfo ci) {
+        DiagnosticTrace.irisTargets(this, "ALLOCATION");
+    }
+
+    @Inject(method = "resizeIfNeeded", at = @At("RETURN"), require = 0)
+    private void mgfsr3$traceResize(CallbackInfo ci) {
+        DiagnosticTrace.irisTargets(this, "RESIZE");
+    }
+
+    @Inject(method = "copyPreHandDepth", at = @At("HEAD"), require = 0)
+    private void mgfsr3$tracePreHandEntry(CallbackInfo ci) {
+        DiagnosticTrace.copyEntry("PRE_HAND_COPY", this);
+    }
+
+    @Inject(method = "copyPreHandDepth", at = @At("RETURN"), require = 0)
+    private void mgfsr3$tracePreHandExit(CallbackInfo ci) {
+        DiagnosticTrace.copyExit("PRE_HAND_COPY");
+    }
+
+    @Inject(method = "copyPreTranslucentDepth", at = @At("HEAD"), require = 0)
+    private void mgfsr3$tracePreTranslucentEntry(CallbackInfo ci) {
+        DiagnosticTrace.copyEntry("PRE_TRANSLUCENT_COPY", this);
+    }
+
+    @Inject(method = "copyPreTranslucentDepth", at = @At("RETURN"), require = 0)
+    private void mgfsr3$tracePreTranslucentExit(CallbackInfo ci) {
+        DiagnosticTrace.copyExit("PRE_TRANSLUCENT_COPY");
     }
 }

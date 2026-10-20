@@ -16,6 +16,8 @@
 
 namespace mg_fsr3 {
 
+inline constexpr float kRcasSharpness = 0.4f;
+
 // The backend owns every FSR3 intermediate and history texture. The adapter
 // supplies only the current frame's color/depth/motion/masks and receives a
 // backend-owned output. Handles are frontend GL names in the active context.

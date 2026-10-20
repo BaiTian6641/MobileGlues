@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.22.1)
 project("mobileglues")
 enable_language(CXX)
+option(MG_FSR3_DIAGNOSTICS "Build the Experiment A bounded GL trace (debug only)" OFF)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -140,6 +142,11 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
     config/settings.cpp
     config/stats.cpp
 )
+
+if(MG_FSR3_DIAGNOSTICS)
+    target_sources(${CMAKE_PROJECT_NAME} PRIVATE gl/diagnostic.cpp)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE MG_FSR3_DIAGNOSTICS=1)
+endif()
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ./includes
