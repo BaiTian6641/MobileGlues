@@ -83,6 +83,7 @@ present.
 | Pack | Preset | Result | Evidence |
 | --- | --- | --- | --- |
 | Complementary Reimagined r5.9.3 | High | pipeline initializes; no `(fallback)`; 22 FPS at 2880×1585; fog/atmosphere/water reflection visible | F3 capture, post-fix log |
+| Complementary Reimagined r5.9.3 | POTATO / VERYLOW / LOW / HIGH | ~55 / ~48 / ~35 / ~20 FPS at 2880×1585; cost model and Balanced preset in `validation/2026-10-19-complementary-performance-model.md` | user F3 values, 2026-10-19 |
 | Complementary Reimagined r5.9.2 (plan fixture) | High | **pipeline active, no fallback**, 21 FPS at 2880×1585; paired shaders-off reference 569 FPS; water reflections, fog, clouds visible; motion accepted by user | `2026-10-19-r592-high-f3.png`, `2026-10-19-r592-high-shaders-off.png`, log `mclo.gs/z3qIi68` |
 | Complementary Reimagined r5.9.2 | High | effect-by-effect fidelity (PBR, shadow edges, bloom, TAA/history isolation) | **not tested** |
 | Complementary Unbound r5.9.2 | High | **pipeline active, no fallback**, 20 FPS at 2880×1585; paired shaders-off reference 574 FPS; water reflections, fog, clouds visible; reload works | `2026-10-19-unbound-r592-high-f3.png`, `2026-10-19-unbound-r592-high-shaders-off.png`, log `mclo.gs/hH2OIs5` |

@@ -33,6 +33,15 @@ Minecraft 26.3 / Java 25 / LWJGL 3.4.3 SDL on Fabric is a future/experimental la
 bytecode and manifest findings stay recorded as future-lane evidence. Minecraft 1.20.1 / Java 17
 Fabric remains the legacy lane and is still unbeaten.
 
+## Polish-stage performance
+
+Complementary Reimagined r5.9.3 measured ~55/48/35/20 FPS at
+POTATO/VERYLOW/LOW/HIGH on 2880×1585. The High-specific cost is shadows,
+light shafts, block reflections, entity shadows and FXAA. X1-85 is a ~3.8 TFLOPS
+class GPU versus ~8.9 TFLOPS for a 780M, so the current High result is near
+hardware parity. The recommended X1E Balanced profile and 1920×1200 target are in
+`validation/2026-10-19-complementary-performance-model.md`. No new release claim.
+
 ## Current stage and active task
 
 - Stage 0/1/2 (historical): locked X1E tuple, reproducible ARM64 build, provider and wrapper probes
