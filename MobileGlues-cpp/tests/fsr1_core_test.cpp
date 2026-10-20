@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstring>
 #include <initializer_list>
+#include <string>
 #include <vector>
 
 #include "gl/FSR1/FSR1Plan.h"
@@ -292,6 +293,13 @@ static bool source_contains(const char* haystack, const char* needle) {
     return std::strstr(haystack, needle) != nullptr;
 }
 
+static int source_count(const char* haystack, const char* needle) {
+    int count = 0;
+    const size_t length = std::strlen(needle);
+    for (const char* at = std::strstr(haystack, needle); at != nullptr; at = std::strstr(at + length, needle)) ++count;
+    return count;
+}
+
 static void test_shader_source() {
     // The shader is data, but the old defects were in it. These assertions pin
     // the corrected interface without needing a GLSL compiler on the host.
@@ -315,6 +323,15 @@ static void test_shader_source() {
     CHECK(source_contains(FSR_FSSource, "clamp(ASU2(p), ASU2(0, 0), last)"));
     CHECK(source_contains(FSR_FSSource, "oFragColor = vec4(sharpenedColor, 1.0);"));
 
+    // Both passes sample the single uInputTex binding: EASU through the
+    // textureGather taps (which honour the texture's filtering/wrap and the
+    // sampler object on unit 0), RCAS through texelFetch. There is exactly one
+    // sampler uniform, so the pass switch is a texture rebind on unit 0 -- which
+    // is why the renderer binds sampler 0 there and restores the application's.
+    CHECK(source_contains(FSR_FSSource, "textureGather(uInputTex,"));
+    CHECK(source_contains(FSR_FSSource, "texelFetch(uInputTex,"));
+    CHECK(source_count(FSR_FSSource, "uniform sampler") == 1);
+
     // The EASU result is not thrown away: it is the fragment result of pass 0.
     const char* easu = std::strstr(FSR_FSSource, "oFragColor = vec4(color, 1.0);");
     CHECK(easu != nullptr);
@@ -337,12 +354,92 @@ static void test_state_mask() {
         STATE_PROGRAM,       STATE_VAO,         STATE_ARRAY_BUFFER,   STATE_TEXTURE,
         STATE_FRAMEBUFFER,   STATE_VIEWPORT,    STATE_SCISSOR,        STATE_BLEND_ENABLE,
         STATE_BLEND_FUNCS,   STATE_BLEND_EQUATION, STATE_DEPTH,       STATE_CULL,
-        STATE_COLOR_MASK,    STATE_CLEAR_COLOR,
+        STATE_COLOR_MASK,    STATE_CLEAR_COLOR, STATE_STENCIL,        STATE_RASTERIZER_DISCARD,
+        STATE_SAMPLER,
     };
     for (uint32_t bit : required) {
         CHECK((kApplyFSRState & bit) != 0);
     }
     CHECK((kApplyFSRState & STATE_TEXTURE) != 0); // active unit + unit 0 binding
+    CHECK((kApplyFSRState & STATE_SAMPLER) != 0); // unit 0 sampler object override
+    // Rasterizer discard and stencil are written by ApplyFSR; a mask that lost
+    // either would leave the application's rasterizer discarding its next draw
+    // or stencil test disabled.
+    CHECK((kApplyFSRState & STATE_STENCIL) != 0);
+    CHECK((kApplyFSRState & STATE_RASTERIZER_DISCARD) != 0);
+
+    // Resource creation binds and sets a viewport, and a rebuild does the same.
+    // The viewport must be in both sets or a resize/init leaves GL_VIEWPORT
+    // describing the FSR1 target instead of the application's scene.
+    CHECK((kResourceCreationState & STATE_VIEWPORT) != 0);
+    CHECK((kRecreateState & STATE_VIEWPORT) != 0);
+    CHECK((kRecreateState & STATE_FRAMEBUFFER) != 0);
+    CHECK((kRecreateState & STATE_TEXTURE) != 0);
+    CHECK((kRecreateState & STATE_RENDERBUFFER) != 0);
+}
+
+// The source-level invariants the masks cannot express on their own, checked as
+// text so the host test fails if a future edit reopens one of them. Paths are
+// resolved from this file, so the test works from any working directory.
+static std::string read_source(const char* relative_from_gl) {
+    std::string path = __FILE__;
+    const size_t slash = path.find_last_of("/\\");
+    path = (slash == std::string::npos ? std::string(".") : path.substr(0, slash)) + "/../gl/";
+    path += relative_from_gl;
+    std::FILE* file = std::fopen(path.c_str(), "rb");
+    CHECK(file != nullptr);
+    if (file == nullptr) return {};
+    std::string text;
+    char buffer[4096];
+    size_t got = 0;
+    while ((got = std::fread(buffer, 1, sizeof(buffer), file)) > 0) text.append(buffer, got);
+    std::fclose(file);
+    return text;
+}
+
+static void test_source_invariants() {
+    const std::string fsr = read_source("FSR1/FSR1.cpp");
+    const std::string fb = read_source("framebuffer.cpp");
+    CHECK(!fsr.empty());
+    CHECK(!fb.empty());
+
+    // The guard queries unit 0's sampler and the pass binds sampler 0, so an
+    // application sampler object cannot override the textures' filtering.
+    CHECK(source_contains(fsr.c_str(), "GL_SAMPLER_BINDING"));
+    CHECK(source_contains(fsr.c_str(), "GLES.glBindSampler(0, 0);"));
+
+    // All three masks are the ones the bodies actually use.
+    CHECK(source_contains(fsr.c_str(), "GLStateGuard state(kApplyFSRState);"));
+    CHECK(source_contains(fsr.c_str(), "GLStateGuard state(kResourceCreationState);"));
+    CHECK(source_contains(fsr.c_str(), "GLStateGuard state(kRecreateState);"));
+
+    // The first frame is only upscaled after a redirect primed the render
+    // target, and every success/failure/recreate path clears the flag.
+    CHECK(source_contains(fsr.c_str(), "if (!FSR1_Context::g_dirty)"));
+    CHECK(source_contains(fsr.c_str(), "FSR1_Context::g_dirty = false;"));
+
+    // The dual draw-FBO tracker is updated through the republish API, never by
+    // touching one of the two fields directly. If this call disappears, the
+    // resize path leaves gl/framebuffer.cpp naming a deleted framebuffer.
+    CHECK(source_contains(fsr.c_str(), "mg_framebuffer_republish_draw_binding("));
+    CHECK(!source_contains(fsr.c_str(), "set_gl_state_current_draw_fbo("));
+    CHECK(source_contains(fb.c_str(), "void mg_framebuffer_republish_draw_binding(GLuint framebuffer)"));
+    // ...and that function writes both trackers.
+    const size_t fn = fb.find("void mg_framebuffer_republish_draw_binding");
+    if (fn != std::string::npos) {
+        const std::string body = fb.substr(fn, fb.find('}', fn) - fn);
+        CHECK(source_contains(body.c_str(), "set_gl_state_current_draw_fbo(framebuffer)"));
+        CHECK(source_contains(body.c_str(), "current_draw_fbo = framebuffer"));
+    }
+
+    // A resize failure deletes the program and the quad as well as the targets:
+    // init failure plus the resize-failure arm.
+    size_t destroys = 0;
+    for (size_t at = fsr.find("DestroyProgramAndQuad();"); at != std::string::npos;
+         at = fsr.find("DestroyProgramAndQuad();", at + 1)) {
+        ++destroys;
+    }
+    CHECK(destroys >= 2);
 }
 
 int main() {
@@ -351,6 +448,7 @@ int main() {
     test_synthetic_edge_dataflow();
     test_shader_source();
     test_state_mask();
+    test_source_invariants();
 
     if (g_failures != 0) {
         std::printf("fsr1_core_test: %d failure(s)\n", g_failures);

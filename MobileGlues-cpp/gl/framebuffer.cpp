@@ -184,7 +184,11 @@ void glBindFramebuffer(GLenum target, GLuint framebuffer) {
     GLuint draw_fb = framebuffer;
     if (framebuffer == 0 && target != GL_READ_FRAMEBUFFER) {
         draw_fb = FSR1_Context::g_renderFBO;
-        FSR1_Context::g_dirty = true;
+        // Only a real redirect puts scene content into the FSR1 render target.
+        // A bind of 0 while FSR1 owns no target -- before the first build, or
+        // after it was disabled -- is the surface itself, and marking that as
+        // primed would let ApplyFSR sample an empty render texture.
+        if (draw_fb != 0) FSR1_Context::g_dirty = true;
     }
 
     if (draw_fb != 0) {
@@ -208,6 +212,21 @@ void glBindFramebuffer(GLenum target, GLuint framebuffer) {
     } else {
         GLES.glBindFramebuffer(target, draw_fb);
     }
+}
+// Record a draw binding without issuing one.
+//
+// The draw framebuffer is tracked twice: gl_state->current_draw_fbo, which the
+// FSR1 guard and the rest of the wrapper read, and this file's per-context
+// current_draw_fbo, which every attachment and draw-buffer path indexes through.
+// glBindFramebuffer writes both. A caller that replaces the currently bound
+// object backend-side -- FSR1's resize rebuild deletes and renames its render
+// FBO -- has to move both names onto the replacement, or the two trackers name
+// different framebuffers and one of them is dead. The driver binding stays the
+// caller's responsibility: this function says what the trackers should say, it
+// does not touch the backend.
+void mg_framebuffer_republish_draw_binding(GLuint framebuffer) {
+    set_gl_state_current_draw_fbo(framebuffer);
+    current_draw_fbo = framebuffer;
 }
 // Only the outermost scope on a thread touches the binding.
 //

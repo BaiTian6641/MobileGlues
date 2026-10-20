@@ -37,8 +37,9 @@ static_assert(static_cast<int>(ColorFormat::RGBA8) == 0, "the plan's RGBA8 tag i
 //     render target already resolved, and it is the only file that binds a draw
 //     framebuffer through GLES other than this one. It also keeps that field off
 //     deleted names, through its own glDeleteFramebuffers -- with one exception,
-//     RecreateFSRTargets, which deletes the render FBO behind its back and so has
-//     to republish the replacement itself.
+//     RecreateFSRTargets, which deletes the render FBO behind its back and so
+//     republishes the replacement -- to both trackers -- through
+//     mg_framebuffer_republish_draw_binding.
 //   - the enable state of GL_BLEND, GL_DEPTH_TEST, GL_STENCIL_TEST, GL_CULL_FACE,
 //     GL_SCISSOR_TEST and GL_RASTERIZER_DISCARD. gl/enable.cpp owns that table and
 //     keeps it per context. This guard changes those bits through the frontend
@@ -66,6 +67,8 @@ static_assert(static_cast<int>(ColorFormat::RGBA8) == 0, "the plan's RGBA8 tag i
 //     an inner guard reading it would restore the outer guard's unit and leave the
 //     body running on a unit it never asked for.
 //   - the read framebuffer and the renderbuffer binding, which nothing tracks.
+//   - unit 0's sampler binding (GL_SAMPLER_BINDING), which overrides the FSR1
+//     textures' filtering, wrap and compare state during the passes.
 //   - viewport, scissor box, blend functions and equations, depth function and
 //     write mask, cull mode, colour mask and clear colour. No shadow exists for
 //     these; they are read once per presented frame, which is the cost of leaving
@@ -82,6 +85,7 @@ struct GLStateGuard {
     GLint prevArrayBuffer = 0;
     GLint prevActiveTexture = GL_TEXTURE0;
     GLint prevTexture = 0;
+    GLint prevSampler = 0;
     GLint prevReadFBO = 0;
     GLint prevDrawFBO = 0;
     GLint prevRenderbuffer = 0;
@@ -109,10 +113,13 @@ struct GLStateGuard {
         if (saved & STATE_PROGRAM) prevProgram = static_cast<GLint>(gl_state->current_program);
         if (saved & STATE_VAO) GLES.glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &prevVAO);
         if (saved & STATE_ARRAY_BUFFER) GLES.glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &prevArrayBuffer);
-        if (saved & STATE_TEXTURE) {
+        if (saved & (STATE_TEXTURE | STATE_SAMPLER)) {
             GLES.glGetIntegerv(GL_ACTIVE_TEXTURE, &prevActiveTexture);
             GLES.glActiveTexture(GL_TEXTURE0);
-            GLES.glGetIntegerv(GL_TEXTURE_BINDING_2D, &prevTexture);
+            if (saved & STATE_TEXTURE) GLES.glGetIntegerv(GL_TEXTURE_BINDING_2D, &prevTexture);
+            // GL_SAMPLER_BINDING is per texture unit, so this is asked with unit 0
+            // active: unit 0 is the unit both passes sample from.
+            if (saved & STATE_SAMPLER) GLES.glGetIntegerv(GL_SAMPLER_BINDING, &prevSampler);
         }
         if (saved & STATE_FRAMEBUFFER) {
             GLES.glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &prevReadFBO);
@@ -170,11 +177,17 @@ struct GLStateGuard {
         if (saved & STATE_PROGRAM) GLES.glUseProgram(prevProgram);
         if (saved & STATE_VAO) GLES.glBindVertexArray(prevVAO);
         if (saved & STATE_ARRAY_BUFFER) GLES.glBindBuffer(GL_ARRAY_BUFFER, prevArrayBuffer);
-        if (saved & STATE_TEXTURE) {
+        if (saved & (STATE_TEXTURE | STATE_SAMPLER)) {
             // Unit 0 is current for the guard's lifetime, but say so anyway: a body
             // is free to move the active unit as long as this line puts it back.
             GLES.glActiveTexture(GL_TEXTURE0);
-            GLES.glBindTexture(GL_TEXTURE_2D, prevTexture);
+            if (saved & STATE_TEXTURE) GLES.glBindTexture(GL_TEXTURE_2D, prevTexture);
+            // Driver-side, like the texture binding above: the sampler binding was
+            // read from the driver, and putting that same name back leaves the
+            // application's shadow and the driver agreeing again. Sampler 0 is
+            // bound for the passes, so a sampler object the application left on
+            // unit 0 cannot override the FSR1 textures' filtering or compare mode.
+            if (saved & STATE_SAMPLER) GLES.glBindSampler(0, prevSampler);
             GLES.glActiveTexture(prevActiveTexture);
         }
         if (saved & STATE_RENDERBUFFER) GLES.glBindRenderbuffer(GL_RENDERBUFFER, prevRenderbuffer);
@@ -576,23 +589,26 @@ void InitFSRResources() {
         DestroyTexturesAndFramebuffers();
         DestroyProgramAndQuad();
         FSR1_Context::g_initFailed = true;
+        FSR1_Context::g_dirty = false;
         FSR1_Context::g_initializing = false;
         LOG_W_FORCE("FSR1: resource creation failed; the spatial path is disabled for this context");
         return;
     }
 
     fsrInitialized = true;
+    FSR1_Context::g_dirty = false;
     FSR1_Context::g_initializing = false;
 
-    // Start with the render target current. The guard then restores whatever the
-    // application had; the next bind of framebuffer 0 is redirected here by
-    // gl/framebuffer.cpp.
-    GLES.glBindFramebuffer(GL_FRAMEBUFFER, FSR1_Context::g_renderFBO);
-    GLES.glViewport(0, 0, FSR1_Context::g_renderWidth, FSR1_Context::g_renderHeight);
-
-    LOG_I("FSR1: output %dx%d, target %dx%d, render %dx%d, RGBA8", FSR1_Context::g_outputWidth,
-          FSR1_Context::g_outputHeight, FSR1_Context::g_targetWidth, FSR1_Context::g_targetHeight,
-          FSR1_Context::g_renderWidth, FSR1_Context::g_renderHeight);
+    // The guard restores the application's bindings and viewport, so there is
+    // deliberately no "start with the render target current" bind here: it would
+    // be undone immediately, and a render target nobody has drawn into is not a
+    // frame. The redirect starts at the application's next draw bind of
+    // framebuffer 0, which also sets g_dirty so ApplyFSR knows the render
+    // texture holds scene content. Until then the surface is presented as drawn.
+    LOG_I("FSR1: resources built for output %dx%d, target %dx%d, render %dx%d; upscaling starts on the next "
+          "redirect bind of framebuffer 0",
+          FSR1_Context::g_outputWidth, FSR1_Context::g_outputHeight, FSR1_Context::g_targetWidth,
+          FSR1_Context::g_targetHeight, FSR1_Context::g_renderWidth, FSR1_Context::g_renderHeight);
 }
 
 // Rebuild the three render targets at the current plan sizes. Returns false when
@@ -600,23 +616,30 @@ void InitFSRResources() {
 // the application immediately goes back to drawing on the surface. The failure is
 // never reported as a working upscale.
 static bool RecreateFSRTargets() {
-    GLStateGuard state(STATE_TEXTURE | STATE_FRAMEBUFFER | STATE_RENDERBUFFER);
+    GLStateGuard state(kRecreateState);
     const GLuint oldRenderFBO = FSR1_Context::g_renderFBO;
     const GLuint oldEasuFBO = FSR1_Context::g_easuFBO;
     const GLuint oldTargetFBO = FSR1_Context::g_targetFBO;
+    // True while the application's framebuffer 0 was the thing being drawn to,
+    // i.e. the tracked draw binding is the redirect: gl/framebuffer.cpp names the
+    // render FBO there instead of 0. Only then does deleting the render FBO leave
+    // a tracked name that has to be republished.
+    const bool redirected = oldRenderFBO != 0 && gl_state->current_draw_fbo == oldRenderFBO;
 
     DestroyTexturesAndFramebuffers();
 
     if (!CreateFSRTargets()) {
         DestroyTexturesAndFramebuffers();
-        // The old render FBO is gone; make the tracked binding name the surface
-        // again, and give the guard the replacement it can legally restore.
-        if (oldRenderFBO != 0 && gl_state->current_draw_fbo == oldRenderFBO) {
-            set_gl_state_current_draw_fbo(0);
-        }
+        // The old render FBO is gone, so both trackers have to name the surface
+        // again -- gl_state->current_draw_fbo because the guard restores from it,
+        // and gl/framebuffer.cpp's per-context draw binding because every later
+        // glDrawBuffers/attachment update indexes through it. Updating only one of
+        // them is how the two would disagree about the name the driver holds.
+        if (redirected) mg_framebuffer_republish_draw_binding(0);
         state.framebuffer_recreated(oldRenderFBO, 0);
         state.framebuffer_recreated(oldEasuFBO, 0);
         state.framebuffer_recreated(oldTargetFBO, 0);
+        FSR1_Context::g_dirty = false;
         GLES.glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return false;
     }
@@ -625,8 +648,8 @@ static bool RecreateFSRTargets() {
     // is drawing to framebuffer 0, because gl/framebuffer.cpp redirects that bind
     // and records the name it handed the driver. That name was deleted above, and
     // nothing in gl/framebuffer.cpp can see it happen -- its glDeleteFramebuffers
-    // hook, the one that rebinds 0, is not the path taken here. Left alone, the
-    // tracked field would keep naming a dead framebuffer and every GLStateGuard from
+    // hook, the one that rebinds 0, is not the path taken here. Left alone, both
+    // trackers would keep naming a dead framebuffer and every GLStateGuard from
     // here on would try to restore it.
     //
     // Name 0 is excluded, and it is reachable: this runs once a frame from the swap
@@ -634,15 +657,15 @@ static bool RecreateFSRTargets() {
     // shader. A tracked 0 there is the real surface, not a redirect, and moving it
     // onto the render FBO would diverge from the driver in the other direction --
     // the guard below restores what it saved, which is 0.
-    if (oldRenderFBO != 0 && gl_state->current_draw_fbo == oldRenderFBO) {
-        set_gl_state_current_draw_fbo(FSR1_Context::g_renderFBO);
-    }
+    if (redirected) mg_framebuffer_republish_draw_binding(FSR1_Context::g_renderFBO);
     state.framebuffer_recreated(oldRenderFBO, FSR1_Context::g_renderFBO);
     state.framebuffer_recreated(oldEasuFBO, FSR1_Context::g_easuFBO);
     state.framebuffer_recreated(oldTargetFBO, FSR1_Context::g_targetFBO);
 
-    GLES.glBindFramebuffer(GL_FRAMEBUFFER, FSR1_Context::g_renderFBO);
-    GLES.glViewport(0, 0, FSR1_Context::g_renderWidth, FSR1_Context::g_renderHeight);
+    // The new render texture has never been drawn into. A frame that presents
+    // before the application binds framebuffer 0 again would sample undefined
+    // pixels, so upscaling waits for the next redirect bind.
+    FSR1_Context::g_dirty = false;
 
     LOG_D("FSR1 resources recreated: output %dx%d, render %dx%d", FSR1_Context::g_outputWidth,
           FSR1_Context::g_outputHeight, FSR1_Context::g_renderWidth, FSR1_Context::g_renderHeight);
@@ -666,6 +689,23 @@ void ApplyFSR() {
         }
     }
 
+    // g_dirty is "the render target holds scene content": gl/framebuffer.cpp sets
+    // it when it redirects a draw bind of framebuffer 0 to g_renderFBO, and a
+    // successful upscale clears it. Without that flag this used to sample and
+    // present whatever the newly created render texture happened to contain when
+    // the application's bind of framebuffer 0 happened before the resources
+    // existed -- the first frame after FSR1 came on. Present the surface as the
+    // application left it instead; that is a correct image, not a missing one.
+    if (!FSR1_Context::g_dirty) {
+        static bool warned = false;
+        if (!warned) {
+            warned = true;
+            LOG_W_FORCE("FSR1: waiting for the application to bind framebuffer 0; presenting the surface as drawn "
+                        "and not claiming an upscale for this frame");
+        }
+        return;
+    }
+
     GLStateGuard state(kApplyFSRState);
 
     // Deterministic pass state. Every bit below is restored by the guard.
@@ -683,6 +723,10 @@ void ApplyFSR() {
 
     GLES.glUseProgram(FSR1_Context::g_fsrProgram);
     GLES.glActiveTexture(GL_TEXTURE0);
+    // A sampler object bound on unit 0 replaces the FSR1 textures' filter, wrap
+    // and compare state. The guard saved it and this pass must see the texture
+    // parameters the textures were created with, so unit 0 gets sampler 0.
+    GLES.glBindSampler(0, 0);
     GLES.glBindVertexArray(FSR1_Context::g_quadVAO);
 
     // EASU: render extent -> intermediate at output extent. gl_FragCoord is the
@@ -715,6 +759,10 @@ void ApplyFSR() {
     GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     GLES.glBlitFramebuffer(0, 0, FSR1_Context::g_targetWidth, FSR1_Context::g_targetHeight, 0, 0,
                            FSR1_Context::g_targetWidth, FSR1_Context::g_targetHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+    // The scene content has been consumed and is on the surface. The next frame
+    // has to draw into the render target again before it can be upscaled.
+    FSR1_Context::g_dirty = false;
 }
 
 void CheckResolutionChange(EGLDisplay display, EGLSurface surface) {
@@ -738,9 +786,15 @@ void CheckResolutionChange(EGLDisplay display, EGLSurface surface) {
 
     if (!RecreateFSRTargets()) {
         // No usable resource set: stop redirecting framebuffer 0 and let the
-        // application present at the surface's own resolution. InitFSRResources
-        // stays latched off so a later frame cannot half-recover.
+        // application present at the surface's own resolution. The targets are
+        // already gone (RecreateFSRTargets deletes them), and the program and
+        // quad are just as unusable without a target set -- they are deleted too,
+        // so the failure leaves no FSR1 objects behind and no later frame can
+        // quietly reuse them. InitFSRResources stays latched off so a later frame
+        // cannot half-recover.
+        DestroyProgramAndQuad();
         FSR1_Context::g_initFailed = true;
+        FSR1_Context::g_dirty = false;
         fsrInitialized = false;
         LOG_W_FORCE("FSR1: resize to %dx%d failed; spatial upscaling disabled", FSR1_Context::g_outputWidth,
                     FSR1_Context::g_outputHeight);
@@ -803,6 +857,9 @@ struct fsr1_ctx_state_t {
     GLuint targetFBO = 0, targetTexture = 0, currentDrawFBO = 0;
     GLsizei outputWidth = 0, outputHeight = 0;
     GLsizei targetWidth = 0, targetHeight = 0, renderWidth = 0, renderHeight = 0;
+    // Whether this context's render texture holds scene content not yet
+    // presented. It travels with the objects because it describes them.
+    bool dirty = false;
     bool initialised = false;
     bool initFailed = false;
 };
@@ -838,6 +895,7 @@ void store_into(fsr1_ctx_state_t& d) {
     d.targetHeight = FSR1_Context::g_targetHeight;
     d.renderWidth = FSR1_Context::g_renderWidth;
     d.renderHeight = FSR1_Context::g_renderHeight;
+    d.dirty = FSR1_Context::g_dirty;
     d.initialised = fsrInitialized;
     d.initFailed = FSR1_Context::g_initFailed;
 }
@@ -864,11 +922,12 @@ void load_from(const fsr1_ctx_state_t& s) {
     FSR1_Context::g_targetHeight = s.targetHeight;
     FSR1_Context::g_renderWidth = s.renderWidth;
     FSR1_Context::g_renderHeight = s.renderHeight;
+    FSR1_Context::g_dirty = s.dirty;
     fsrInitialized = s.initialised;
     FSR1_Context::g_initFailed = s.initFailed;
-    // Left alone deliberately: g_dirty, g_resolutionChanged and the pending size
-    // describe work queued for the frame in flight, not the context's objects.
-    // So is g_initializing, which only spans a single synchronous build.
+    // Left alone deliberately: g_resolutionChanged and the pending size describe
+    // work queued for the frame in flight, not the context's objects. So is
+    // g_initializing, which only spans a single synchronous build.
 }
 
 } // namespace

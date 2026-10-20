@@ -60,6 +60,12 @@ namespace FSR1_Context {
     extern GLsizei g_targetHeight;
     extern GLsizei g_renderWidth;
     extern GLsizei g_renderHeight;
+    // "The render target holds scene content not yet presented." Set by
+    // gl/framebuffer.cpp when it redirects a draw bind of framebuffer 0 to
+    // g_renderFBO, cleared after a successful upscale and after a resize rebuild
+    // (the new texture is unwritten). ApplyFSR does not sample the render texture
+    // while it is false; the surface is presented as drawn instead. Per context,
+    // like the objects it describes.
     extern bool g_dirty;
 
     extern bool g_resolutionChanged;

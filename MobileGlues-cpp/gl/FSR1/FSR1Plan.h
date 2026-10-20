@@ -211,16 +211,33 @@ enum StateBit : uint32_t {
     STATE_CLEAR_COLOR = 1u << 14,
     STATE_STENCIL = 1u << 15,
     STATE_RASTERIZER_DISCARD = 1u << 16,
+    // Unit 0's sampler object. A sampler bound there overrides the texture's own
+    // min/mag filter, wrap modes and compare mode, so EASU would sample through
+    // the application's sampler instead of the texture parameters the FSR1
+    // textures were created with. The guard reads GL_SAMPLER_BINDING for unit 0,
+    // binds sampler 0 for the internal passes and puts the application's back.
+    STATE_SAMPLER = 1u << 17,
 };
 
 // Everything ApplyFSR touches or relies on. A body that grows a state change
 // without growing this mask is a bug the host test catches.
 constexpr uint32_t kApplyFSRState =
-    STATE_PROGRAM | STATE_VAO | STATE_ARRAY_BUFFER | STATE_TEXTURE | STATE_FRAMEBUFFER | STATE_VIEWPORT |
-    STATE_SCISSOR | STATE_BLEND_ENABLE | STATE_BLEND_FUNCS | STATE_BLEND_EQUATION | STATE_DEPTH | STATE_CULL |
-    STATE_COLOR_MASK | STATE_CLEAR_COLOR | STATE_STENCIL | STATE_RASTERIZER_DISCARD;
+    STATE_PROGRAM | STATE_VAO | STATE_ARRAY_BUFFER | STATE_TEXTURE | STATE_SAMPLER | STATE_FRAMEBUFFER |
+    STATE_VIEWPORT | STATE_SCISSOR | STATE_BLEND_ENABLE | STATE_BLEND_FUNCS | STATE_BLEND_EQUATION | STATE_DEPTH |
+    STATE_CULL | STATE_COLOR_MASK | STATE_CLEAR_COLOR | STATE_STENCIL | STATE_RASTERIZER_DISCARD;
 
+// InitFSRResources creates its objects under this mask. It binds textures,
+// framebuffers and a renderbuffer, and it may set a viewport while building --
+// the viewport is in the set so a build can never leave GL_VIEWPORT describing
+// the FSR1 target instead of the application's scene. Samplers are not touched
+// here: no draw happens during creation.
 constexpr uint32_t kResourceCreationState =
-    STATE_PROGRAM | STATE_TEXTURE | STATE_FRAMEBUFFER | STATE_RENDERBUFFER | STATE_VAO | STATE_ARRAY_BUFFER;
+    STATE_PROGRAM | STATE_TEXTURE | STATE_FRAMEBUFFER | STATE_RENDERBUFFER | STATE_VAO | STATE_ARRAY_BUFFER |
+    STATE_VIEWPORT;
+
+// RecreateFSRTargets deletes and rebuilds the three targets. Same reasoning for
+// the viewport: the rebuild must not hand the application a viewport of the
+// render extent after it was only asked to resize a surface.
+constexpr uint32_t kRecreateState = STATE_TEXTURE | STATE_FRAMEBUFFER | STATE_RENDERBUFFER | STATE_VIEWPORT;
 
 } // namespace FSR1Plan
