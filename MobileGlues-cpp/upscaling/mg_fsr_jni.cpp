@@ -469,9 +469,28 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeCamera(JNIEnv* env, jclass, jfloa
     g_camera.valid = true;
 }
 
+static bool bypass_dispatch() {
+    char value[PROP_VALUE_MAX] = {};
+    return __system_property_get("debug.mgfsr3.bypass", value) > 0 && value[0] == '1';
+}
+
+static bool history_requested() {
+    static const bool requested = []() {
+        char value[PROP_VALUE_MAX] = {};
+        const bool prop = __system_property_get("debug.mgfsr3.history", value) > 0 && value[0] == '1';
+        return prop || std::getenv("MG_FSR3_HISTORY") != nullptr;
+    }();
+    return requested;
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     if (global_settings.fsr3_setting != FSR3_Mode::Experimental) return 0;
+    if (bypass_dispatch()) {
+        static bool logged = false;
+        if (!logged) { logged = true; LOG_W_FORCE("FSR3 bridge: dispatch bypassed by debug.mgfsr3.bypass"); }
+        return 0;
+    }
     if (!GLES.glDispatchCompute || !GLES.glBindImageTexture) return -1;
     const unsigned long long context_key = g_current_ctx ? g_current_ctx->id : 1;
     FramebufferGuard restore_guard;
