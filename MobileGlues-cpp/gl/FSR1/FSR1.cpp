@@ -46,6 +46,14 @@ static_assert(static_cast<int>(ColorFormat::RGBA8) == 0, "the plan's RGBA8 tag i
 //     reads the value the outer one established and not the application's older
 //     request. The table is left describing the driver at every point.
 //
+// The program and draw-framebuffer entries above are the exception to nesting:
+// they read a shadow that the bodies deliberately do not write (they go straight
+// to GLES so the application's tracked value survives). The only nested guard in
+// this file is InitFullscreenQuad's, and it asks only for VAO and array buffer,
+// which are driver-queried. A future guard nested inside a body that changes the
+// program or the draw binding must query the driver instead of trusting those
+// two entries, or update the shadow and restore it.
+//
 // Asked of the driver, because nothing in the tree can answer:
 //   - the vertex array. What this layer tracks is the application's name, the
 //     mapping to the driver's lives in gl/buffer.cpp and is not exported, and the
