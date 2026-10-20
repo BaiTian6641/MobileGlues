@@ -60,6 +60,26 @@ void bridge_fail(const char* why) {
     if (!g_bridge_failed_logged.exchange(true)) LOG_W_FORCE("FSR3 bridge: %s", why);
 }
 
+struct FramebufferGuard {
+    GLint read = 0;
+    GLint draw = 0;
+    GLint viewport[4]{};
+    bool active = false;
+
+    FramebufferGuard() {
+        GLES.glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read);
+        GLES.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw);
+        GLES.glGetIntegerv(GL_VIEWPORT, viewport);
+        active = (read != 0 || draw != 0);
+    }
+    ~FramebufferGuard() {
+        if (!active) return;
+        GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(read));
+        GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(draw));
+        GLES.glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    }
+};
+
 bool attachment_texture(GLenum attachment, GLuint& texture, int& width, int& height) {
     GLint type = 0;
     GLES.glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, attachment,
@@ -166,6 +186,7 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     if (global_settings.fsr3_setting != FSR3_Mode::Experimental) return 0;
     if (!GLES.glDispatchCompute || !GLES.glBindImageTexture) return -1;
     const unsigned long long context_key = g_current_ctx ? g_current_ctx->id : 1;
+    FramebufferGuard restore_guard;
 
     GLint fbo = 0;
     GLES.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fbo);
@@ -267,7 +288,7 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     }
     if (!s.warned) {
         s.warned = true;
-        LOG_W_FORCE("FSR3 bridge: experimental submit %dx%d -> %dx%d (render %dx%d); synthetic motion, scene native",
+        LOG_W_FORCE("FSR3 bridge: experimental submit %dx%d -> %dx%d (render %dx%d); synthetic motion, Iris scene adapter",
                       rw, rh, width, height, rw, rh);
     }
     mg_fsr_resource_t out{};
@@ -276,10 +297,6 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
         bridge_fail("no FSR output");
         return -1;
     }
-    GLint prev_read = 0, prev_draw = 0, viewport[4]{};
-    GLES.glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &prev_read);
-    GLES.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &prev_draw);
-    GLES.glGetIntegerv(GL_VIEWPORT, viewport);
     if (!s.output_fbo) GLES.glGenFramebuffers(1, &s.output_fbo);
     GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, s.output_fbo);
     if (s.attached_output != out.handle) {
@@ -289,9 +306,6 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     }
     GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(fbo));
     GLES.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(prev_read));
-    GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(prev_draw));
-    GLES.glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
     FSR3MarkBridgePresent();
     return 0;
 }

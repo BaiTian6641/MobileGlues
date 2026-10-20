@@ -21,12 +21,12 @@ bool FSR3AdjustViewport(int& x, int& y, int& width, int& height);
 bool FSR3GetSurfaceSize(int& width, int& height);
 void FSR3NativeViewport();
 
-// True when the optional Minecraft/Iris bridge has presented within the last
-// frame interval. The swap-path diagnostic present must then stay out of the
-// way: the bridge already ran before HUD composition, and running the direct
-// path would process (and blur) the HUD as well.
+// True when the optional Minecraft/Iris bridge has presented in this frame.
+// The swap-path diagnostic present must then stay out of the way: the bridge
+// already ran before HUD composition, and running the direct path would process
+// (and blur) the HUD as well. The flag is consumed by the next swap present.
 void FSR3MarkBridgePresent();
-bool FSR3BridgeActiveRecently();
+bool FSR3BridgePresentedThisFrame();
 
 // Drop the per-context resources when a context goes away. Called only after
 // the last current reference has been released; if no context is current the

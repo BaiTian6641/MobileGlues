@@ -13,6 +13,7 @@
 #include "log.h"
 #include "../config/settings.h"
 #include "FSR1/FSR1.h"
+#include "FSR3Direct.h"
 
 #define DEBUG 0
 
@@ -211,6 +212,18 @@ void glBindFramebuffer(GLenum target, GLuint framebuffer) {
         GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
     } else {
         GLES.glBindFramebuffer(target, draw_fb);
+    }
+
+    // Iris binds its scaled gbuffer/composite FBOs without setting a viewport.
+    // Scale the current surface-sized viewport at bind time; native final/HUD
+    // targets and shadow targets do not match the surface and stay untouched.
+    if (target != GL_READ_FRAMEBUFFER && draw_fb != 0) {
+        GLint vp[4] = {0, 0, 0, 0};
+        GLES.glGetIntegerv(GL_VIEWPORT, vp);
+        int x = vp[0], y = vp[1], w = vp[2], h = vp[3];
+        if (FSR3AdjustViewport(x, y, w, h)) {
+            GLES.glViewport(x, y, w, h);
+        }
     }
 }
 // Record a draw binding without issuing one.

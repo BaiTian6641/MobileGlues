@@ -16,6 +16,9 @@ struct gles_func_t g_gles_func{};
 namespace FSR1_Context { GLuint g_renderFBO = 0; bool g_dirty = false; }
 void set_gl_state_current_draw_fbo(GLuint v) { gl_state->current_draw_fbo = v; }
 void mg_set_gl_error(GLenum) {}
+// The production link provides this via gl/FSR3Direct.cpp. This test only exercises
+// framebuffer shuffle state and has no EGL surface, so the FSR3 scene hook is inert.
+bool FSR3AdjustViewport(int&, int&, int&, int&) { return false; }
 int __android_log_print(int, const char*, const char*, ...) { return 0; }
 extern "C" void write_log(const char*, ...) {}
 global_settings_t global_settings{};

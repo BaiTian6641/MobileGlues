@@ -38,9 +38,9 @@ adapter to request a real reduced scene.
 
 ## Package identity
 
-- Core `libmobileglues.so` SHA-256: `c6b4cd518c9d49b314e3ab8a2b20bb313724bc4ed58c77cafd352185fa563119`
-- APK SHA-256: `eeb3a2f26ecd8a1ba6a49d45acc32a8c638468f02332cf78fbb7d10453c29e50`
-- Bridge JAR SHA-256: `fdf7c1485340a18c520743cbe245b594f14dcfbcef546d031df9ac3ecf811f16`
+- Core `libmobileglues.so` SHA-256: `8bbfed7cdac1bb90b2c1f05756e03c5a1e2bd450f08f5491c81499d44805229a`
+- APK SHA-256: `dc15d23be5a01cf06f1510994c312ad8fc47eed9a2b6ccd82dc85ebfb2b861cb`
+- Bridge JAR SHA-256: `096111baf99ce7ab4508c680695cb76f076c0364d2082fc6d3e4591974b0b609`
 - APK: `arm64-v8a` only, 16 KB ELF/archive alignment, debug-key signature
 - Files: `/home/polar/MobileGlues-fixtures/MobileGlues-scene-arm64.apk` and
   `/home/polar/MobileGlues-fixtures/mgfsr3bridge-0.1.0.jar`
@@ -54,9 +54,8 @@ RenderTargetsMixin loaded
 FSR3 bridge: experimental submit 1920x1200 -> 1920x1200 (render 1920x1200); synthetic motion, scene native
 ```
 
-The final log text still says `scene native`; the code now uses the adapter
-extent. Both the adapter activation and the actual target dimensions must be
-confirmed from the run before editing that wording.
+The bridge log now says `Iris scene adapter`; the adapter extent must still be
+confirmed from the actual run.
 
 ## Next executable task
 
@@ -64,3 +63,20 @@ Device-run the APK + bridge pair with FSR3 off first, then Quality, then
 Performance. Record F3, screenshots of world and HUD, and `mgfsr3.log`/logcat.
 If the world is cropped or HUD blurs, stop and inspect the viewport/FBO trace
 before changing quality.
+
+
+## Independent review corrections
+
+The first review found two blocking integration defects, both now fixed:
+
+- `resizeIfNeeded` args for Iris 1.8.14 are `(depthBufferVersion, depthTextureId,
+  width, height, ...)`; the handlers now use ordinals 2/3. The previous 0/1
+  would have reverted targets on the first per-frame resize and could corrupt
+  depth attachments.
+- Iris binds its gbuffer FBO without a viewport call, so the viewport hook now
+  also runs at the end of the app-facing `glBindFramebuffer`.
+- The direct-present suppression is a per-frame flag, not a 250 ms window.
+- The bridge captures/restores read/draw FBO and viewport at entry through an
+  RAII guard, including early returns after aux allocation.
+
+Host semantic tests pass with these changes. Device runtime remains NOT RUN.

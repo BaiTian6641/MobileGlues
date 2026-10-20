@@ -28,12 +28,14 @@ public abstract class RenderTargetsMixin {
         return Fsr3Bridge.sceneHeight(height);
     }
 
-    @ModifyVariable(method = "resizeIfNeeded", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+    // Iris 1.8.14 signature is (depthBufferVersion, depthTextureId, width, height, ...).
+    // The first two ints are not dimensions; touching them corrupts resize state.
+    @ModifyVariable(method = "resizeIfNeeded", at = @At("HEAD"), argsOnly = true, ordinal = 2)
     private int mgfsr3$resizeWidth(int width) {
         return Fsr3Bridge.sceneWidth(width);
     }
 
-    @ModifyVariable(method = "resizeIfNeeded", at = @At("HEAD"), argsOnly = true, ordinal = 1)
+    @ModifyVariable(method = "resizeIfNeeded", at = @At("HEAD"), argsOnly = true, ordinal = 3)
     private int mgfsr3$resizeHeight(int height) {
         return Fsr3Bridge.sceneHeight(height);
     }

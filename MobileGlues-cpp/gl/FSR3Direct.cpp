@@ -54,7 +54,7 @@ struct ContextState {
 std::mutex g_mutex;
 std::unordered_map<unsigned long long, ContextState> g_states;
 thread_local bool g_in_present = false;
-std::atomic<int64_t> g_bridge_last_present_ms{0};
+std::atomic<bool> g_bridge_presented_this_frame{false};
 
 struct PresentGuard {
     GLint draw = 0, read = 0, active = GL_TEXTURE0, tex0 = 0, sampler0 = 0;
@@ -216,22 +216,18 @@ void FSR3NativeViewport() {
 }
 
 void FSR3MarkBridgePresent() {
-    using namespace std::chrono;
-    g_bridge_last_present_ms.store(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count(),
-                                   std::memory_order_relaxed);
+    g_bridge_presented_this_frame.store(true, std::memory_order_release);
 }
 
-bool FSR3BridgeActiveRecently() {
-    using namespace std::chrono;
-    const int64_t last = g_bridge_last_present_ms.load(std::memory_order_relaxed);
-    if (last == 0) return false;
-    const int64_t now = duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
-    return now - last < 250;
+bool FSR3BridgePresentedThisFrame() {
+    return g_bridge_presented_this_frame.exchange(false, std::memory_order_acq_rel);
 }
 
 void ApplyFSR3Present() {
     if (global_settings.fsr3_setting != FSR3_Mode::Experimental) return;
-    if (FSR3BridgeActiveRecently()) return;
+    // The bridge runs before HUD and the swap path runs after HUD. Skip exactly
+    // the swap that follows a bridge submit, even on a long/stalled frame.
+    if (FSR3BridgePresentedThisFrame()) return;
     if (g_in_present) return;
     if (!GLES.glDispatchCompute || !GLES.glBindImageTexture) return;
     if (!g_current_ctx && (!GLES.glGetString || GLES.glGetString(GL_VERSION) == nullptr)) return;
