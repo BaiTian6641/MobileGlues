@@ -14,6 +14,7 @@ $CXX -o /tmp/mg_depth_test  tests/depth_filter_test.cpp       gl/depth_filter.cp
 $CXX -o /tmp/mg_cache_key_test tests/cache_key_test.cpp      gl/glsl/cache_key.cpp
 $CXX -o /tmp/mg_image_test tests/compat_image_test.cpp gl/glsl/compat_image.cpp
 $CXX -o /tmp/mg_subgroup_test tests/compat_subgroup_test.cpp gl/glsl/compat_subgroup.cpp gl/glsl/compat_subgroup_partition.cpp
+$CXX -o /tmp/mg_fsr_contract_test tests/fsr_contract_test.cpp
 /tmp/mg_pixel_test
 echo
 /tmp/mg_fb_test
@@ -27,3 +28,5 @@ echo
 /tmp/mg_image_test
 echo
 /tmp/mg_subgroup_test
+echo
+/tmp/mg_fsr_contract_test

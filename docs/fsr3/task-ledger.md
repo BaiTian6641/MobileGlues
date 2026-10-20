@@ -1,0 +1,39 @@
+# FSR3 task ledger
+
+Updated: 2026-10-20. Owner: coordinator. Gate labels follow
+`docs/MobileGlues_FSR3_Research_and_Implementation_Plan.md`.
+
+| ID | Stage | Task | Owner | Paths | Status | Evidence / blocker |
+| --- | --- | --- | --- | --- | --- | --- |
+| FSR-S0-A | S0 | Lock actual core/plugin/device provenance | coordinator | `docs/fsr3/` | DONE | plugin 2.0.0 APK `f032e667…`; installed `libmobileglues.so` `dcb3493e…`; core source `8ac7036`; checkout `355d797` |
+| FSR-S0-B | S0 | Host baseline and existing regressions | coordinator | `docs/fsr3/` | PARTIAL | `sh MobileGlues-cpp/tests/run.sh` passes; game baseline captures exist; white UI/ACT/WSR regression rerun pending |
+| FSR-S0-C | S0 | Reproduce FSR1 static findings | FsrCoreAudit | `/tmp/mg-fsr-core` | IN PROGRESS | worker isolated; installed binary contains the same single-pass shader |
+| FSR-S1-A | S1 | Output-first FSR1 dimensions and true reduced render | FsrCoreAudit | `gl/FSR1/`, focused tests | IN PROGRESS | worker assignment |
+| FSR-S1-B | S1 | Correct EASU→RCAS two-pass dataflow and format policy | FsrCoreAudit | `gl/FSR1/` | IN PROGRESS | worker assignment |
+| FSR-S1-C | S1 | Injected-pass state/lifecycle tests | FsrCoreAudit | `gl/FSR1/`, tests | IN PROGRESS | worker assignment |
+| FSR-S2-A | S2 | Freeze ABI v1 frame contract | coordinator | `docs/fsr3/frame-contract.md` | DONE | frozen; requires version bump for changes |
+| FSR-S2-B | S2 | Pin AMD SDK v1.1.4 / FSR3.1.4 and audit licenses | FsrBackendSpike | `/tmp/mg-fsr-backend` | IN PROGRESS | worker assignment |
+| FSR-S2-C | S2 | GLES operation/format feasibility spike | FsrBackendSpike | `/tmp/fsr3-spike` | IN PROGRESS | worker assignment; device NOT RUN |
+| FSR-S2-D | S2 | Minecraft/Iris pass graph, jitter, motion audit | FsrGameAudit | `/tmp/mg-fsr-game` | IN PROGRESS | worker assignment |
+| FSR-S3-A | S3 | Minimal in-tree GLES backend and shader adaptations | backend | `MobileGlues-cpp/upscaling/` | BLOCKED | waits for S2 backend decision and integration owner |
+| FSR-S4-A | S4 | Adapter reduced-resolution scene + semantic inputs | game | game integration module | BLOCKED | waits for S1/S2 |
+| FSR-S4-B | S4 | Camera-only prototype, then moving objects | game | adapter/debug | BLOCKED | waits for S3 |
+| FSR-S5-A | S5 | Complementary r5.9.3 profile; r5.9.2 regression | game/QA | integration metadata | BLOCKED | waits for S4 |
+| FSR-S6-A | S6 | Native/bilinear/FSR1/FSR3 matched benchmark matrix | QA | `bench/upscaling/` | NOT RUN | device serialized; thresholds provisional |
+| FSR-S6-B | S6 | Sustained thermal, lifecycle, packaging | QA | release | NOT RUN | waits for S5 |
+
+## Ownership locks
+
+- Coordinator: shared ABI, CMake, `egl/`, `gl/framebuffer.cpp`, `gl/texture.cpp`, integration
+  merge order, final status.
+- Core worker: `MobileGlues-cpp/gl/FSR1/` and focused tests only.
+- Backend worker: `MobileGlues-cpp/upscaling/fsr3/` after S2 decision, plus benchmark harness;
+  no shared file edits without a patch proposal.
+- Game worker: integration module and versioned profile metadata; no edits to original packs.
+- QA: validation/benchmark evidence; no implementation edits.
+
+## Stop conditions
+
+Do not advance a gate on a compile-only result. Do not mark FSR3 available if the backend
+falls back to spatial scaling. Do not improve FPS by disabling ACT, WSR, player reflections,
+or requested pack effects.
