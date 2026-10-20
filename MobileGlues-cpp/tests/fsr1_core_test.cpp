@@ -397,6 +397,39 @@ static std::string read_source(const char* relative_from_gl) {
     return text;
 }
 
+// The render-target priming transitions, driven without GL. These are the rules
+// ApplyFSR and gl/framebuffer.cpp implement; a change that reintroduces the
+// bind-once freeze or presents an empty post-rebuild texture fails here.
+static void test_priming_state() {
+    // Never bound: wait, whether or not a rebuild left a hold behind.
+    CHECK(DecidePresent(false, false) == PresentDecision::Wait);
+    CHECK(DecidePresent(false, true) == PresentDecision::Wait);
+
+    // One redirect bind primes the target. Every following frame upscales, with
+    // or without another bind -- this is the bind-once multi-frame case.
+    bool primed = true;
+    CHECK(DecidePresent(primed, false) == PresentDecision::Upscale);
+    CHECK(DecidePresent(primed, false) == PresentDecision::Upscale);
+    CHECK(DecidePresent(primed, false) == PresentDecision::Upscale);
+
+    // A rebuild keeps priming and holds exactly one present.
+    bool skip_present = SkipPresentAfterRebuild(primed);
+    CHECK(skip_present);
+    CHECK(DecidePresent(primed, skip_present) == PresentDecision::SkipOne);
+    skip_present = false; // the hold is consumed, or a bind dropped it
+    CHECK(DecidePresent(primed, skip_present) == PresentDecision::Upscale);
+    CHECK(DecidePresent(primed, skip_present) == PresentDecision::Upscale);
+
+    // A rebuild of a target that was never primed changes nothing.
+    CHECK(!SkipPresentAfterRebuild(false));
+    CHECK(DecidePresent(false, false) == PresentDecision::Wait);
+
+    // The path being disabled abandons both facts.
+    primed = false;
+    skip_present = false;
+    CHECK(DecidePresent(primed, skip_present) == PresentDecision::Wait);
+}
+
 static void test_source_invariants() {
     const std::string fsr = read_source("FSR1/FSR1.cpp");
     const std::string fb = read_source("framebuffer.cpp");
@@ -413,10 +446,29 @@ static void test_source_invariants() {
     CHECK(source_contains(fsr.c_str(), "GLStateGuard state(kResourceCreationState);"));
     CHECK(source_contains(fsr.c_str(), "GLStateGuard state(kRecreateState);"));
 
-    // The first frame is only upscaled after a redirect primed the render
-    // target, and every success/failure/recreate path clears the flag.
-    CHECK(source_contains(fsr.c_str(), "if (!FSR1_Context::g_dirty)"));
-    CHECK(source_contains(fsr.c_str(), "FSR1_Context::g_dirty = false;"));
+    // Priming is persistent: ApplyFSR decides through the pure helper and never
+    // clears g_dirty after presenting, so a bind-once application keeps getting
+    // upscaled. A rebuild preserves priming and holds exactly one present; a
+    // redirect bind after the rebuild drops that hold; build/failure clear both.
+    CHECK(source_contains(fsr.c_str(), "DecidePresent(FSR1_Context::g_dirty, FSR1_Context::g_skipNextPresent)"));
+    CHECK(source_contains(fsr.c_str(), "SkipPresentAfterRebuild(FSR1_Context::g_dirty)"));
+    CHECK(source_contains(fb.c_str(), "FSR1_Context::g_skipNextPresent = false;"));
+    const size_t apply_at = fsr.find("void ApplyFSR()");
+    const size_t check_at = fsr.find("void CheckResolutionChange(");
+    if (apply_at != std::string::npos && check_at != std::string::npos && check_at > apply_at) {
+        const std::string apply_body = fsr.substr(apply_at, check_at - apply_at);
+        // Clearing the persistent flag here is the bind-once freeze.
+        CHECK(!source_contains(apply_body.c_str(), "g_dirty = false"));
+        CHECK(source_contains(apply_body.c_str(), "DecidePresent("));
+        CHECK(source_contains(apply_body.c_str(), "g_skipNextPresent = false;"));
+    } else {
+        CHECK(false);
+    }
+    // The rebuild arm must not clear the primed flag either (only the failure
+    // arm does, and that arm is inside RecreateFSRTargets before the success
+    // code). Count the clears: init failure, init success/fresh build, recreate
+    // failure, resize failure -- but not ApplyFSR.
+    CHECK(source_count(fsr.c_str(), "FSR1_Context::g_dirty = false;") >= 4);
 
     // The dual draw-FBO tracker is updated through the republish API, never by
     // touching one of the two fields directly. If this call disappears, the
@@ -448,6 +500,7 @@ int main() {
     test_synthetic_edge_dataflow();
     test_shader_source();
     test_state_mask();
+    test_priming_state();
     test_source_invariants();
 
     if (g_failures != 0) {

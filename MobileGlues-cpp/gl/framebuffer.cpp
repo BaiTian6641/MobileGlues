@@ -184,11 +184,17 @@ void glBindFramebuffer(GLenum target, GLuint framebuffer) {
     GLuint draw_fb = framebuffer;
     if (framebuffer == 0 && target != GL_READ_FRAMEBUFFER) {
         draw_fb = FSR1_Context::g_renderFBO;
-        // Only a real redirect puts scene content into the FSR1 render target.
-        // A bind of 0 while FSR1 owns no target -- before the first build, or
-        // after it was disabled -- is the surface itself, and marking that as
-        // primed would let ApplyFSR sample an empty render texture.
-        if (draw_fb != 0) FSR1_Context::g_dirty = true;
+        // Only a real redirect means the application draws into the FSR1 render
+        // target. A bind of 0 while FSR1 owns no target -- before the first
+        // build, or after it was disabled -- is the surface itself, and marking
+        // that as primed would let ApplyFSR sample an empty render texture.
+        if (draw_fb != 0) {
+            FSR1_Context::g_dirty = true;
+            // Priming survives a rebuild, but one present is held while the new
+            // texture is still empty. A bind during that window means this frame
+            // draws into it before presentation, so the hold can be dropped.
+            FSR1_Context::g_skipNextPresent = false;
+        }
     }
 
     if (draw_fb != 0) {

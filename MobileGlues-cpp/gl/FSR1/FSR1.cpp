@@ -284,6 +284,7 @@ namespace FSR1_Context {
     GLsizei g_renderWidth = 0;
     GLsizei g_renderHeight = 0;
     bool g_dirty = false;
+    bool g_skipNextPresent = false;
 
     bool g_resolutionChanged = false;
     GLsizei g_pendingWidth = 0;
@@ -590,6 +591,7 @@ void InitFSRResources() {
         DestroyProgramAndQuad();
         FSR1_Context::g_initFailed = true;
         FSR1_Context::g_dirty = false;
+        FSR1_Context::g_skipNextPresent = false;
         FSR1_Context::g_initializing = false;
         LOG_W_FORCE("FSR1: resource creation failed; the spatial path is disabled for this context");
         return;
@@ -597,14 +599,16 @@ void InitFSRResources() {
 
     fsrInitialized = true;
     FSR1_Context::g_dirty = false;
+    FSR1_Context::g_skipNextPresent = false;
     FSR1_Context::g_initializing = false;
 
     // The guard restores the application's bindings and viewport, so there is
     // deliberately no "start with the render target current" bind here: it would
     // be undone immediately, and a render target nobody has drawn into is not a
     // frame. The redirect starts at the application's next draw bind of
-    // framebuffer 0, which also sets g_dirty so ApplyFSR knows the render
-    // texture holds scene content. Until then the surface is presented as drawn.
+    // framebuffer 0, which also sets g_dirty so ApplyFSR knows the application
+    // draws into the render texture from then on. Until then the surface is
+    // presented as drawn.
     LOG_I("FSR1: resources built for output %dx%d, target %dx%d, render %dx%d; upscaling starts on the next "
           "redirect bind of framebuffer 0",
           FSR1_Context::g_outputWidth, FSR1_Context::g_outputHeight, FSR1_Context::g_targetWidth,
@@ -640,6 +644,7 @@ static bool RecreateFSRTargets() {
         state.framebuffer_recreated(oldEasuFBO, 0);
         state.framebuffer_recreated(oldTargetFBO, 0);
         FSR1_Context::g_dirty = false;
+        FSR1_Context::g_skipNextPresent = false;
         GLES.glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return false;
     }
@@ -662,10 +667,14 @@ static bool RecreateFSRTargets() {
     state.framebuffer_recreated(oldEasuFBO, FSR1_Context::g_easuFBO);
     state.framebuffer_recreated(oldTargetFBO, FSR1_Context::g_targetFBO);
 
-    // The new render texture has never been drawn into. A frame that presents
-    // before the application binds framebuffer 0 again would sample undefined
-    // pixels, so upscaling waits for the next redirect bind.
-    FSR1_Context::g_dirty = false;
+    // The new render texture has never been drawn into, but the application's
+    // drawing habit has not changed: if it was drawing into the old render
+    // target, it is still drawing into this one -- often without binding
+    // framebuffer 0 again. Keep priming so upscaling resumes, and hold exactly
+    // one present so the empty texture is not what gets shown. A redirect bind
+    // after the rebuild clears the hold (framebuffer.cpp), because that frame
+    // will draw into the new target before it is presented.
+    FSR1_Context::g_skipNextPresent = SkipPresentAfterRebuild(FSR1_Context::g_dirty);
 
     LOG_D("FSR1 resources recreated: output %dx%d, render %dx%d", FSR1_Context::g_outputWidth,
           FSR1_Context::g_outputHeight, FSR1_Context::g_renderWidth, FSR1_Context::g_renderHeight);
@@ -689,14 +698,15 @@ void ApplyFSR() {
         }
     }
 
-    // g_dirty is "the render target holds scene content": gl/framebuffer.cpp sets
-    // it when it redirects a draw bind of framebuffer 0 to g_renderFBO, and a
-    // successful upscale clears it. Without that flag this used to sample and
-    // present whatever the newly created render texture happened to contain when
-    // the application's bind of framebuffer 0 happened before the resources
-    // existed -- the first frame after FSR1 came on. Present the surface as the
-    // application left it instead; that is a correct image, not a missing one.
-    if (!FSR1_Context::g_dirty) {
+    // Priming is persistent: once the application has bound framebuffer 0 for
+    // drawing, gl/framebuffer.cpp redirects every later draw of it to
+    // g_renderFBO, and an application that binds only once keeps rendering into
+    // the target without another bind. So ApplyFSR upscales every present after
+    // that point. g_skipNextPresent is the one exception: a rebuild produced
+    // empty storage, so the first present afterwards holds until the target is
+    // bound again or that present has passed.
+    switch (DecidePresent(FSR1_Context::g_dirty, FSR1_Context::g_skipNextPresent)) {
+    case PresentDecision::Wait: {
         static bool warned = false;
         if (!warned) {
             warned = true;
@@ -704,6 +714,15 @@ void ApplyFSR() {
                         "and not claiming an upscale for this frame");
         }
         return;
+    }
+    case PresentDecision::SkipOne:
+        // The new render target has no content yet. Present the surface as it
+        // stands and resume upscaling on the next frame even if the application
+        // never binds framebuffer 0 again.
+        FSR1_Context::g_skipNextPresent = false;
+        return;
+    case PresentDecision::Upscale:
+        break;
     }
 
     GLStateGuard state(kApplyFSRState);
@@ -760,9 +779,9 @@ void ApplyFSR() {
     GLES.glBlitFramebuffer(0, 0, FSR1_Context::g_targetWidth, FSR1_Context::g_targetHeight, 0, 0,
                            FSR1_Context::g_targetWidth, FSR1_Context::g_targetHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
-    // The scene content has been consumed and is on the surface. The next frame
-    // has to draw into the render target again before it can be upscaled.
-    FSR1_Context::g_dirty = false;
+    // g_dirty deliberately survives the present: the application keeps drawing
+    // into the render target, and the next frame is upscaled without requiring a
+    // new bind of framebuffer 0.
 }
 
 void CheckResolutionChange(EGLDisplay display, EGLSurface surface) {
@@ -795,6 +814,7 @@ void CheckResolutionChange(EGLDisplay display, EGLSurface surface) {
         DestroyProgramAndQuad();
         FSR1_Context::g_initFailed = true;
         FSR1_Context::g_dirty = false;
+        FSR1_Context::g_skipNextPresent = false;
         fsrInitialized = false;
         LOG_W_FORCE("FSR1: resize to %dx%d failed; spatial upscaling disabled", FSR1_Context::g_outputWidth,
                     FSR1_Context::g_outputHeight);
@@ -857,9 +877,11 @@ struct fsr1_ctx_state_t {
     GLuint targetFBO = 0, targetTexture = 0, currentDrawFBO = 0;
     GLsizei outputWidth = 0, outputHeight = 0;
     GLsizei targetWidth = 0, targetHeight = 0, renderWidth = 0, renderHeight = 0;
-    // Whether this context's render texture holds scene content not yet
-    // presented. It travels with the objects because it describes them.
+    // Whether this context's render texture has ever been bound for drawing, and
+    // whether one present is being held after a rebuild. They travel with the
+    // objects because they describe them.
     bool dirty = false;
+    bool skipNextPresent = false;
     bool initialised = false;
     bool initFailed = false;
 };
@@ -896,6 +918,7 @@ void store_into(fsr1_ctx_state_t& d) {
     d.renderWidth = FSR1_Context::g_renderWidth;
     d.renderHeight = FSR1_Context::g_renderHeight;
     d.dirty = FSR1_Context::g_dirty;
+    d.skipNextPresent = FSR1_Context::g_skipNextPresent;
     d.initialised = fsrInitialized;
     d.initFailed = FSR1_Context::g_initFailed;
 }
@@ -923,6 +946,7 @@ void load_from(const fsr1_ctx_state_t& s) {
     FSR1_Context::g_renderWidth = s.renderWidth;
     FSR1_Context::g_renderHeight = s.renderHeight;
     FSR1_Context::g_dirty = s.dirty;
+    FSR1_Context::g_skipNextPresent = s.skipNextPresent;
     fsrInitialized = s.initialised;
     FSR1_Context::g_initFailed = s.initFailed;
     // Left alone deliberately: g_resolutionChanged and the pending size describe

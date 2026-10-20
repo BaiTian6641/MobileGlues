@@ -13,7 +13,7 @@
 
 // --- the four externals framebuffer.cpp reaches for --------------------------
 struct gles_func_t g_gles_func{};
-namespace FSR1_Context { GLuint g_renderFBO = 0; bool g_dirty = false; }
+namespace FSR1_Context { GLuint g_renderFBO = 0; bool g_dirty = false; bool g_skipNextPresent = false; }
 void set_gl_state_current_draw_fbo(GLuint v) { gl_state->current_draw_fbo = v; }
 void mg_set_gl_error(GLenum) {}
 int __android_log_print(int, const char*, const char*, ...) { return 0; }
@@ -170,9 +170,12 @@ int main() {
     expect("bind 0 without an FSR target does not prime", FSR1_Context::g_dirty ? 1u : 0u, 0u);
 
     FSR1_Context::g_renderFBO = 42;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); // redirected to 42
+    FSR1_Context::g_skipNextPresent = true; // as if a rebuild had just held one present
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);   // redirected to 42
     expect("redirect is the tracked draw binding", gl_state->current_draw_fbo, 42);
     expect("redirect primes the render target", FSR1_Context::g_dirty ? 1u : 0u, 1u);
+    expect("a redirect bind after a rebuild drops the held present",
+           FSR1_Context::g_skipNextPresent ? 1u : 0u, 0u);
     glDrawBuffer(GL_NONE); // mark 42's record: all colour attachments are NONE
     expect("record 42 is all-none", mg_draw_framebuffer_all_none() ? 1u : 0u, 1u);
 
@@ -185,6 +188,7 @@ int main() {
     expect("failed rebuild republishes the surface", gl_state->current_draw_fbo, 0);
     FSR1_Context::g_renderFBO = 0;
     FSR1_Context::g_dirty = false;
+    FSR1_Context::g_skipNextPresent = false;
 
     printf("\n%s (%d failures)\n", fails ? "FAILED" : "all checks passed", fails);
     return fails != 0;

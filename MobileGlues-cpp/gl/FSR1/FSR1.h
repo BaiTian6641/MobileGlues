@@ -60,13 +60,21 @@ namespace FSR1_Context {
     extern GLsizei g_targetHeight;
     extern GLsizei g_renderWidth;
     extern GLsizei g_renderHeight;
-    // "The render target holds scene content not yet presented." Set by
-    // gl/framebuffer.cpp when it redirects a draw bind of framebuffer 0 to
-    // g_renderFBO, cleared after a successful upscale and after a resize rebuild
-    // (the new texture is unwritten). ApplyFSR does not sample the render texture
-    // while it is false; the surface is presented as drawn instead. Per context,
-    // like the objects it describes.
+    // "The render target has been bound for drawing at least once" for the
+    // current object set. Set by gl/framebuffer.cpp when it redirects a draw bind
+    // of framebuffer 0 to g_renderFBO; never cleared by a present, because a
+    // bind-once application keeps drawing into the target every frame. Cleared
+    // only when the targets are built, rebuilt into an unusable state, or the
+    // path is disabled. ApplyFSR does not sample the render texture while it is
+    // false; the surface is presented as drawn instead. Per context, like the
+    // objects it describes.
     extern bool g_dirty;
+    // A rebuild produced fresh, unwritten storage. Priming survives it (so a
+    // bind-once application keeps upscaling), but the first present is held
+    // until the application binds framebuffer 0 again or that present has
+    // passed. Distinct from g_dirty so "may upscale from now on" and "this
+    // texture already has content" do not have to share one flag.
+    extern bool g_skipNextPresent;
 
     extern bool g_resolutionChanged;
     extern GLsizei g_pendingWidth;

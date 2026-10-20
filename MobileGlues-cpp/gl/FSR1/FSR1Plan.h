@@ -240,4 +240,36 @@ constexpr uint32_t kResourceCreationState =
 // render extent after it was only asked to resize a surface.
 constexpr uint32_t kRecreateState = STATE_TEXTURE | STATE_FRAMEBUFFER | STATE_RENDERBUFFER | STATE_VIEWPORT;
 
+// Priming contract for the render target, pure so the host suite can drive the
+// state transitions without GL.
+//
+// "Primed" is persistent: once the application has redirected a draw bind of
+// framebuffer 0 to the render target, it keeps drawing there every frame even
+// when it does not bind again, so ApplyFSR upscales on every present until the
+// object set is rebuilt or the path is disabled.
+//
+// A rebuild replaces the object names with fresh, empty storage. Priming is
+// preserved across it (otherwise a bind-once application would never upscale
+// again), but one present is held so an empty texture is not presented. A
+// redirect bind after the rebuild clears the hold: that frame will draw into
+// the new target before it is presented.
+enum class PresentDecision : uint8_t {
+    Wait,     // never primed: present the surface as drawn
+    SkipOne,  // freshly rebuilt and not bound since: hold one present
+    Upscale,  // primed and ready
+};
+
+constexpr PresentDecision DecidePresent(bool primed, bool skip_present) {
+    if (!primed) return PresentDecision::Wait;
+    if (skip_present) return PresentDecision::SkipOne;
+    return PresentDecision::Upscale;
+}
+
+// The one state transition a rebuild performs: priming survives, and a primed
+// target holds exactly one present until it is bound or that present passes.
+// An unprimed target stays unprimed and has nothing to hold.
+constexpr bool SkipPresentAfterRebuild(bool primed) {
+    return primed;
+}
+
 } // namespace FSR1Plan
