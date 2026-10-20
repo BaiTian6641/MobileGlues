@@ -28,6 +28,7 @@ public abstract class FinalPassRendererMixin {
             DiagnosticTrace.snapshot("FINAL_ENTRY", null);
             Fsr3Bridge.beginFinalPass();
             NativeBridge.finalScope(true);
+            NativeBridge.setSceneDepth(Fsr3Bridge.sceneDepthTextureId());
             Fsr3Bridge.captureCamera();
             Fsr3Bridge.resetNativeViewport();
         }
@@ -40,6 +41,7 @@ public abstract class FinalPassRendererMixin {
             Fsr3Bridge.submit();
             DiagnosticTrace.plain("FINAL_POST_SUBMIT", null);
             NativeBridge.finalScope(false);
+            NativeBridge.setSceneDepth(0);
             Fsr3Bridge.endFinalPass();
         }
     }

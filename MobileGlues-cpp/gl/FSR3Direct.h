@@ -26,6 +26,8 @@ void FSR3SetBridgeMode();
 bool FSR3BridgeMode();
 
 void FSR3SetFinalScope(bool active);
+void FSR3SetBridgeDepthTexture(unsigned int texture);
+unsigned int FSR3BridgeDepthTexture();
 void FSR3ApplyFinalViewportUniforms(int currentProgram);
 
 // True when the optional Minecraft/Iris bridge has presented in this frame.

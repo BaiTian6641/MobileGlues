@@ -91,6 +91,21 @@ void bridge_fail(const char* why) {
     if (!g_bridge_failed_logged.exchange(true)) LOG_W_FORCE("FSR3 bridge: %s", why);
 }
 
+bool texture_size_2d(GLuint texture, int& width, int& height) {
+    if (texture == 0) return false;
+    GLint previous = 0;
+    GLES.glGetIntegerv(GL_TEXTURE_BINDING_2D, &previous);
+    GLES.glBindTexture(GL_TEXTURE_2D, texture);
+    GLint w = 0, h = 0;
+    GLES.glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+    GLES.glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+    GLES.glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(previous));
+    if (w <= 0 || h <= 0) return false;
+    width = w;
+    height = h;
+    return true;
+}
+
 struct FramebufferGuard {
     GLint read = 0;
     GLint draw = 0;
@@ -471,8 +486,15 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
         return -1;
     }
     int depth_width = 0, depth_height = 0;
-    const bool have_depth = attachment_texture(GL_DEPTH_ATTACHMENT, depth, depth_width, depth_height) &&
-                            depth_width == width && depth_height == height;
+    bool have_depth = false;
+    const GLuint bridge_depth = FSR3BridgeDepthTexture();
+    if (bridge_depth != 0) {
+        have_depth = texture_size_2d(bridge_depth, depth_width, depth_height);
+        depth = bridge_depth;
+    } else {
+        have_depth = attachment_texture(GL_DEPTH_ATTACHMENT, depth, depth_width, depth_height) &&
+                     depth_width == width && depth_height == height;
+    }
 
     if (!have_depth) {
         bridge_fail("no depth texture attachment");
@@ -623,6 +645,11 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     return 0;
 }
 
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSetSceneDepth(JNIEnv*, jclass, jint texture) {
+    FSR3SetBridgeDepthTexture(static_cast<unsigned int>(texture));
+}
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeFinalScope(JNIEnv*, jclass, jboolean active) {

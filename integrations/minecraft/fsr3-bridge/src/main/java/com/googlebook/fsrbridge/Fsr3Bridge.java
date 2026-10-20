@@ -220,6 +220,10 @@ public final class Fsr3Bridge {
         }
     }
 
+    public static synchronized int sceneDepthTextureId() {
+        return managedDepth == null ? 0 : managedDepth.getTextureId();
+    }
+
     public static synchronized void destroySceneDepth() {
         if (managedDepth == null) return;
         try {
