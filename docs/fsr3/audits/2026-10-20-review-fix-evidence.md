@@ -44,6 +44,7 @@ after R1/R6/R7. This is backend API evidence, not full game quality.
 ## Still open from the review
 
 R2 (final-image reconstruction boundary), R3 (scene depth/screen-unit grid),
-R4 (float camera translation precision), R5 (jitter/depth parameters/TAA),
-R8 (ABI fields/capability validation) and R10 (steady-state cost) remain open.
+R5 (jitter/depth parameters/TAA), R8 (ABI fields/capability validation) and
+R10 (steady-state cost) remain open. R4 is fixed in source (double JNI
+positions); its coordinated APK+JAR package and device run are pending.
 Do not qualify performance from the current path.
