@@ -20,6 +20,7 @@
 #include <cstring>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 
 #ifdef __ANDROID__
 #include <android/log.h>
@@ -1134,6 +1135,12 @@ void glTexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
     LOG_D("glTexImage3D, target: 0x%x, level: %d, internalFormat: 0x%x, width: "
           "0x%x, height: %d, depth: %d, border: %d, format: 0x%x, type: %d",
           target, level, internalFormat, width, height, depth, border, format, type)
+#ifdef MG_FSR3_DIAGNOSTICS
+    if (target == GL_TEXTURE_3D && width == 512 && height == 128 && depth == 33) {
+        LOG_W_FORCE("3D LUT entry internal=0x%x format=0x%x type=0x%x pixels=%d", internalFormat, format, type,
+                    pixels ? 1 : 0);
+    }
+#endif
 
     // Same ordering as glTexImage2D; see the note there.
     GLenum want_if = static_cast<GLenum>(internalFormat), want_fmt = format, want_type = type;
@@ -1168,6 +1175,12 @@ void glTexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
     // been nulled turned the drop into an allocation with undefined contents, which
     // is not what GL does after an error: it does nothing.
     if (fix.dropped()) {
+#ifdef MG_FSR3_DIAGNOSTICS
+        if (target == GL_TEXTURE_3D) {
+            LOG_W_FORCE("3D upload dropped %dx%dx%d internal=0x%x format=0x%x type=0x%x", width, height, depth,
+                        internalFormat, format, type);
+        }
+#endif
         CHECK_GL_ERROR
         return;
     }
@@ -1179,6 +1192,12 @@ void glTexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
         type = want_type;
     }
     GLenum rtarget = map_tex_target(target);
+#ifdef MG_FSR3_DIAGNOSTICS
+    if (target == GL_TEXTURE_3D) {
+        LOG_W_FORCE("3D postfix %dx%dx%d dropped=%d hasdata=%d rtarget=0x%x", width, height, depth,
+                    fix.dropped() ? 1 : 0, fix.has_data() ? 1 : 0, rtarget);
+    }
+#endif
     if (rtarget == GL_PROXY_TEXTURE_3D) {
         int max1 = 4096;
         GLES.glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max1);
@@ -1189,7 +1208,26 @@ void glTexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
         return;
     }
 
+#ifdef MG_FSR3_DIAGNOSTICS
+    if (target == GL_TEXTURE_3D && width == 512 && height == 128 && depth == 33) {
+        LOG_W_FORCE("3D LUT driver call internal=0x%x format=0x%x type=0x%x pixels=%d", internalFormat, format, type,
+                    fix.pixels ? 1 : 0);
+    }
+#endif
     GLES.glTexImage3D(target, level, internalFormat, width, height, depth, border, format, type, fix.pixels);
+
+#ifdef MG_FSR3_DIAGNOSTICS
+    if (target == GL_TEXTURE_3D) {
+        static std::unordered_set<unsigned long long> logged;
+        const unsigned long long key = (static_cast<unsigned long long>(internalFormat) << 40) ^
+                                       (static_cast<unsigned long long>(width) << 20) ^
+                                       static_cast<unsigned long long>(depth);
+        if (logged.insert(key).second) {
+            LOG_W_FORCE("3D upload internal=0x%x %dx%dx%d format=0x%x type=0x%x pixels=%d",
+                        internalFormat, width, height, depth, format, type, fix.pixels ? 1 : 0);
+        }
+    }
+#endif
 
     GET_TEXTURE_OBJECT(target);
     tex->target = ConvertGLEnumToTextureTarget(target);
@@ -1272,6 +1310,11 @@ void glTexStorage3D(GLenum target, GLsizei levels, GLenum internalFormat, GLsize
     internalFormat = mg_lower_16bit_image_storage(internalFormat);
 
     GLES.glTexStorage3D(target, levels, internalFormat, width, height, depth);
+
+#ifdef MG_FSR3_DIAGNOSTICS
+    LOG_W_FORCE("3D storage target=0x%x internal=0x%x %dx%dx%d levels=%d", target, internalFormat, width, height,
+                depth, levels);
+#endif
 
     GET_TEXTURE_OBJECT(target);
     tex->target = ConvertGLEnumToTextureTarget(target);
@@ -2072,6 +2115,10 @@ void glTexSubImage3D(GLenum target, GLint level, GLint xoffset, GLint yoffset, G
     }
     GLES.glTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, fix.format, fix.type,
                          fix.pixels);
+#ifdef MG_FSR3_DIAGNOSTICS
+    LOG_W_FORCE("3D subimage target=0x%x level=%d %dx%dx%d format=0x%x type=0x%x pixels=%d", target, level, width,
+                height, depth, fix.format, fix.type, fix.pixels ? 1 : 0);
+#endif
     CHECK_GL_ERROR
 }
 
@@ -2099,6 +2146,11 @@ void glReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format
 
 void glTexParameteri(GLenum target, GLenum pname, GLint param) {
     LOG()
+#ifdef MG_FSR3_DIAGNOSTICS
+    if (target == GL_TEXTURE_3D && (pname == GL_TEXTURE_MIN_FILTER || pname == GL_TEXTURE_MAX_LEVEL)) {
+        LOG_W_FORCE("3D param pname=0x%x value=0x%x", pname, param);
+    }
+#endif
     pname = pname_convert(pname);
     LOG_D("glTexParameteri, pname: 0x%x", pname)
 

@@ -75,3 +75,16 @@ orange with a black sky. This exonerates the `pixelData2D` exposure scalar as
 the primary cause and weakens the gbuffer lightmap/sun-mask branch. The next
 leading candidates are the atmosphere 3D LUT/custom-texture upload and the
 remaining clear=false custom images.
+
+## LUT upload/parameter result
+
+The 512x128x33 RGBA16F custom texture is reached and uploaded; the wrapper
+reports `dropped=0`, `hasdata=1`, and the driver call with
+`internal=0x881a`, `format=0x1908`, `type=0x140b`. Its DSA parameters are
+`MIN_FILTER=LINEAR` and `MAX_LEVEL=0`, with target `GL_TEXTURE_3D`.
+
+This eliminates "LUT never uploaded" and "single-level texture left
+mip-incomplete". The remaining candidates are LUT content/layout interpretation,
+the draw-time sampler unit binding, or the pack's sky sampling path. A bounded
+GPU readback of texture 109 at three texels versus a CPU half-float decode is
+the next discriminator.

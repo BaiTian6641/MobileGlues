@@ -7,6 +7,7 @@
 
 #include "DSAWrapper.h"
 #include <cassert>
+#include <unordered_set>
 #include <ska/flat_hash_map.hpp>
 #include "../texture.h"
 #include "../pixel.h"
@@ -1096,6 +1097,10 @@ void glTextureStorage2D(GLuint texture, GLsizei levels, GLenum internalformat, G
 void glTextureStorage3D(GLuint texture, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height,
                         GLsizei depth) {
     TEXTURE_OP_FUNC_BEGIN(glTextureStorage3D)
+#ifdef MG_FSR3_DIAGNOSTICS
+    LOG_W_FORCE("DSA 3D storage texture=%u target=0x%x internal=0x%x %dx%dx%d levels=%d", texture, target,
+                internalformat, width, height, depth, levels);
+#endif
     glTexStorage3D(target, levels, internalformat, width, height, depth);
     TEXTURE_OP_FUNC_END
     LOG_D("[DSA] Set 3D storage for texture %u with internal format 0x%X and size (%d, %d, %d)", texture,
@@ -1141,6 +1146,10 @@ void glTextureSubImage2D(GLuint texture, GLint level, GLint xoffset, GLint yoffs
 void glTextureSubImage3D(GLuint texture, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width,
                          GLsizei height, GLsizei depth, GLenum format, GLenum type, const void* pixels) {
     TEXTURE_OP_FUNC_BEGIN(glTextureSubImage3D)
+#ifdef MG_FSR3_DIAGNOSTICS
+    LOG_W_FORCE("DSA 3D subimage texture=%u target=0x%x level=%d %dx%dx%d format=0x%x type=0x%x pixels=%d",
+                texture, target, level, width, height, depth, format, type, pixels ? 1 : 0);
+#endif
     glTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, pixels);
     TEXTURE_OP_FUNC_END
     LOG_D("[DSA] Updated 3D sub-image of texture %u at level %d with size (%d, %d, %d) at offset (%d, %d, %d)", texture,
@@ -1218,6 +1227,11 @@ void glTextureParameterfv(GLuint texture, GLenum pname, const GLfloat* param) {
 
 void glTextureParameteri(GLuint texture, GLenum pname, GLint param) {
     TEXTURE_OP_FUNC_BEGIN(glTextureParameteri)
+#ifdef MG_FSR3_DIAGNOSTICS
+    if (target == GL_TEXTURE_3D && (pname == GL_TEXTURE_MIN_FILTER || pname == GL_TEXTURE_MAX_LEVEL)) {
+        LOG_W_FORCE("DSA 3D param texture=%u pname=0x%x value=0x%x", texture, pname, param);
+    }
+#endif
     glTexParameteri(target, pname, param);
     TEXTURE_OP_FUNC_END
     LOG_D("[DSA] Set integer parameter 0x%X for texture %u to %d", pname, texture, param);
@@ -1311,6 +1325,15 @@ void glBindTextureUnit(GLuint unit, GLuint texture) {
 
     GLenum target = GetTexTarget(texture);
     if (mgRejectUnknownTexture("glBindTextureUnit", texture, target)) return;
+#ifdef MG_FSR3_DIAGNOSTICS
+    if (target == GL_TEXTURE_3D) {
+        static std::unordered_set<unsigned long long> logged;
+        const unsigned long long key = (static_cast<unsigned long long>(texture) << 32) ^ unit;
+        if (logged.insert(key).second) {
+            LOG_W_FORCE("DSA bind unit=%u texture=%u target=0x%x", unit, texture, target);
+        }
+    }
+#endif
     if (!sameUnit) glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(target, texture);
     if (!sameUnit) glActiveTexture(prevUnit);
