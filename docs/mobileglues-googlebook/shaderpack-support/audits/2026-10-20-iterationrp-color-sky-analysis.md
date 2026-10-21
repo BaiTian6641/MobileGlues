@@ -428,3 +428,16 @@ source is added to Git. Retain this dated result when investigating newer code.
 - [Desktop GLSL 4.60 specification](https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html): the corresponding geometry-output rule is also present on desktop.
 - [Original-pack static audit](2026-10-20-iterationrp-static-audit.md), [visual audit](2026-10-20-iterationrp-visual-audit.md), [latest red/green audit](2026-10-20-iterationrp-redgreen-audit.md): historical findings, refined above rather than treated as proof of exclusion.
 - [G1 legalization record](../../validation/2026-10-20-g1-rg16f-rg32f-lowering.md), [G10 presentation record](../../validation/2026-10-20-g10-no-final-guard.md), [provider capability record](../../validation/2026-10-19-x1e-iterationrp-caps.json): distinct host/provider/game evidence levels.
+
+## Anisotropic-quality control
+
+With `ANISOTROPIC_FILTERING_QUALITY=0` and manual exposure unchanged, texture
+detail returns (terrain shows block speckle instead of a flat field), but the
+base color remains orange and the sky remains black.
+
+Screenshot: `/home/polar/MobileGlues-fixtures/iterationRP-aniso0.png` SHA-256
+`8f28c45a3ddfce137717ce544301d81896a3b482e6ea8ce35f236379cdc1c45b`.
+
+Conclusion: the terrain geometry/output sampling hazard is real and affects
+texture detail, but it is not the primary cause of the constant color or the
+black sky. Restore anisotropic quality to its original value after this test.
