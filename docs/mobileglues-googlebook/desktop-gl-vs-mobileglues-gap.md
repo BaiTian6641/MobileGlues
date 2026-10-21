@@ -1,6 +1,8 @@
 # Desktop OpenGL vs MobileGlues: gap analysis for Minecraft shaderpacks
 
-Updated: 2026-10-20. Evidence levels are separated:
+Updated: 2026-10-20. **See [`desktop-gl-gap-closure.md`](desktop-gl-gap-closure.md) for the
+row-by-row verification, corrected classifications, exact implementation designs,
+and probe matrix.** Evidence levels are separated:
 
 - **wrapper**: implemented in MobileGlues and exercised by a host/device probe.
 - **lowered**: the desktop feature is rewritten to a legal ES/ANGLE form.
