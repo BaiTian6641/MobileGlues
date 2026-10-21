@@ -36,6 +36,13 @@ int main() {
           "layout(r16f) uniform image2D rf;\n");
     check("rgba16ui-untouched", mg_lower_legacy_image_formats("layout(rgba16ui) uniform uimage2D g;\n"),
           "layout(rgba16ui) uniform uimage2D g;\n");
+    check("r16ui-widened", mg_lower_legacy_image_formats("layout(r16ui) uniform uimage3D v;\n"),
+          "layout(r32ui) uniform uimage3D v;\n");
+    check("r8ui-widened", mg_lower_legacy_image_formats("layout(r8ui) uniform uimage3D v8;\n"),
+          "layout(r32ui) uniform uimage3D v8;\n");
+    check("rg32ui-widened", mg_lower_legacy_image_formats("layout(rg32ui) writeonly uniform uimage1D blocks;\n"),
+          "layout(rgba32ui) writeonly uniform uimage1D blocks;\n");
+
     check("non-image-untouched", mg_lower_legacy_image_formats("const int colortex1Format = RGBA16;\n"),
           "const int colortex1Format = RGBA16;\n");
     check("adjacent-lines",
