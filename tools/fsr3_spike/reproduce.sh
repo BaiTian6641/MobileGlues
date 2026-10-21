@@ -31,6 +31,24 @@ make -C "$HERE/probe"
 "$HERE/probe/fsr3_gles_probe" --compile-shader "$SPIKE"/out/shaders/*_essl320.glsl \
   > "$SPIKE/out/driver-compile-host.json" || true
 
+# Execute the dispatch gate as well as compiling its shaders. Readback belongs
+# to this host qualification harness, not the production renderer.
+make -C "$HERE/dispatch"
+SPIKE="$SPIKE" bash "$HERE/dispatch/make_shaders.sh" > "$SPIKE/out/dispatch-shaders.txt"
+"$HERE/dispatch/fsr3_dispatch" --shader "$SPIKE/out/shaders/rcas_essl320.glsl" \
+  > "$SPIKE/out/rcas-dispatch-host.json"
+"$HERE/dispatch/fsr3_dispatch" --shader "$SPIKE/out/shaders/rcas_essl320.glsl" \
+  --width 640 --height 360 --sharpness 1.0 > "$SPIKE/out/rcas-dispatch-host-640.json"
+for pattern in flat step; do
+  "$HERE/dispatch/fsr3_dispatch" --mode chain --shaders "$SPIKE/out/shaders" \
+    --pattern "$pattern" --render 160x90 --output 320x180 \
+    > "$SPIKE/out/chain-$pattern-host.json"
+  "$HERE/dispatch/fsr3_dispatch" --mode chain --shaders "$SPIKE/out/shaders" \
+    --pattern "$pattern" --render 320x180 --output 480x270 \
+    > "$SPIKE/out/chain-$pattern-host-480.json"
+done
+"$HERE/dispatch/build_android.sh"
+
 "$HERE/probe/build_android.sh"
 
 # Device packaging only. Run run_device.sh only when this worker owns a device.
