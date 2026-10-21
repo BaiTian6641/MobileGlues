@@ -489,3 +489,16 @@ TAA is therefore eliminated as the primary cause. The leading mechanism is the
 colortex0 ping-pong side selected for the no-final copy, consistent with the
 diffuse-denoiser `frameWeights` scratch side identified in the final-sampling
 audit.
+
+## Baseline-side fix: terrain corrected
+
+Forcing the no-final `baseline` attachment to `renderTargets.get(0).getMainTexture()`
+at `renderPass HEAD` restores textured, normally colored terrain. The sky is
+still black. Screenshot SHA-256 `0baa64f6088174ef68c92849e45a7d17519dbde2b30e3fcc278ac5baa5f93bc5`.
+
+This confirms the final copy was reading the wrong colortex0 side (the diffuse
+denoiser scratch) and isolates the remaining defect to the sky/atmosphere path.
+The source of the fix is in `FinalPassRendererMixin`.
+
+No-TAA remains selected in this capture; the terrain correction is from the
+baseline-side change, not TAA.
