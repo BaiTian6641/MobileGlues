@@ -20,9 +20,20 @@ Root causes addressed in commit `7ce1684`:
   scissor could clip the presentation blit to 1694x932. `PresentGuard` now saves,
   disables and restores the scissor state around presentation.
 
-Device result: with FSR3 enabled/Balanced, the 1.21.1 title menu now fills the
-display. Capture `/tmp/title-menu-fixed2.png`, SHA-256 `0f7fe8de…0df4`.
-Host suite passes, including the new native-restore cases in
+The direct presenter also ran before the Iris bridge class initialized, so it
+upscaled the reduced menu before any bridge final pass existed. Commit
+`8f88f5e` gates `ApplyFSR3Present` behind `fsr3DirectPresent`, default **off**.
+The Minecraft bridge remains the world presentation path.
+
+Device result after the gate: the 1.21.1 title is rendered natively at normal
+GUI size (Minecraft logo and buttons visible). Capture
+`/tmp/title-native-directoff.png`, SHA-256 `7131e6fe…52c4`.
+
+The title was still hosted in FCL's freeform 1694x932 window while the desktop
+was 2880x1800. `options.txt` requests `overrideWidth:2880`,
+`overrideHeight:1585`, and `fullscreen:false`; the window manager reports
+`mWindowingMode=freeform`. This is an FCL window/fullscreen state, not an FSR3
+scaling defect. Host suite passes, including the native-restore cases in
 `fsr3_viewport_runtime_test`.
 
 ## Performance baseline
