@@ -535,3 +535,15 @@ reverted to the known terrain-correct colortex0 main baseline. This makes a
 missing/lost composite80-85 color write more likely than a simple target-side
 choice. The next probe must capture the actual draw attachment and program pass,
 not guess another texture index.
+
+## Attachment trace: baseline override withdrawn
+
+Captured targets: colortex0 main=103/alt=104, colortex6 main=89/alt=90,
+colortex8 main=100/alt=101. Composite20 -> 101, composite25 -> 90,
+composite80 -> 90, composite85 -> **104 (colortex0 alt)**.
+
+The original baseline already read alt=104, i.e. the real final composite. The
+forced main=103 path presented albedo; it is withdrawn. Composite85 executes
+and writes the expected side. The salmon/flat final is therefore the actual
+lit path with missing lighting/sky inputs, not a lost final write. Pass-name and
+attachment diagnostics were removed.
