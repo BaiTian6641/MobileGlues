@@ -37,7 +37,18 @@ Do not edit original shaderpacks. Keep compile/link/FBO failures truthful.
 | G6 | Pack lifecycle state: bridge unit/format maps and core fallback map persist across reload/switch; 32-name cap reuses unit 0 | bridge `ImageBindingRegistry.java`, `gl/image_bindings.cpp`, S9 NOT RUN | wrapper+bridge defect | Clear maps on pack load/unload/reload/context loss; fail loudly on unit exhaustion. | A→B→A pack switch and same-pack reload preserve distinct units; no silent reuse. |
 | G7 | ACT/WSR staging beyond r5.9.2: r5.9.3 and Unbound; residual half-rate floodfill circle | `feature-matrix.md:116-121`, `execution-state.md`, AuroraLumen audit | qualification (`d`) | Same profile matrix on r5.9.3 and Unbound; 8 s clips; compare floodfill behavior to desktop reference. | Staged ACT 192 / WSR 128 on r5.9.2, r5.9.3, Unbound; no fallback; player refs off. |
 | G8 | BSL and effect fidelity; AuroraLumen private boundary | `feature-matrix.md:88-93,122-124`, AuroraLumen validations | qualification (`d`) | Import original BSL default; run named-effect matrix on original packs. Keep AuroraLumen private-only. | BSL pipeline active with named effects; per-effect matrix recorded; private derivative never used as original-pack evidence. |
+| G10 | scene-scaled no-final pack copy: iterationRP finalizes through composites, Iris copies scaled colortex0 into native main | `shaderpack-support/audits/2026-10-20-iterationrp-visual-audit.md`; `FinalPassRenderer` no-final path | bridge defect | force coherent NativeAA/no scale for no-final packs, or implement a scaled copy/upscale | full native frame under FSR scaling |
 | G9 | RGB8/RGB10_A2 render-target completeness for Sildur: Vibrant colortex1/3 `RGB8`, Enhanced `gnormalFormat=RGB10_A2` | `validation/2026-10-20-x1e-sildur-format-probe.md`; both FBO complete | **PASS (provider FBO)** | No core widening needed for these formats; keep RGB8_SNORM handling separate | FBO complete; source compile/link and S0/S1 remain |
+
+### G1 implementation status
+
+- Host: RG16F → RGBA16F and RG32F → RGBA32F lowering/backing implemented with
+  `compat_image` and `image_metadata` tests passing
+  (`validation/2026-10-20-g1-rg16f-rg32f-lowering.md`).
+- Still open: target-aware RGBA16/RG16 image-bound attachments, stage-scoped
+  rewriting, core-only unit proof, and original-pack host sweep/device gate.
+- The G1 build is not the currently installed stable core; do not treat the
+  host test as a device pass.
 
 ### iterationRP refinement (from the 2026-10-20 static audit)
 

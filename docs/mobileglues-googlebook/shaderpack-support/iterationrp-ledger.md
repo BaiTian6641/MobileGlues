@@ -12,7 +12,7 @@ Target: original `iterationRP Alpha 0.8.31.zip`
 | ITRP-03 | Core-only deterministic image units (G2) | PROOF GAP | core resolver exists; no original-pack no-bridge run |
 | ITRP-04 | SSBO clear reachability (G3) | NOT A DEFAULT BLOCKER | 4 KiB SSBO fully written by SSBOUpdate_CS |
 | ITRP-05 | Graphics-stage image rewriting (G4) | NOT RUN | `PixelData_VS`, `shadow.gsh` |
-| ITRP-06 | Device S0/S1 on default profile | **S0 PASS; S1 FAIL** | FSR scaling: split frame; NativeAA: full frame but brown/black lighting; `validation/2026-10-20-iterationrp-original-s0.md` |
+| ITRP-06 | Device S0/S1 on default profile | **S0 PASS; S1 FAIL** | split = no-final copy path; brown/black = image/LUT content; audits/2026-10-20-iterationrp-visual-audit.md |
 | ITRP-07 | S2 effect matrix on default profile | NOT RUN | no missing effects |
 | ITRP-08 | Advanced ACT/WSR/RTW profiles | NOT RUN | separate profile gates |
 
