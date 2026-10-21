@@ -52,6 +52,8 @@ struct MgProgramObject {
     bool has_image_uniforms = false;
     std::unordered_map<GLint, GLuint> image_uniform_units;
     std::unordered_map<GLint, std::string> image_uniform_names;
+    // Zero for scalars; arrays record the active elements from this location onward.
+    std::unordered_map<GLint, GLsizei> image_uniform_array_remaining;
     // Filled when the application assigns image units: app unit -> canonical.
     std::unordered_map<GLuint, GLuint> image_unit_remap;
     // Canonical image unit -> uniform name, and names declared in a vertex shader.

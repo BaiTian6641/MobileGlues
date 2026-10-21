@@ -31,16 +31,10 @@ void mg_resolve_duplicate_image_bindings(GLuint program);
 // program that is currently in use. Returns the input when no mapping exists.
 GLuint mg_remap_image_unit(GLuint unit);
 
-// Converts the value passed to glUniform1i for an image uniform to the
-// canonical unit, records the application's unit for bind remapping, and
-// returns true when the location is an image uniform.
-bool mg_image_uniform_value(GLint location, GLint value, GLint* out_value);
-
-// Same as mg_image_uniform_value for an explicitly selected program.
-// glProgramUniform* must never resolve locations against the current program.
-// Array elements registered by mg_reflect_image_uniforms are looked up by
-// their own location, so a 1iv write can be remapped element by element.
-bool mg_image_uniform_value_for_program(GLuint program, GLint location, GLint value, GLint* out_value);
+// Handles desktop 1i/1iv image writes using logical image binding state.
+// Returns false for ordinary uniforms, which must still reach the ES driver.
+// A handled invalid write raises the desktop error without changing mappings.
+bool mg_image_uniform_write_for_program(GLuint program, GLint location, GLsizei count, const GLint* values);
 
 bool mg_is_image_uniform_type(GLenum type);
 

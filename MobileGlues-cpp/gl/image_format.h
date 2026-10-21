@@ -67,6 +67,22 @@ inline bool mg_is_native_image_format(GLenum format) {
     return entry != nullptr && entry->backing == format;
 }
 
+// Desktop GL 4.6 table 8.26 accepts these enums even for a texture-zero unbind.
+// Being a valid API argument does not imply that we implement its image storage.
+inline bool mg_is_desktop_image_format(GLenum format) {
+    if (mg_find_image_format(format) != nullptr) return true;
+    switch (format) {
+    case GL_R11F_G11F_B10F: case GL_RGB10_A2UI:
+    case GL_RG16UI: case GL_RG8UI: case GL_RG32I: case GL_RG16I: case GL_RG8I:
+    case GL_RGB10_A2: case GL_RG8:
+    case GL_RGBA16_SNORM: case GL_RG16_SNORM: case GL_RG8_SNORM:
+    case GL_R16_SNORM: case GL_R8_SNORM:
+        return true;
+    default:
+        return false;
+    }
+}
+
 inline unsigned mg_image_format_bits(GLenum format) {
     if (const auto* entry = mg_find_image_format(format)) return entry->logical_bits;
     // Non-image storage formats can still participate in a legal by-size view.

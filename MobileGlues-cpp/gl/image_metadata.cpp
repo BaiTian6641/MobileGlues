@@ -50,6 +50,10 @@ GLenum mg_image_backing_format(GLenum logical_format) {
     return entry != nullptr ? entry->backing : GL_NONE;
 }
 
+GLenum mg_image_unbind_format(GLenum logical_format) {
+    return mg_is_desktop_image_format(logical_format) ? GL_RGBA8 : GL_NONE;
+}
+
 GLenum mg_image_unit_format(GLenum logical_format, GLenum texture_internal_format) {
     const GLenum backing = mg_image_backing_format(logical_format);
     if (backing == GL_NONE || texture_internal_format == 0) return backing;

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-2.1-only
 #define DEBUG 0
 #include "image_bindings.h"
+#include "image_uniform_write.h"
 #include "shader_state.h"
 #include "mg.h"
 #include "../egl/context.h"
@@ -300,6 +301,7 @@ void mg_reflect_image_uniforms(GLuint program) {
     if (state == nullptr) return;
     state->image_uniform_units.clear();
     state->image_uniform_names.clear();
+    state->image_uniform_array_remaining.clear();
     state->image_unit_remap.clear();
     state->image_unit_names.clear();
     state->image_declaration_stage.clear();
@@ -354,9 +356,12 @@ void mg_reflect_image_uniforms(GLuint program) {
             const GLuint element_unit = unit + static_cast<GLuint>(element);
             state->image_uniform_units[element_location] = element_unit;
             state->image_uniform_names[element_location] = base;
+            state->image_uniform_array_remaining[element_location] =
+                bracket == std::string::npos ? 0 : array_index + elements - element;
             state->image_unit_names[element_unit] = base;
         }
     }
+    mg_finalize_image_uniform_arrays(*state);
     state->has_image_uniforms = !state->image_uniform_units.empty();
     if (state->has_image_uniforms) {
         LOG_W_FORCE("Image bindings: program %u has %zu active image uniforms", program,
@@ -365,26 +370,16 @@ void mg_reflect_image_uniforms(GLuint program) {
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-bool mg_image_uniform_value_for_program(GLuint program, GLint location, GLint value, GLint* out_value) {
-    if (out_value) *out_value = value;
-    if (value < 0) return false;
+bool mg_image_uniform_write_for_program(GLuint program, GLint location, GLsizei count, const GLint* values) {
     MgProgramObject* state = mg_find_program(program);
     if (state == nullptr || !state->has_image_uniforms) return false;
-    auto it = state->image_uniform_units.find(location);
-    if (it == state->image_uniform_units.end()) return false;
-    const GLuint app_unit = static_cast<GLuint>(value);
-    if (state->image_unit_remap.find(app_unit) == state->image_unit_remap.end()) {
-        LOG_W_FORCE("Image bindings: program %u location %d app unit %u -> core unit %u", program, location, app_unit,
-                    it->second)
-    }
-    state->image_unit_remap[app_unit] = it->second;
-    if (out_value) *out_value = static_cast<GLint>(it->second);
+    if (state->image_uniform_units.find(location) == state->image_uniform_units.end()) return false;
+    GLint max_units = 0;
+    GLES.glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_units);
+    GLenum error = GL_NO_ERROR;
+    mg_update_image_uniforms(*state, location, count, values, max_units, error);
+    if (error != GL_NO_ERROR) mg_set_gl_error(error);
     return true;
-}
-
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-bool mg_image_uniform_value(GLint location, GLint value, GLint* out_value) {
-    return mg_image_uniform_value_for_program(gl_state->current_program, location, value, out_value);
 }
 
 GLuint mg_remap_image_unit(GLuint unit) {

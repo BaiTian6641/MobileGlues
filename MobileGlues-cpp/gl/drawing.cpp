@@ -12,6 +12,7 @@
 #include "mg.h"
 #include "texture.h"
 #include "image_metadata.h"
+#include "image_format.h"
 #include "image_bindings.h"
 #include "diagnostic.h"
 #include "FSR3Direct.h"
@@ -269,7 +270,10 @@ namespace {
 // Resolve from the real allocation; a legal image enum is insufficient when
 // its texel size differs from storage. Invalid formats never reach the driver.
 GLenum image_unit_bind_format(GLenum logical_format, GLuint texture) {
-    const TextureObject* tex = texture != 0 ? mgGetTexObjectByID(texture) : nullptr;
+    // Multi-bind resets image units with the desktop R8 default. No storage is
+    // accessed on an unbind, so lack of an R8 image representation is irrelevant.
+    if (texture == 0) return mg_image_unbind_format(logical_format);
+    const TextureObject* tex = mgGetTexObjectByID(texture);
     return mg_image_unit_format(logical_format, tex != nullptr ? tex->internal_format : 0);
 }
 } // namespace
@@ -340,6 +344,11 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
     LOG_D("glBindImageTexture, unit: %d, texture: %d, level: %d, layered: %d, layer: %d, access: %d, format: %d", unit,
           texture, level, layered, layer, access, format)
     const GLenum logical_format = format;
+    if (!mg_is_desktop_image_format(logical_format)) {
+        // OpenGL 4.6 section 8.26 specifies INVALID_VALUE for this argument.
+        mg_set_gl_error(GL_INVALID_VALUE);
+        return;
+    }
     format = image_unit_bind_format(logical_format, texture);
     if (format == GL_NONE) {
         mg_set_gl_error(GL_INVALID_OPERATION);
@@ -396,94 +405,50 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
     CHECK_GL_ERROR
 }
 
-namespace {
-// Remaps the elements of a 1iv write that name an active image uniform of
-// `program`. `remapped` receives a copy only once an image element is found, so
-// a write that touches no image uniform keeps the caller's bytes untouched.
-// Element locations are addressed as base + i, which is how image-array
-// elements are registered by mg_reflect_image_uniforms.
-bool remap_image_uniforms_1iv(GLuint program, GLint location, GLsizei count, const GLint* value,
-                              std::vector<GLint>& remapped) {
-    bool image_uniform = false;
-    for (GLsizei i = 0; i < count; ++i) {
-        GLint mapped = value[i];
-        if (!mg_image_uniform_value_for_program(program, location + i, value[i], &mapped)) continue;
-        if (remapped.empty()) remapped.assign(value, value + count);
-        remapped[static_cast<size_t>(i)] = mapped;
-        image_uniform = true;
-    }
-    return image_uniform;
-}
-} // namespace
-
+// Desktop image uniform assignments update the logical binding map. Their
+// physical ES bindings are fixed by layout(binding), so forwarding a handled
+// assignment to GLES would incorrectly raise GL_INVALID_OPERATION.
 void glUniform1i(GLint location, GLint v0) {
     LOG()
-    if (!gl_state->current_program_has_image_uniforms) {
+    if (mg_image_uniform_write_for_program(gl_state->current_program, location, 1, &v0)) {
+        mg_materialize_image_bindings();
+    } else {
         GLES.glUniform1i(location, v0);
-        CHECK_GL_ERROR
-        return;
+        mg_set_gl_error(GLES.glGetError());
     }
-    GLint mapped = v0;
-    const bool image_uniform = mg_image_uniform_value(location, v0, &mapped);
-    LOG_D("glUniform1i, location: %d, v0: %d", location, mapped)
-    GLES.glUniform1i(location, mapped);
-    // The application may bind images before it selects the program and sets
-    // the image uniform. Once the logical unit is known, replay the binding.
-    if (image_uniform) mg_materialize_image_bindings();
     CHECK_GL_ERROR
 }
 
 void glUniform1iv(GLint location, GLsizei count, const GLint* value) {
     LOG()
-    if (count <= 0 || value == nullptr) {
+    if (mg_image_uniform_write_for_program(gl_state->current_program, location, count, value)) {
+        mg_materialize_image_bindings();
+    } else {
         GLES.glUniform1iv(location, count, value);
-        CHECK_GL_ERROR
-        return;
+        mg_set_gl_error(GLES.glGetError());
     }
-    if (!gl_state->current_program_has_image_uniforms) {
-        GLES.glUniform1iv(location, count, value);
-        CHECK_GL_ERROR
-        return;
-    }
-    std::vector<GLint> remapped;
-    const bool image_uniform =
-        remap_image_uniforms_1iv(gl_state->current_program, location, count, value, remapped);
-    LOG_D("glUniform1iv, location: %d, count: %d, image: %d", location, count, image_uniform)
-    GLES.glUniform1iv(location, count, image_uniform ? remapped.data() : value);
-    if (image_uniform) mg_materialize_image_bindings();
     CHECK_GL_ERROR
 }
 
 void glProgramUniform1i(GLuint program, GLint location, GLint v0) {
     LOG()
-    if (program == gl_state->current_program && !gl_state->current_program_has_image_uniforms) {
+    if (mg_image_uniform_write_for_program(program, location, 1, &v0)) {
+        if (program == gl_state->current_program) mg_materialize_image_bindings();
+    } else {
         GLES.glProgramUniform1i(program, location, v0);
-        CHECK_GL_ERROR
-        return;
+        mg_set_gl_error(GLES.glGetError());
     }
-    GLint mapped = v0;
-    const bool image_uniform = mg_image_uniform_value_for_program(program, location, v0, &mapped);
-    LOG_D("glProgramUniform1i, program: %u, location: %d, v0: %d", program, location, mapped)
-    GLES.glProgramUniform1i(program, location, mapped);
-    // The uniform belongs to `program`, which need not be the program in use.
-    // Only a write to the current program changes the units a draw needs.
-    if (image_uniform && program == gl_state->current_program) mg_materialize_image_bindings();
     CHECK_GL_ERROR
 }
 
 void glProgramUniform1iv(GLuint program, GLint location, GLsizei count, const GLint* value) {
     LOG()
-    if (count <= 0 || value == nullptr) {
+    if (mg_image_uniform_write_for_program(program, location, count, value)) {
+        if (program == gl_state->current_program) mg_materialize_image_bindings();
+    } else {
         GLES.glProgramUniform1iv(program, location, count, value);
-        CHECK_GL_ERROR
-        return;
+        mg_set_gl_error(GLES.glGetError());
     }
-    std::vector<GLint> remapped;
-    const bool image_uniform = remap_image_uniforms_1iv(program, location, count, value, remapped);
-    LOG_D("glProgramUniform1iv, program: %u, location: %d, count: %d, image: %d", program, location, count,
-          image_uniform)
-    GLES.glProgramUniform1iv(program, location, count, image_uniform ? remapped.data() : value);
-    if (image_uniform && program == gl_state->current_program) mg_materialize_image_bindings();
     CHECK_GL_ERROR
 }
 

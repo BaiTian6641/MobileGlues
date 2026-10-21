@@ -44,6 +44,27 @@ int main() {
     check("RG32F is not itself native image storage", !mg_is_native_image_format(GL_RG32F));
     check("unknown format rejected", mg_image_backing_format(GL_DEPTH_COMPONENT24) == GL_NONE &&
         mg_image_qualifier(GL_DEPTH_COMPONENT24) == nullptr);
+    // glBindImageTextures(NULL) uses the desktop R8 default. All table-8.26
+    // formats remain legal for texture zero without enabling their storage.
+    const GLenum desktop_formats[] = {
+        GL_RGBA32F, GL_RGBA16F, GL_RG32F, GL_RG16F, GL_R11F_G11F_B10F, GL_R32F, GL_R16F,
+        GL_RGBA32UI, GL_RGBA16UI, GL_RGB10_A2UI, GL_RGBA8UI, GL_RG32UI, GL_RG16UI,
+        GL_RG8UI, GL_R32UI, GL_R16UI, GL_R8UI,
+        GL_RGBA32I, GL_RGBA16I, GL_RGBA8I, GL_RG32I, GL_RG16I, GL_RG8I, GL_R32I, GL_R16I, GL_R8I,
+        GL_RGBA16, GL_RGB10_A2, GL_RGBA8, GL_RG16, GL_RG8, GL_R16, GL_R8,
+        GL_RGBA16_SNORM, GL_RGBA8_SNORM, GL_RG16_SNORM, GL_RG8_SNORM, GL_R16_SNORM, GL_R8_SNORM
+    };
+    static_assert(sizeof(desktop_formats) / sizeof(desktop_formats[0]) == 39);
+    for (const GLenum format : desktop_formats) {
+        check("desktop-valid null image unbind", mg_is_desktop_image_format(format) &&
+            mg_is_native_image_format(mg_image_unbind_format(format)));
+    }
+    for (const GLenum format : {GL_NONE, GL_DEPTH_COMPONENT24, GL_RGB8, GL_RGB9_E5, GL_SRGB8_ALPHA8}) {
+        check("invalid null image format remains rejected", !mg_is_desktop_image_format(format) &&
+            mg_image_unbind_format(format) == GL_NONE);
+    }
+    check("null binding does not enable unsupported narrow storage",
+        mg_image_unbind_format(GL_R8) == GL_RGBA8 && mg_image_unit_format(GL_R8, GL_R8) == GL_NONE);
     for (const GLenum format : {GL_R8, GL_R16, GL_R16F, GL_R8I, GL_R16I}) {
         check("unimplemented numerical conversion rejected", mg_image_backing_format(format) == GL_NONE &&
             mg_image_qualifier(format) == nullptr && mg_lower_image_storage_format(format) == format);

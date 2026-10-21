@@ -40,8 +40,12 @@ const char* mg_image_qualifier(GLenum logical_format);
 
 // Resolve a legal ES image-unit format against the actual texture storage.
 // Returns GL_NONE if the representation is unmapped or size-incompatible.
-// texture_internal_format == 0 requests only the logical mapping (e.g. unbind).
+// texture_internal_format == 0 requests only the logical mapping.
 GLenum mg_image_unit_format(GLenum logical_format, GLenum texture_internal_format);
+
+// A zero texture has no storage to convert. Accept desktop-valid format enums
+// while supplying a legal, unused GLES format. Invalid enums return GL_NONE.
+GLenum mg_image_unbind_format(GLenum logical_format);
 
 // Rewrites formatless image declarations for which metadata exists. The
 // function is deliberately a no-op for declarations without metadata: an
