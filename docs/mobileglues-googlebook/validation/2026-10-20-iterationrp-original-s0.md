@@ -62,3 +62,15 @@ support dependency.
 The stable core `c741b74d…` was reinstalled after the G1 experiment. The G1
 source remains committed and host-tested; it is not currently the installed
 device build.
+
+## G10 guard verification blocked by leftover diagnostic bridge
+
+A first G10 build used a non-static constructor injection and was rejected by
+Mixin; the handler was corrected to static. The second launch still failed,
+but the log shows the failure is `mgirisbridge`'s `SodiumGlShaderMixin`
+(signature mismatch), not the G10 guard. The diagnostic `mgirisbridge` JAR
+remains in the mods folder despite the reported removal.
+
+G10 is therefore **built but NOT device-verified**. Do not launch until every
+`mgirisbridge-*.jar` is removed from the FCL mods folder and the mod list shows
+only `mgfsr3bridge`.
