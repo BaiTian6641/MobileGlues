@@ -16,3 +16,16 @@ iterationRP diagnostic sampler/upload mixins and native probe were reverted.
 Conclusion: the iterationRP failure is not a general MobileGlues sky/final-pass
 failure. Complementary is the current clean reference. BSL needs a focused
 cloud-shadow comparison before any wrapper change.
+
+## Shadow comparison
+
+Same scene/time, per-pack defaults:
+
+- Complementary Reimagined 5.9.3 LOW: smooth, coherent soft shadowing on snow.
+- BSL v10.1.8 HIGH: hard, blocky shadow patches; BSL's HIGH profile uses a
+  2048 shadow map over 256 blocks.
+
+The bridge's shadow/viewport mixins are trace-only, FSR3 submit is inactive,
+and the Complementary reference uses the same Iris shadow targets. No
+wrapper-wide shadow-pass failure is demonstrated. BSL's hard shadow look is
+its pack-side shadow algorithm/settings, not a reason to change MobileGlues.
