@@ -40,10 +40,13 @@ pass is the reference evidence. Effect-specific rows are not upgraded by this he
 | Lane | Result | Evidence |
 | --- | --- | --- |
 | Minecraft 26.2, zero mods, OpenGL/ANGLE, current HEAD | **PASS for the bounded zero-mod world**: terrain, trees, HUD, hand and sky render after exporting the missing draw entry points | [26.2 regression record](validation/2026-10-21-262-sampler-and-rgba8-regressions.md), capture `8cc8dc7c…07d40f105` |
-| Minecraft 26.2, NeoForge + Iris + Sodium | **PENDING** | separate lane; not qualified by the zero-mod pass |
-| 1.21.1 shaderpack lane after the image/translator changes | **PENDING** | regression gate remains open |
+| Minecraft 26.2, NeoForge + Iris + Sodium | **PASS for Sildurs Vibrant 2.02 Extreme**: terrain/world correct; 36 FPS without bridge, **66-70 FPS with bridge 0.2.4** | [FSR3 performance/RGBA8 record](validation/2026-10-21-26.2-fsr3-performance-and-rgba8.md) |
+| 1.21.1 NeoForge + Iris + Sodium, Sildurs Extreme + bridge 0.2.4 | **74 FPS**; regression pass | same record |
+| Create Delight Remake 1.20.1 Forge + Oculus + Steadfast 0.8.0 | **76 FPS** for the captured scene | same record |
+| RGBA8 null allocation + image bind | **PASS** (`tex=0 bind=0`) | `rgba8_null_bind` wrapper probe, commit `01feb52` |
+| FSR3 bridge 26.1 Fabric/NeoForge | **host PASS; device PENDING** | bridge commits `b95f259`, `8576b37` |
 
-The 26.2 zero-mod pass is not a delivery-lane or shaderpack qualification.
+The 26.2 zero-mod and bounded shaderpack passes are not a full release qualification.
 
 ## Renderer / build rows
 

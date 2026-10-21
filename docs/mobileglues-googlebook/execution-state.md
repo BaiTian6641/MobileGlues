@@ -8,12 +8,17 @@ That record supersedes the active task, repository map, latest-build and next-ac
 sections in the historical snapshot below. Review findings and boundaries are in
 [the independent review](2026-10-21-review.md). The supported delivery tuple is unchanged.
 
-26.x experimental status: a zero-mod Minecraft 26.2 world now renders terrain, trees,
+26.x experimental status: a zero-mod Minecraft 26.2 world renders terrain, trees,
 HUD, hand and sky after exporting the missing `glDrawArraysInstanced`/indirect entry
-points. The device bisect, upstream control and three fixed regressions are recorded in
+points. The device bisect, upstream control and fixed regressions are recorded in
 [the 26.2 regression record](validation/2026-10-21-262-sampler-and-rgba8-regressions.md).
-26.2 NeoForge/Iris/Sodium and the 1.21.1 shaderpack regression lane remain **PENDING**;
-this is not a delivery-lane or full 26.x qualification.
+The 26.2 NeoForge/Iris/Sodium lane with the 0.2.4 bridge now renders Sildurs at
+**66-70 FPS** versus **74 FPS** on 1.21.1; the prior 36 FPS result was a missing
+26.2 bridge JAR, not renderer overhead. Create Delight Remake captured at 76 FPS.
+RGBA8 null image bind passes, and the bridge has capability-gated ten profiles
+including 26.1. See
+[the performance/RGBA8 record](validation/2026-10-21-26.2-fsr3-performance-and-rgba8.md).
+26.1 device qualification, thermal/power and full release gates remain pending.
 
 Historical stage snapshot last updated: 2026-10-19 (bridge 1.0.17).
 

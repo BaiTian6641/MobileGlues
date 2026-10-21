@@ -94,9 +94,14 @@ is true, and the null-data `glTexImage2D` path converted the allocation to
 immutable one-level storage. Upstream has no `image_format.h` and no such
 null-data conversion.
 
-The fix excludes `GL_RGBA8` and `GL_RGBA8_SNORM` from that conversion. The
-atlas then becomes mutable, but the 26.2 copy/upload path still does not fill it.
-Readback after the fix:
+> Later correction: this RGBA8 carve-out was removed in `d6c9d5f` after the
+> missing draw-export fix proved to be the actual atlas failure. Immutable RGBA8
+> storage is restored and 26.2 still renders; see the
+> [performance/RGBA8 record](2026-10-21-26.2-fsr3-performance-and-rgba8.md).
+
+The attempted fix excluded `GL_RGBA8` and `GL_RGBA8_SNORM` from that conversion.
+The atlas then became mutable, but the 26.2 copy/upload path still did not fill it.
+Readback after the attempted fix:
 
 ```
 nonzero=6665/524288
