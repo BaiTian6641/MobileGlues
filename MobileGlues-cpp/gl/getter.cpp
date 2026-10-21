@@ -23,6 +23,19 @@
 
 #define DEBUG 0
 
+#ifndef MG_BUILD_ID
+#define MG_BUILD_ID "unidentified"
+#endif
+
+#if defined(_WIN32)
+#define MG_BUILD_ID_EXPORT __declspec(dllexport)
+#else
+#define MG_BUILD_ID_EXPORT __attribute__((visibility("default")))
+#endif
+extern "C" MG_BUILD_ID_EXPORT const char* mg_get_build_id() {
+    return MG_BUILD_ID;
+}
+
 Version GLVersion;
 
 namespace {
@@ -448,6 +461,7 @@ const GLubyte* glGetString(GLenum name) {
                 std::string gpuName = getGpuName();
                 std::string glesName = getGLESName();
                 rendererString = std::string(gpuName) + " | " + std::string(glesName);
+                rendererString += " | MG " MG_BUILD_ID;
             } else {
                 const char choices[] = "AINM";
                 rendererString = choices[rand() % 4];

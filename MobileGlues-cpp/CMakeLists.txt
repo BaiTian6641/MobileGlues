@@ -3,6 +3,26 @@ project("mobileglues")
 enable_language(CXX)
 option(MG_FSR3_DIAGNOSTICS "Build the Experiment A bounded GL trace (debug only)" OFF)
 
+# Fingerprint the implementation at configure time, including uncommitted source.
+# A cached launcher library can then be distinguished from the artifact on disk.
+file(GLOB_RECURSE MG_ID_INPUTS CONFIGURE_DEPENDS
+    "gl/*.cpp" "gl/*.h" "gles/*.cpp" "gles/*.h" "egl/*.cpp" "egl/*.h"
+    "glx/*.cpp" "glx/*.h" "config/*.cpp" "config/*.c" "config/*.h"
+    "upscaling/*.cpp" "upscaling/*.h" "bench/*.cpp" "bench/*.h")
+list(APPEND MG_ID_INPUTS "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
+    "${CMAKE_CURRENT_SOURCE_DIR}/init.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/version.h")
+list(SORT MG_ID_INPUTS)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${MG_ID_INPUTS})
+set(MG_SOURCE_DIGEST "")
+foreach(MG_INPUT IN LISTS MG_ID_INPUTS)
+    file(SHA256 "${MG_INPUT}" MG_INPUT_HASH)
+    file(RELATIVE_PATH MG_INPUT_NAME "${CMAKE_CURRENT_SOURCE_DIR}" "${MG_INPUT}")
+    string(APPEND MG_SOURCE_DIGEST "${MG_INPUT_NAME}:${MG_INPUT_HASH}\n")
+endforeach()
+string(SHA256 MG_SOURCE_HASH "${MG_SOURCE_DIGEST}")
+string(SUBSTRING "${MG_SOURCE_HASH}" 0 16 MG_SOURCE_ID)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -142,6 +162,8 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
     config/settings.cpp
     config/stats.cpp
 )
+
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE MG_BUILD_ID="src-${MG_SOURCE_ID}")
 
 if(MG_FSR3_DIAGNOSTICS)
     target_sources(${CMAKE_PROJECT_NAME} PRIVATE gl/diagnostic.cpp)
