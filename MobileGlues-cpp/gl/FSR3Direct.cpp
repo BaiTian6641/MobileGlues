@@ -331,6 +331,9 @@ bool FSR3BridgePresentedThisFrame() {
 
 void ApplyFSR3Present() {
     if (global_settings.fsr3_setting != FSR3_Mode::Experimental) return;
+    // Direct presentation is opt-in. It must not process menus/title frames;
+    // the Minecraft bridge path owns world presentation.
+    if (!global_settings.fsr3_direct_present) return;
     // The Minecraft bridge is the product route. The direct path consumes the
     // already-composed framebuffer and must never touch menu/UI-only frames.
     if (FSR3BridgeMode()) return;

@@ -245,6 +245,9 @@ struct global_settings_t {
     FSR1_Quality_Preset fsr1_setting;
     FSR3_Mode fsr3_setting;
     FSR3_Quality_Preset fsr3_quality;
+    // The direct presenter consumes the composed frame; menu/title frames must
+    // stay native. The Minecraft bridge owns all world presentation.
+    bool fsr3_direct_present = false;
     HideMGEnvLevel hide_mg_env_level;
 };
 

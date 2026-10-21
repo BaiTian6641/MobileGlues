@@ -60,6 +60,7 @@ void init_settings() {
         success ? static_cast<FSR1_Quality_Preset>(config_get_int("fsr1Setting")) : FSR1_Quality_Preset::Disabled;
     FSR3_Mode fsr3Setting =
         success ? static_cast<FSR3_Mode>(config_get_int("fsr3Setting")) : FSR3_Mode::Disabled;
+    const bool fsr3DirectPresent = success && config_get_int("fsr3DirectPresent") > 0;
     FSR3_Quality_Preset fsr3Quality =
         success ? static_cast<FSR3_Quality_Preset>(config_get_int("fsr3Quality"))
                 : FSR3_Quality_Preset::NativeAA;
@@ -236,6 +237,7 @@ void init_settings() {
     global_settings.fsr1_setting = fsr1Setting;
     global_settings.fsr3_setting = fsr3Setting;
     global_settings.fsr3_quality = fsr3Quality;
+    global_settings.fsr3_direct_present = fsr3DirectPresent;
     global_settings.hide_mg_env_level = hideMGEnvLevel;
 #endif
 
