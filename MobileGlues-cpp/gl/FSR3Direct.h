@@ -19,6 +19,7 @@ void ApplyFSR3Present();
 // FSR3 setting is enabled and the current draw target is smaller than the EGL
 // surface (i.e. Iris RenderTargets was created at the selected scene extent).
 bool FSR3AdjustViewport(int& x, int& y, int& width, int& height);
+bool FSR3AdjustScissor(int& x, int& y, int& width, int& height);
 bool FSR3GetSurfaceSize(int& width, int& height);
 void FSR3NativeViewport();
 void FSR3SetBridgeMode();

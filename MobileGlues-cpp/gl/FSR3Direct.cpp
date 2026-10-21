@@ -59,16 +59,29 @@ std::atomic<bool> g_bridge_presented_this_frame{false};
 std::atomic<bool> g_bridge_mode{false};
 thread_local bool g_final_scope = false;
 thread_local unsigned int g_bridge_depth = 0;
+struct ScaledViewport {
+    bool active = false;
+    int x = 0, y = 0, width = 0, height = 0;
+    int surface_width = 0, surface_height = 0;
+};
+thread_local ScaledViewport g_scaled_viewport;
 
 struct PresentGuard {
     GLint draw = 0, read = 0, active = GL_TEXTURE0, tex0 = 0, sampler0 = 0;
     GLint viewport[4]{};
+    GLint scissor[4]{};
+    GLint scissor_test = 0;
 
     PresentGuard() {
         GLES.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &draw);
         GLES.glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &read);
         GLES.glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
         GLES.glGetIntegerv(GL_VIEWPORT, viewport);
+        GLES.glGetIntegerv(GL_SCISSOR_BOX, scissor);
+        GLES.glGetIntegerv(GL_SCISSOR_TEST, &scissor_test);
+        // Presentation must cover the surface even when the caller left a
+        // reduced scene scissor active. Restore it after the blits.
+        if (scissor_test) GLES.glDisable(GL_SCISSOR_TEST);
         GLES.glActiveTexture(GL_TEXTURE0);
         GLES.glGetIntegerv(GL_TEXTURE_BINDING_2D, &tex0);
         GLES.glGetIntegerv(GL_SAMPLER_BINDING, &sampler0);
@@ -78,6 +91,8 @@ struct PresentGuard {
         GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, draw);
         GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, read);
         GLES.glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+        GLES.glScissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+        if (scissor_test) GLES.glEnable(GL_SCISSOR_TEST); else GLES.glDisable(GL_SCISSOR_TEST);
         GLES.glActiveTexture(GL_TEXTURE0);
         GLES.glBindTexture(GL_TEXTURE_2D, tex0);
         GLES.glBindSampler(0, sampler0);
@@ -181,7 +196,9 @@ bool FSR3BridgeMode() {
     return g_bridge_mode.load(std::memory_order_acquire);
 }
 
-bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
+static void clear_scaled_viewport() { g_scaled_viewport = {}; }
+
+static bool adjust_rect(int& x, int& y, int& width, int& height, bool track_viewport) {
     if (global_settings.fsr3_setting != FSR3_Mode::Experimental) return false;
     if (width <= 0 || height <= 0) return false;
     // The current EGL surface owns the output extent. A previously bound
@@ -189,9 +206,28 @@ bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
     // before the next bridge submission.
     int surface_w = 0, surface_h = 0;
     if (!surface_size(surface_w, surface_h)) return false;
+
+    if (track_viewport && g_scaled_viewport.active &&
+        (g_scaled_viewport.surface_width != surface_w || g_scaled_viewport.surface_height != surface_h ||
+         g_scaled_viewport.x != x || g_scaled_viewport.y != y ||
+         g_scaled_viewport.width != width || g_scaled_viewport.height != height)) {
+        // The application replaced the scene viewport itself. Do not carry a
+        // stale conversion into the next target.
+        clear_scaled_viewport();
+    }
+
     GLint fbo = 0;
     GLES.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fbo);
-    if (fbo == 0) return false;
+    if (fbo == 0) {
+        if (track_viewport && g_scaled_viewport.active) {
+            // Menu/title frames return to the default framebuffer. Restore the
+            // native extent instead of leaving the UI cropped at scene size.
+            x = 0; y = 0; width = surface_w; height = surface_h;
+            clear_scaled_viewport();
+            return true;
+        }
+        return false;
+    }
     GLint type = 0;
     GLES.glGetFramebufferAttachmentParameteriv(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                                GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, &type);
@@ -210,12 +246,30 @@ bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
     GLES.glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &target_h);
     GLES.glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(prev_tex));
     GLES.glActiveTexture(static_cast<GLenum>(prev_unit));
+
+    if (track_viewport && g_scaled_viewport.active &&
+        target_w == surface_w && target_h == surface_h) {
+        // A native target after a scaled scene target owns the full output.
+        x = 0; y = 0; width = surface_w; height = surface_h;
+        clear_scaled_viewport();
+        return true;
+    }
+
     // Attachment size alone cannot identify a final pass: native-sized targets
     // and larger atlases may use arbitrary viewports or scissor rectangles.
     // The bridge resets the final viewport explicitly at its presentation boundary.
     const FSR3ViewportPlan plan = FSR3PlanViewport(surface_w, surface_h, target_w, target_h,
                                                     x, y, width, height);
-    if (!plan.adjust) return false;
+    if (!plan.adjust) {
+        if (track_viewport && g_scaled_viewport.active &&
+            (target_w >= surface_w || target_h >= surface_h)) {
+            clear_scaled_viewport();
+        }
+        return false;
+    }
+    if (track_viewport) {
+        g_scaled_viewport = {true, plan.x, plan.y, plan.width, plan.height, surface_w, surface_h};
+    }
     x = plan.x;
     y = plan.y;
     width = plan.width;
@@ -226,6 +280,14 @@ bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
         LOG_W_FORCE("FSR3 scene viewport %dx%d -> %dx%d", surface_w, surface_h, width, height);
     }
     return true;
+}
+
+bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
+    return adjust_rect(x, y, width, height, true);
+}
+
+bool FSR3AdjustScissor(int& x, int& y, int& width, int& height) {
+    return adjust_rect(x, y, width, height, false);
 }
 
 void FSR3SetBridgeDepthTexture(unsigned int texture) { g_bridge_depth = texture; }
@@ -256,6 +318,7 @@ void FSR3NativeViewport() {
         LOG_W_FORCE("FSR3 native viewport %dx%d", width, height);
     }
     GLES.glViewport(0, 0, width, height);
+    clear_scaled_viewport();
 }
 
 void FSR3MarkBridgePresent() {

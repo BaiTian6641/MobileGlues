@@ -104,6 +104,13 @@ int main() {
     target_width = 1694; target_height = 932;
     request("Balanced scene scales once", {0, 0, 2880, 1585}, true, {0, 0, 1694, 932});
     request("already scaled scene unchanged", {0, 0, 1694, 932}, false, {0, 0, 1694, 932});
+    target_width = 2880; target_height = 1585;
+    request("native target restores the scaled viewport", {0, 0, 1694, 932}, true, {0, 0, 2880, 1585});
+    target_width = 1694; target_height = 932;
+    request("scene restores its scaled viewport", {0, 0, 2880, 1585}, true, {0, 0, 1694, 932});
+    framebuffer = 0;
+    request("default framebuffer restores the scaled viewport", {0, 0, 1694, 932}, true, {0, 0, 2880, 1585});
+    framebuffer = 7;
     request("offset scene request unchanged", {1, 2, 2880, 1585}, false, {1, 2, 2880, 1585});
     framebuffer = 0;
     request("default framebuffer unchanged", {0, 0, 2880, 1585}, false, {0, 0, 2880, 1585});
