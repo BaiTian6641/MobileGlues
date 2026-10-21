@@ -1054,14 +1054,8 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
             type = GL_FLOAT;
         }
     }
-    // GL_RGBA8 is both an ordinary color format and a legal image format.
-    // Minecraft 26.2 allocates its block atlas with glTexImage2D(level 0, null)
-    // and fills it through its own upload path. Converting that allocation to
-    // immutable one-level storage left the atlas empty; keep the immutable
-    // image-storage bridge for dedicated image formats only.
-    const bool ordinary_color_format = internalFormat == GL_RGBA8 || internalFormat == GL_RGBA8_SNORM;
     if (!mg_upload_has_data(pixels) && level == 0 && target == GL_TEXTURE_2D &&
-        mg_is_native_image_format(internalFormat) && !ordinary_color_format) {
+        mg_is_native_image_format(internalFormat)) {
         glTexStorage2D(target, 1, internalFormat, width, height);
         CHECK_GL_ERROR
         return;
