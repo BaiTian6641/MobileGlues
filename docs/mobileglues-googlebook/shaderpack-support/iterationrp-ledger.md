@@ -18,6 +18,9 @@ Target: original `iterationRP Alpha 0.8.31.zip`
 | ITRP-09 | Final/composite sampling and ping-pong identity audit | IN PROGRESS | periodic reset observed; `IterationRPFinalSamplingAudit` |
 | ITRP-10 | Remaining image/sampler/barrier contract audit | IN PROGRESS | `IterationRPImageContractAudit` |
 | ITRP-11 | Atmosphere LUT sampler3D consumption audit | IN PROGRESS | `IterationRPAtmosphereAudit` |
+| ITRP-12 | Black-sky presentation/sampling audit | IN PROGRESS | `IterationRPSkyAudit` |
+| ITRP-13 | Missing light/shadow effect audit | IN PROGRESS | `IterationRPShadowAudit` |
+| ITRP-14 | Sky/LUT/shadow runtime probe design | IN PROGRESS | `IterationRPSamplerProbeDesign` |
 
 ## Promotion rule
 
