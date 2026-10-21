@@ -1,0 +1,45 @@
+{
+  "level": "x1e-minecraft-loader-world-smoke",
+  "core_source_commit": "9014c92",
+  "core_sha256": "d515ca6a334d29783ff742e75d069249d76461357cabacc77b3ac3bfd5035f18",
+  "core_build_id": "src-167f4da0e295031b",
+  "bridge_commit": "287fff5e6e72c6cf94b082f13f81cb7250d012ec",
+  "bridge_sha256": "db37b5f138f8271cf5fc90735a724a365b0f72d0a045350212eae2433439842b",
+  "device": {
+    "class": "Snapdragon X Elite X1E-80-100",
+    "abi": "arm64-v8a",
+    "identity_record": "Exact serial, OS build and provider records retained in local raw evidence."
+  },
+  "minecraft": "1.21.1",
+  "loader": "NeoForge 21.1.262",
+  "java": "21.0.1-internal (observed F3)",
+  "iris": "1.8.14-beta.1+mc1.21.1",
+  "sodium": "0.8.13+mc1.21.1",
+  "shaderpack": "ComplementaryReimagined_r5.9.3.zip",
+  "profile": "LOW (+2 existing user changes)",
+  "checks": {
+    "core_marker_in_game_log": true,
+    "seven_mixins_applied_in_debug_log": true,
+    "visible_world_frame": true,
+    "save_quit_all_dimensions_saved": true,
+    "returned_to_launcher": true,
+    "previous_bridge_restored_sha256": "4d49e1351e17f43dd54ccb3222cd489d5b70daeacbcd494e8f98781a2fbb0684"
+  },
+  "not_qualified": [
+    "native submit success or exact scene scaling",
+    "FSR visual fidelity and preset matrix",
+    "shader reload, resize, context loss",
+    "performance or thermal gate",
+    "other seven game-loader profiles",
+    "X2 hardware"
+  ],
+  "captures": {
+    "latest-before-quit.log": "be0294f02a5b7794e1326e7a9dbb349049ed258b8513c49db87b81c4c5a6cda7",
+    "world.png": "e715e70e777151468c30e82337de7e505434bccdda315535e45e59424ba3d9af",
+    "latest-after-save.log": "87283edee5300c89a1270ec272cbd15a8c0558d121312b620e895dfcc8cea292",
+    "world-f3.png": "74ee8544069e3609edb3558d57a17ee3bd863f55b429fae9bd30bb8897a91c48",
+    "after-save.png": "ca6fb78e7afdf81b0e022047b76706353e137e514884d5e97254755c01a70f2b",
+    "debug-before-quit.log": "8a255519aea9fe50f909e92802181071b8995037321d3b2d1b8106d1f69b54b1"
+  },
+  "publication_note": "Public evidence summary: device-specific identity and local paths redacted. Full raw record retained locally."
+}

@@ -1,0 +1,32 @@
+{
+  "level": "android-wrapper-readback",
+  "device": {
+    "class": "Snapdragon X Elite X1E-80-100",
+    "abi": "arm64-v8a",
+    "identity_record": "Exact serial, OS build and provider records retained in local raw evidence."
+  },
+  "core_sha256": "d515ca6a334d29783ff742e75d069249d76461357cabacc77b3ac3bfd5035f18",
+  "probe_sha256": "315938c827b7e012c1bdc3630138902ba2803965f39cab8d3bade44b01c6a5c9",
+  "case": "late_uniform",
+  "exit_code": 0,
+  "results": {
+    "context_lane": "wrapper-egl",
+    "wrapper": {
+      "library": "[device temporary storage]/mg-qualification-d515ca6a334d2978-315938c8/libmobileglues.so",
+      "renderer": "Adreno (TM)  X1-85 | ANGLE | Vulkan [Vulkan revision retained locally] | OpenGL ES 3.2 | MG src-167f4da0e295031b",
+      "version": "4.0.0 MobileGlues 2.0.0",
+      "shading": "4.60 MobileGlues with glslang and SPIRV-Cross"
+    },
+    "provider": {
+      "api": "OpenGL ES 3.2",
+      "implementation": "ANGLE over Vulkan",
+      "identity_record": "Exact provider strings retained in local raw evidence."
+    },
+    "build_id": "src-167f4da0e295031b",
+    "late_uniform": {
+      "pass": true,
+      "detail": "value=7 error=0 log="
+    }
+  },
+  "publication_note": "Public evidence summary: device-specific identity and local paths redacted. Full raw record retained locally."
+}

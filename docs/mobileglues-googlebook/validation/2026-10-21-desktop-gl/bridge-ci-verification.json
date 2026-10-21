@@ -1,0 +1,354 @@
+{
+  "commit": "287fff5e6e72c6cf94b082f13f81cb7250d012ec",
+  "run_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205",
+  "run_conclusion": "success",
+  "all_eight_build_test_ast_reproducibility_checks": "success",
+  "artifact_upload": "success",
+  "uploaded_artifact_count": 8,
+  "hosted_download_verification": "pass: all eight downloaded JARs and build reports byte-identical to exact-commit local build; downloaded packages inspected",
+  "local_matching_build_directory": "[temporary]/fsr-hosted-comparison-287fff5/dist",
+  "profiles": [
+    {
+      "profile": "1.18.2-fabric",
+      "jar": "mgfsr3bridge-0.2.0-1.18.2-fabric.jar",
+      "jar_sha256": "ec452566cee8a35f43e2504521e27ac5c2ee1f4d5d6961e1c00ad490b71f37aa",
+      "size_bytes": 48694,
+      "intended_artifact_name": "mgfsr3bridge-1.18.2-fabric",
+      "job_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/job/119068641672",
+      "ci_build_sha256_matches_local": true,
+      "ci_repeat_build_sha256_matches_local": true,
+      "package_crc_class_isolation_java17_native_abi_checks": "pass",
+      "native": {
+        "arm64-v8a": {
+          "sha256": "3e377ff264117a8b6f555a9d19c2330aea1aba7eab79a90be113c8ce62ea9d92",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 183
+        },
+        "x86_64": {
+          "sha256": "2593a342daa94c14c10c3897a2ca173014ae9829400054ad85752ee021ee8336",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 62
+        }
+      },
+      "source_tree_sha256": "0855f370b77968e9131e960a07c04ef930ed25cc1b9199f6d3160524e6c39ab5",
+      "artifact_id": 12324726893,
+      "artifact_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/artifacts/12324726893",
+      "artifact_archive_size_bytes": 48024,
+      "artifact_archive_sha256_metadata": "sha256:ebe0cd86a7bad3629f7cda40022e3e6b8ee60ff92440e5a6e431c6ddf8c672a1",
+      "artifact_expires_at": "2026-11-04T06:10:58Z",
+      "downloaded_jar_matches_local_bytes": true,
+      "downloaded_build_report_matches_local_bytes": true,
+      "downloaded_package_crc_class_isolation_java17_native_abi_checks": "pass"
+    },
+    {
+      "profile": "1.18.2-forge",
+      "jar": "mgfsr3bridge-0.2.0-1.18.2-forge.jar",
+      "jar_sha256": "dbe834ed676afb66b4c84088f42fd4757a8cafbe4fc9bacc5df1928d33e99024",
+      "size_bytes": 48751,
+      "intended_artifact_name": "mgfsr3bridge-1.18.2-forge",
+      "job_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/job/119068641783",
+      "ci_build_sha256_matches_local": true,
+      "ci_repeat_build_sha256_matches_local": true,
+      "package_crc_class_isolation_java17_native_abi_checks": "pass",
+      "native": {
+        "arm64-v8a": {
+          "sha256": "3e377ff264117a8b6f555a9d19c2330aea1aba7eab79a90be113c8ce62ea9d92",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 183
+        },
+        "x86_64": {
+          "sha256": "2593a342daa94c14c10c3897a2ca173014ae9829400054ad85752ee021ee8336",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 62
+        }
+      },
+      "source_tree_sha256": "0855f370b77968e9131e960a07c04ef930ed25cc1b9199f6d3160524e6c39ab5",
+      "artifact_id": 12324388959,
+      "artifact_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/artifacts/12324388959",
+      "artifact_archive_size_bytes": 48115,
+      "artifact_archive_sha256_metadata": "sha256:78db690829946544966efbfcdbdeb0e288024d632a8590877a5372af5f33785f",
+      "artifact_expires_at": "2026-11-04T06:11:08Z",
+      "downloaded_jar_matches_local_bytes": true,
+      "downloaded_build_report_matches_local_bytes": true,
+      "downloaded_package_crc_class_isolation_java17_native_abi_checks": "pass"
+    },
+    {
+      "profile": "1.20.1-fabric",
+      "jar": "mgfsr3bridge-0.2.0-1.20.1-fabric.jar",
+      "jar_sha256": "e959d38f362182609ca169a4a4dd783d03ec15e8f2b5462f8cf34bef64d1e236",
+      "size_bytes": 48685,
+      "intended_artifact_name": "mgfsr3bridge-1.20.1-fabric",
+      "job_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/job/119068641754",
+      "ci_build_sha256_matches_local": true,
+      "ci_repeat_build_sha256_matches_local": true,
+      "package_crc_class_isolation_java17_native_abi_checks": "pass",
+      "native": {
+        "arm64-v8a": {
+          "sha256": "3e377ff264117a8b6f555a9d19c2330aea1aba7eab79a90be113c8ce62ea9d92",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 183
+        },
+        "x86_64": {
+          "sha256": "2593a342daa94c14c10c3897a2ca173014ae9829400054ad85752ee021ee8336",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 62
+        }
+      },
+      "source_tree_sha256": "0855f370b77968e9131e960a07c04ef930ed25cc1b9199f6d3160524e6c39ab5",
+      "artifact_id": 12324573370,
+      "artifact_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/artifacts/12324573370",
+      "artifact_archive_size_bytes": 48025,
+      "artifact_archive_sha256_metadata": "sha256:dbe833f3d3aa7f3a71f88167e6c08e083f1f70db1ca1318546b6840adbca6ab9",
+      "artifact_expires_at": "2026-11-04T06:11:16Z",
+      "downloaded_jar_matches_local_bytes": true,
+      "downloaded_build_report_matches_local_bytes": true,
+      "downloaded_package_crc_class_isolation_java17_native_abi_checks": "pass"
+    },
+    {
+      "profile": "1.20.1-forge",
+      "jar": "mgfsr3bridge-0.2.0-1.20.1-forge.jar",
+      "jar_sha256": "5ccbeecf86a66c268f8bbcd11298c53defaae7491dfbf4c43c78f0e03ddd588a",
+      "size_bytes": 48740,
+      "intended_artifact_name": "mgfsr3bridge-1.20.1-forge",
+      "job_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/job/119068641859",
+      "ci_build_sha256_matches_local": true,
+      "ci_repeat_build_sha256_matches_local": true,
+      "package_crc_class_isolation_java17_native_abi_checks": "pass",
+      "native": {
+        "arm64-v8a": {
+          "sha256": "3e377ff264117a8b6f555a9d19c2330aea1aba7eab79a90be113c8ce62ea9d92",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 183
+        },
+        "x86_64": {
+          "sha256": "2593a342daa94c14c10c3897a2ca173014ae9829400054ad85752ee021ee8336",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 62
+        }
+      },
+      "source_tree_sha256": "0855f370b77968e9131e960a07c04ef930ed25cc1b9199f6d3160524e6c39ab5",
+      "artifact_id": 12324503637,
+      "artifact_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/artifacts/12324503637",
+      "artifact_archive_size_bytes": 48095,
+      "artifact_archive_sha256_metadata": "sha256:f452a4a5b45cff25d848622e18ed16df29516c432b8e8962bde951f398487237",
+      "artifact_expires_at": "2026-11-04T06:11:12Z",
+      "downloaded_jar_matches_local_bytes": true,
+      "downloaded_build_report_matches_local_bytes": true,
+      "downloaded_package_crc_class_isolation_java17_native_abi_checks": "pass"
+    },
+    {
+      "profile": "1.21.1-fabric",
+      "jar": "mgfsr3bridge-0.2.0-1.21.1-fabric.jar",
+      "jar_sha256": "36b7b2557216a38184380f55b21fe82f377f54069988b625fd2f8ce76ca0e4e3",
+      "size_bytes": 48696,
+      "intended_artifact_name": "mgfsr3bridge-1.21.1-fabric",
+      "job_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/job/119068641741",
+      "ci_build_sha256_matches_local": true,
+      "ci_repeat_build_sha256_matches_local": true,
+      "package_crc_class_isolation_java17_native_abi_checks": "pass",
+      "native": {
+        "arm64-v8a": {
+          "sha256": "3e377ff264117a8b6f555a9d19c2330aea1aba7eab79a90be113c8ce62ea9d92",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 183
+        },
+        "x86_64": {
+          "sha256": "2593a342daa94c14c10c3897a2ca173014ae9829400054ad85752ee021ee8336",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 62
+        }
+      },
+      "source_tree_sha256": "0855f370b77968e9131e960a07c04ef930ed25cc1b9199f6d3160524e6c39ab5",
+      "artifact_id": 12324448787,
+      "artifact_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/artifacts/12324448787",
+      "artifact_archive_size_bytes": 48026,
+      "artifact_archive_sha256_metadata": "sha256:aaa953420662aac985995380468c01dda08d40d75f532d382ea91f0a280072bb",
+      "artifact_expires_at": "2026-11-04T06:11:12Z",
+      "downloaded_jar_matches_local_bytes": true,
+      "downloaded_build_report_matches_local_bytes": true,
+      "downloaded_package_crc_class_isolation_java17_native_abi_checks": "pass"
+    },
+    {
+      "profile": "1.21.1-neoforge",
+      "jar": "mgfsr3bridge-0.2.0-1.21.1-neoforge.jar",
+      "jar_sha256": "db37b5f138f8271cf5fc90735a724a365b0f72d0a045350212eae2433439842b",
+      "size_bytes": 48761,
+      "intended_artifact_name": "mgfsr3bridge-1.21.1-neoforge",
+      "job_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/job/119068641878",
+      "ci_build_sha256_matches_local": true,
+      "ci_repeat_build_sha256_matches_local": true,
+      "package_crc_class_isolation_java17_native_abi_checks": "pass",
+      "native": {
+        "arm64-v8a": {
+          "sha256": "3e377ff264117a8b6f555a9d19c2330aea1aba7eab79a90be113c8ce62ea9d92",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 183
+        },
+        "x86_64": {
+          "sha256": "2593a342daa94c14c10c3897a2ca173014ae9829400054ad85752ee021ee8336",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 62
+        }
+      },
+      "source_tree_sha256": "0855f370b77968e9131e960a07c04ef930ed25cc1b9199f6d3160524e6c39ab5",
+      "artifact_id": 12324806538,
+      "artifact_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/artifacts/12324806538",
+      "artifact_archive_size_bytes": 48115,
+      "artifact_archive_sha256_metadata": "sha256:9b30bb50a1b30bdd6e663eda574030b9defa93abfa42a1f3d84c0844add7f138",
+      "artifact_expires_at": "2026-11-04T06:11:00Z",
+      "downloaded_jar_matches_local_bytes": true,
+      "downloaded_build_report_matches_local_bytes": true,
+      "downloaded_package_crc_class_isolation_java17_native_abi_checks": "pass"
+    },
+    {
+      "profile": "26.2-fabric",
+      "jar": "mgfsr3bridge-0.2.0-26.2-fabric.jar",
+      "jar_sha256": "5f35db80ea04781662d54d10c7a664394a9c25441478787fda32fb026e9e0b2d",
+      "size_bytes": 48780,
+      "intended_artifact_name": "mgfsr3bridge-26.2-fabric",
+      "job_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/job/119068641777",
+      "ci_build_sha256_matches_local": true,
+      "ci_repeat_build_sha256_matches_local": true,
+      "package_crc_class_isolation_java17_native_abi_checks": "pass",
+      "native": {
+        "arm64-v8a": {
+          "sha256": "3e377ff264117a8b6f555a9d19c2330aea1aba7eab79a90be113c8ce62ea9d92",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 183
+        },
+        "x86_64": {
+          "sha256": "2593a342daa94c14c10c3897a2ca173014ae9829400054ad85752ee021ee8336",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 62
+        }
+      },
+      "source_tree_sha256": "0855f370b77968e9131e960a07c04ef930ed25cc1b9199f6d3160524e6c39ab5",
+      "artifact_id": 12324458726,
+      "artifact_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/artifacts/12324458726",
+      "artifact_archive_size_bytes": 48251,
+      "artifact_archive_sha256_metadata": "sha256:6734b0e26c4c188c2385406d8e4149119b213f10a4ef2a984287cbac63f3a011",
+      "artifact_expires_at": "2026-11-04T06:11:02Z",
+      "downloaded_jar_matches_local_bytes": true,
+      "downloaded_build_report_matches_local_bytes": true,
+      "downloaded_package_crc_class_isolation_java17_native_abi_checks": "pass"
+    },
+    {
+      "profile": "26.2-neoforge",
+      "jar": "mgfsr3bridge-0.2.0-26.2-neoforge.jar",
+      "jar_sha256": "11fe98f0b935398ddd6c071d3ed24f761a1497f2582e60155b46da3ad5d5876e",
+      "size_bytes": 48848,
+      "intended_artifact_name": "mgfsr3bridge-26.2-neoforge",
+      "job_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/job/119068641805",
+      "ci_build_sha256_matches_local": true,
+      "ci_repeat_build_sha256_matches_local": true,
+      "package_crc_class_isolation_java17_native_abi_checks": "pass",
+      "native": {
+        "arm64-v8a": {
+          "sha256": "3e377ff264117a8b6f555a9d19c2330aea1aba7eab79a90be113c8ce62ea9d92",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 183
+        },
+        "x86_64": {
+          "sha256": "2593a342daa94c14c10c3897a2ca173014ae9829400054ad85752ee021ee8336",
+          "load_alignments": [
+            16384,
+            16384,
+            16384,
+            16384
+          ],
+          "machine": 62
+        }
+      },
+      "source_tree_sha256": "0855f370b77968e9131e960a07c04ef930ed25cc1b9199f6d3160524e6c39ab5",
+      "artifact_id": 12324951061,
+      "artifact_url": "https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39553378205/artifacts/12324951061",
+      "artifact_archive_size_bytes": 48335,
+      "artifact_archive_sha256_metadata": "sha256:b86ed1489b51539fdc874396e5369c2e198c9c544a6d26bbbc0a2b40c42f5c5d",
+      "artifact_expires_at": "2026-11-04T06:11:11Z",
+      "downloaded_jar_matches_local_bytes": true,
+      "downloaded_build_report_matches_local_bytes": true,
+      "downloaded_package_crc_class_isolation_java17_native_abi_checks": "pass"
+    }
+  ],
+  "verified_at_utc": "2026-10-21T06:12:19.855404+00:00",
+  "run_attempt": 2,
+  "download_directory": "[temporary]/fsr-ci-287fff5-attempt2-download",
+  "loader_launch": "not_run",
+  "device_qualification": "not_run",
+  "publication_note": "Public evidence summary: device-specific identity and local paths redacted. Full raw record retained locally."
+}

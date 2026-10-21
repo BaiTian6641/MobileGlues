@@ -1,0 +1,270 @@
+{
+  "host": [
+    {
+      "file": "MobileGlues-cpp/gl/shader_source.cpp",
+      "sha256": "d3508e6b14d2bab1dd277ad68b24527b4e0eb2261bc469a456cd11f15d33373f",
+      "lint": "zero compiler warnings",
+      "ast": {
+        "scope": "Clang declarations matching mg_ (complete translation unit syntax checked)",
+        "root_declarations": 8,
+        "node_kinds": {
+          "FunctionDecl": 8,
+          "ParmVarDecl": 17,
+          "CompoundStmt": 38,
+          "IfStmt": 37,
+          "ImplicitCastExpr": 310,
+          "DeclRefExpr": 290,
+          "BinaryOperator": 119,
+          "UnaryOperator": 38,
+          "IntegerLiteral": 50,
+          "ParenExpr": 5,
+          "CXXNullPtrLiteralExpr": 2,
+          "ReturnStmt": 14,
+          "CXXBoolLiteralExpr": 15,
+          "DeclStmt": 57,
+          "VarDecl": 57,
+          "CXXConstructExpr": 15,
+          "ForStmt": 6,
+          "unknown": 11,
+          "ArraySubscriptExpr": 6,
+          "CompoundAssignOperator": 2,
+          "CXXStaticCastExpr": 11,
+          "CallExpr": 10,
+          "CXXMemberCallExpr": 61,
+          "MemberExpr": 61,
+          "CXXOperatorCallExpr": 28,
+          "WhileStmt": 2,
+          "ExprWithCleanups": 8,
+          "CXXBindTemporaryExpr": 4,
+          "ConditionalOperator": 1,
+          "CharacterLiteral": 23,
+          "ContinueStmt": 4,
+          "BreakStmt": 1,
+          "StringLiteral": 15,
+          "CXXDefaultArgExpr": 8,
+          "InitListExpr": 1,
+          "CXXForRangeStmt": 5,
+          "CXXRewrittenBinaryOperator": 4,
+          "MaterializeTemporaryExpr": 4
+        }
+      }
+    },
+    {
+      "file": "MobileGlues-cpp/gl/image_metadata.cpp",
+      "sha256": "44b29cb268f9fbdb34413993684f255c10f4e0b4db8a33278c07ab9a92d3d1ff",
+      "lint": "zero compiler warnings",
+      "ast": {
+        "scope": "Clang declarations matching mg_ (complete translation unit syntax checked)",
+        "root_declarations": 26,
+        "node_kinds": {
+          "FunctionDecl": 25,
+          "VisibilityAttr": 6,
+          "ParmVarDecl": 25,
+          "VarDecl": 63,
+          "InitListExpr": 26,
+          "ImplicitCastExpr": 591,
+          "IntegerLiteral": 163,
+          "StringLiteral": 70,
+          "CXXNullPtrLiteralExpr": 16,
+          "CompoundStmt": 45,
+          "CXXForRangeStmt": 2,
+          "unknown": 6,
+          "DeclStmt": 62,
+          "DeclRefExpr": 384,
+          "BinaryOperator": 155,
+          "UnaryOperator": 17,
+          "IfStmt": 36,
+          "MemberExpr": 82,
+          "ReturnStmt": 29,
+          "CXXOperatorCallExpr": 37,
+          "CXXConstructExpr": 15,
+          "CallExpr": 18,
+          "CXXBoolLiteralExpr": 11,
+          "SwitchStmt": 2,
+          "CaseStmt": 30,
+          "ConstantExpr": 30,
+          "DefaultStmt": 2,
+          "ConditionalOperator": 11,
+          "ForStmt": 2,
+          "CXXMemberCallExpr": 59,
+          "CharacterLiteral": 25,
+          "ExprWithCleanups": 17,
+          "MaterializeTemporaryExpr": 8,
+          "CXXBindTemporaryExpr": 20,
+          "CXXDefaultArgExpr": 18,
+          "WhileStmt": 5,
+          "BreakStmt": 5,
+          "CompoundAssignOperator": 1,
+          "ContinueStmt": 1,
+          "ParenExpr": 6,
+          "CXXRewrittenBinaryOperator": 1,
+          "CXXFunctionalCastExpr": 2,
+          "CXXTemporaryObjectExpr": 1
+        }
+      }
+    },
+    {
+      "file": "MobileGlues-cpp/gl/glsl/compat_image.cpp",
+      "sha256": "f12b9063e1650aa8d980e289c4958464347328592f5842624d83171a9a6724a8",
+      "lint": "zero compiler warnings",
+      "ast": {
+        "scope": "Clang declarations matching mg_ (complete translation unit syntax checked)",
+        "root_declarations": 10,
+        "node_kinds": {
+          "FunctionDecl": 9,
+          "ParmVarDecl": 13,
+          "CompoundStmt": 31,
+          "DeclStmt": 47,
+          "VarDecl": 49,
+          "CXXConstructExpr": 18,
+          "DeclRefExpr": 306,
+          "ForStmt": 5,
+          "ImplicitCastExpr": 487,
+          "IntegerLiteral": 144,
+          "unknown": 9,
+          "BinaryOperator": 97,
+          "CXXMemberCallExpr": 58,
+          "MemberExpr": 73,
+          "CXXBoolLiteralExpr": 8,
+          "IfStmt": 25,
+          "CXXOperatorCallExpr": 51,
+          "CharacterLiteral": 18,
+          "ConditionalOperator": 7,
+          "ExprWithCleanups": 13,
+          "MaterializeTemporaryExpr": 19,
+          "CXXBindTemporaryExpr": 22,
+          "StringLiteral": 63,
+          "CXXDefaultArgExpr": 20,
+          "WhileStmt": 2,
+          "UnaryOperator": 16,
+          "BreakStmt": 2,
+          "CompoundAssignOperator": 1,
+          "ContinueStmt": 3,
+          "ReturnStmt": 20,
+          "InitListExpr": 27,
+          "CXXNullPtrLiteralExpr": 12,
+          "CXXForRangeStmt": 2,
+          "CallExpr": 7,
+          "SwitchStmt": 2,
+          "CaseStmt": 30,
+          "ConstantExpr": 30,
+          "DefaultStmt": 2,
+          "CXXRewrittenBinaryOperator": 4,
+          "CXXStaticCastExpr": 13,
+          "CXXRecordDecl": 2,
+          "FieldDecl": 3,
+          "CXXConstructorDecl": 3,
+          "CXXCtorInitializer": 3,
+          "CXXMethodDecl": 2,
+          "CXXDestructorDecl": 1,
+          "CXXFunctionalCastExpr": 2
+        }
+      }
+    }
+  ],
+  "evidence_level": "host/static only",
+  "native": [
+    {
+      "file": "MobileGlues-cpp/gl/shader_source.cpp",
+      "sha256": "d3508e6b14d2bab1dd277ad68b24527b4e0eb2261bc469a456cd11f15d33373f",
+      "diagnostics": {},
+      "allowed_existing_diagnostics": {},
+      "new_diagnostics": {}
+    },
+    {
+      "file": "MobileGlues-cpp/gl/image_metadata.cpp",
+      "sha256": "44b29cb268f9fbdb34413993684f255c10f4e0b4db8a33278c07ab9a92d3d1ff",
+      "diagnostics": {},
+      "allowed_existing_diagnostics": {},
+      "new_diagnostics": {}
+    },
+    {
+      "file": "MobileGlues-cpp/gl/glsl/compat_image.cpp",
+      "sha256": "f12b9063e1650aa8d980e289c4958464347328592f5842624d83171a9a6724a8",
+      "diagnostics": {},
+      "allowed_existing_diagnostics": {},
+      "new_diagnostics": {}
+    },
+    {
+      "file": "MobileGlues-cpp/gl/drawing.cpp",
+      "sha256": "22dcf1baf84d4a30189226f35be2db3f078475a8299a59c85addc9b73bcaa534",
+      "diagnostics": {
+        "cert-err58-cpp": 1,
+        "bugprone-easily-swappable-parameters": 2,
+        "cert-err33-c": 2,
+        "bugprone-switch-missing-default-case": 1
+      },
+      "allowed_existing_diagnostics": {
+        "cert-err58-cpp": 1,
+        "bugprone-easily-swappable-parameters": 2,
+        "cert-err33-c": 2,
+        "bugprone-switch-missing-default-case": 1
+      },
+      "new_diagnostics": {}
+    },
+    {
+      "file": "MobileGlues-cpp/gl/image_bindings.cpp",
+      "sha256": "0eb3f6d0386fe57e0f185cb8ec59bff05b394c6d1c0cf270f644c5a115dfc33a",
+      "diagnostics": {
+        "cert-err34-c": 1
+      },
+      "allowed_existing_diagnostics": {
+        "cert-err34-c": 1
+      },
+      "new_diagnostics": {}
+    },
+    {
+      "file": "MobileGlues-cpp/upscaling/mg_fsr.cpp",
+      "sha256": "dee9e9f70ef6bba6d4f102e68f1d4921282f00dc93abc54b6cc741b08ae2e81b",
+      "diagnostics": {
+        "cert-err33-c": 2
+      },
+      "allowed_existing_diagnostics": {
+        "cert-err33-c": 2
+      },
+      "new_diagnostics": {}
+    },
+    {
+      "file": "MobileGlues-cpp/upscaling/mg_fsr_jni.cpp",
+      "sha256": "dfa27642efab6604f527edc4dcfa25f224e09d845ab9aae6182fff137a44c4e1",
+      "diagnostics": {
+        "cert-err58-cpp": 1,
+        "bugprone-easily-swappable-parameters": 3,
+        "bugprone-narrowing-conversions": 2
+      },
+      "allowed_existing_diagnostics": {
+        "cert-err58-cpp": 1,
+        "bugprone-easily-swappable-parameters": 3,
+        "bugprone-narrowing-conversions": 2
+      },
+      "new_diagnostics": {}
+    },
+    {
+      "file": "MobileGlues-cpp/gl/FSR3Direct.cpp",
+      "sha256": "4980a36e2d1c411f10385e38645195795dd77d135d0aee06f2bd6e3dbc8eef8e",
+      "diagnostics": {
+        "bugprone-easily-swappable-parameters": 3,
+        "bugprone-narrowing-conversions": 4
+      },
+      "allowed_existing_diagnostics": {
+        "bugprone-easily-swappable-parameters": 3,
+        "bugprone-narrowing-conversions": 4
+      },
+      "new_diagnostics": {}
+    },
+    {
+      "file": "MobileGlues-cpp/egl/context.cpp",
+      "sha256": "da785b4aa086e85426725051d6c108e47fdf3fa821400d865f5a42ca52e049e2",
+      "diagnostics": {
+        "performance-unnecessary-value-param": 1,
+        "bugprone-easily-swappable-parameters": 3
+      },
+      "allowed_existing_diagnostics": {
+        "performance-unnecessary-value-param": 1,
+        "bugprone-easily-swappable-parameters": 3
+      },
+      "new_diagnostics": {}
+    }
+  ],
+  "publication_note": "Public evidence summary: device-specific identity and local paths redacted. Full raw record retained locally."
+}

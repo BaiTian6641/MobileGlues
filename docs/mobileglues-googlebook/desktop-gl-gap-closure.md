@@ -1,5 +1,12 @@
 # Desktop GL → MobileGlues gap-closure plan
 
+Implementation update: the
+[2026-10-21 continuation](2026-10-21-desktop-gl-bridge-ci.md) records newer
+source, host and device evidence for G0/G3/G4/G5/G10 and the standalone FSR3
+bridge. The row-by-row text below remains the original planning snapshot;
+in particular, its “untested” labels and source line numbers must not be used
+as the current execution state. Unclosed gaps retain their existing priority.
+
 Status: **plan and verification record, not a support promotion.** Evidence date
 2026-10-21. Target tuple: Minecraft 1.21.1 / NeoForge 21.1.262 / Iris
 1.8.14-beta.1 / Sodium 0.8.13, HP Googlebook 14 (`C1L63708PZ`), Snapdragon

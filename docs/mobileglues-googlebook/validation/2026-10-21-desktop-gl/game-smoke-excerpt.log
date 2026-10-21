@@ -1,0 +1,16 @@
+[21Oct2026 01:13:29.398] [Render thread/DEBUG] [mixin/]: Mixing PipelineMixin from mixins.mgfsrbridge.json into net.irisshaders.iris.pipeline.IrisRenderingPipeline
+[21Oct2026 01:13:30.064] [Render thread/DEBUG] [mixin/]: Mixing ShadowRendererTraceMixin from mixins.mgfsrbridge.json into net.irisshaders.iris.shadows.ShadowRenderer
+[21Oct2026 01:13:31.677] [Render thread/DEBUG] [mixin/]: Mixing RenderTargetsTraceMixin from mixins.mgfsrbridge.json into net.irisshaders.iris.targets.RenderTargets
+[21Oct2026 01:13:31.723] [Render thread/DEBUG] [mixin/]: Mixing ViewportMixin from mixins.mgfsrbridge.json into net.irisshaders.iris.uniforms.ViewportUniforms
+[21Oct2026 01:13:31.805] [Render thread/DEBUG] [mixin/]: Mixing CompositeRendererTraceMixin from mixins.mgfsrbridge.json into net.irisshaders.iris.pipeline.CompositeRenderer
+[21Oct2026 01:13:32.542] [Render thread/DEBUG] [mixin/]: Mixing FinalPassMixin from mixins.mgfsrbridge.json into net.irisshaders.iris.pipeline.FinalPassRenderer
+[21Oct2026 01:13:44.581] [Render thread/DEBUG] [mixin/]: Mixing HandRendererTraceMixin from mixins.mgfsrbridge.json into net.irisshaders.iris.pathways.HandRenderer
+		MobileGlues FSR3 Bridge 0.2.0 (mgfsr3bridge)
+[21Oct2026 01:13:27.629] [Render thread/INFO] [com.mojang.blaze3d.platform.Window/]: OpenGL Renderer: Adreno (TM)  X1-85 | ANGLE | Vulkan [Vulkan revision retained locally] | OpenGL ES 3.2 | MG src-167f4da0e295031b
+[21Oct2026 01:13:28.153] [Render thread/INFO] [Iris/]: Profile: LOW (+2 options changed by user)
+[21Oct2026 01:13:28.644] [Render thread/INFO] [Iris/]: Using shaderpack: ComplementaryReimagined_r5.9.3.zip
+[21Oct2026 01:14:52.023] [Render thread/INFO] [net.minecraft.advancements.AdvancementTree/]: Loaded 32 advancements
+[21Oct2026 01:17:35.574] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage ([existing world]): All chunks are saved
+[21Oct2026 01:17:35.574] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[21Oct2026 01:17:35.574] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[21Oct2026 01:17:35.574] [Server thread/INFO] [net.minecraft.server.MinecraftServer/]: ThreadedAnvilChunkStorage: All dimensions are saved

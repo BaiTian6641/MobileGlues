@@ -3,7 +3,12 @@
 Plan baseline: `docs/01_MobileGlues_Googlebook_Architecture.md`,
 `docs/02_MobileGlues_Googlebook_Implementation_Plan.md` and
 `docs/03_MobileGlues_Googlebook_Validation_and_Sources.md`. Distribution locks: `compat/`.
-Last updated: 2026-10-19 (bridge 1.0.17).
+Latest continuation: [2026-10-21 desktop GL, bridge and CI](2026-10-21-desktop-gl-bridge-ci.md).
+That record supersedes the active task, repository map, latest-build and next-action
+sections in the historical snapshot below. Review findings and boundaries are in
+[the independent review](2026-10-21-review.md). The supported delivery tuple is unchanged.
+
+Historical stage snapshot last updated: 2026-10-19 (bridge 1.0.17).
 
 Stage labels below retain the historical `Stage 0`-`Stage 8` numbering used when the evidence
 was captured. The approximate `S0`-`S9` mapping and lane status are in `README.md`. In current

@@ -1,0 +1,32 @@
+{
+  "level": "android-wrapper-readback",
+  "device": {
+    "class": "Snapdragon X Elite X1E-80-100",
+    "abi": "arm64-v8a",
+    "identity_record": "Exact serial, OS build and provider records retained in local raw evidence."
+  },
+  "core_sha256": "d515ca6a334d29783ff742e75d069249d76461357cabacc77b3ac3bfd5035f18",
+  "probe_sha256": "315938c827b7e012c1bdc3630138902ba2803965f39cab8d3bade44b01c6a5c9",
+  "case": "provider_geometry_atomics_native",
+  "exit_code": 1,
+  "results": {
+    "context_lane": "native-system-egl",
+    "wrapper": {
+      "library": "[device temporary storage]/mg-qualification-d515ca6a334d2978-315938c8/libmobileglues.so",
+      "renderer": "ANGLE (Qualcomm, Vulkan [Vulkan revision retained locally] (Adreno (TM)  X1-85 (0x43050C01)), Qualcomm Technologies Inc. Adreno Vulkan Driver-[driver revision retained locally])",
+      "version": "OpenGL ES 3.2 (ANGLE 2.1 git hash: [provider revision retained locally])",
+      "shading": "OpenGL ES GLSL ES 3.20 (ANGLE 2.1 git hash: [provider revision retained locally])"
+    },
+    "provider": {
+      "api": "OpenGL ES 3.2",
+      "implementation": "ANGLE over Vulkan",
+      "identity_record": "Exact provider strings retained in local raw evidence."
+    },
+    "build_id": "src-167f4da0e295031b",
+    "provider_geometry_atomics_native": {
+      "pass": false,
+      "detail": "raw_system_gles=1 context_lane_recorded_at_top_level=1 3D layer=1 stage=36313 checked_words=12 compile_error=0 setup_error=0 end_error=0 mapped=1 unmapped=1 programs=2,5,4 mismatch=0 got=7 expected=0 invocation_count=3 values=7,3,10,12,60,60,9,11,3,15,11 direct_geometry=1 logs= stage=35633: stage=36313: stage=35632:"
+    }
+  },
+  "publication_note": "Public evidence summary: device-specific identity and local paths redacted. Full raw record retained locally."
+}

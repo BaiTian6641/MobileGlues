@@ -1,5 +1,11 @@
 # Handoff: desktop-GL feature completion for MobileGlues
 
+Continuation on 2026-10-21: see
+[desktop GL, bridge and CI execution](2026-10-21-desktop-gl-bridge-ci.md) and
+[independent review](2026-10-21-review.md). They supersede the immediate-state
+table and next-action list below. The original handoff is retained as the
+baseline; it is not a description of the latest branch or artifacts.
+
 Date: 2026-10-21. Target: Minecraft 1.21.1 / NeoForge 21.1.262 / Iris
 1.8.14-beta.1 / Sodium 0.8.13, HP Googlebook 14 (`C1L63708PZ`), Snapdragon
 X1E80100 / Adreno X1-85, ANGLE 2.1 over Vulkan 1.4.295, GLES 3.2.
