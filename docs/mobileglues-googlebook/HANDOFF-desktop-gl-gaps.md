@@ -1,0 +1,169 @@
+# Handoff: desktop-GL feature completion for MobileGlues
+
+Date: 2026-10-21. Target: Minecraft 1.21.1 / NeoForge 21.1.262 / Iris
+1.8.14-beta.1 / Sodium 0.8.13, HP Googlebook 14 (`C1L63708PZ`), Snapdragon
+X1E80100 / Adreno X1-85, ANGLE 2.1 over Vulkan 1.4.295, GLES 3.2.
+
+This handoff is for continuing the **general MobileGlues desktop-GL feature
+completion**, not for adding more shaderpack-specific adaptations. The current
+pack is accepted as the working regression target.
+
+## Immediate state
+
+| Item | Value |
+|---|---|
+| Main repo | `/home/polar/MobileGlues`, branch `googlebook/x1e-stage1-3`, HEAD `ad79230` |
+| Main repo working tree | clean except user `.gitignore` and untracked `.vscode/` |
+| Plugin source | `/home/polar/MobileGlues-plugin` (separate repo/worktree), dirty |
+| Plugin APK | `/home/polar/MobileGlues-plugin/app/build/outputs/apk/debug/app-debug.apk`, SHA-256 `005958b8…d832` |
+| Plugin package | `com.fcl.plugin.mobileglues`, version 2.0.1, debug-signed, arm64 only |
+| Plugin packaging | `useLegacyPackaging = true`; native lib must extract to `/data/app/.../lib/arm64/libmobileglues.so` |
+| Bridge JAR | `integrations/minecraft/fsr3-bridge/dist/mgfsr3bridge-0.1.0.jar`, SHA-256 `4d49e135…0684` |
+| Device | `C1L63708PZ`; ComplementaryReimagined_r5.9.3 active; shaders enabled; debug options off; shadow distance 32 |
+| Latest device run | Complementary, night, 44 FPS at 2880×1585, no compile errors |
+| Capture | `/tmp/current-device.png`, SHA-256 `baa02e6c…fae25` |
+
+## What is already implemented
+
+| Commit | Change |
+|---|---|
+| `98058e3` | Explicit `r8ui`/`r16ui`→`r32ui`, `rg32ui`→`rgba32ui`; RGBA32UI backing |
+| `0d3b890` | Host regression cases for those qualifiers |
+| `2bcdf10` | Late global `uniform` hoisting in core shader source |
+| `ad79230` | Validation record for host tests + current-pack device regression |
+
+Host suite: `sh MobileGlues-cpp/tests/run.sh` passes, including
+`compat_image`, `image_metadata`, subgroup, and FSR contract tests.
+
+## Critical caveat: verify which core is loaded
+
+FCL appears to cache the renderer in `/data/user/10/com.tungsten.fcl/app_runtime_mod`.
+During the Bliss investigation the bridge ran, but no newly added core shader
+marker appeared, and the driver error was unchanged. Reinstalling the plugin
+and reselecting the renderer was attempted, but this was not conclusively
+verified.
+
+Before trusting any device result for the new image lowering:
+
+1. Add a **core build marker** that is visible from the game process, e.g. a
+   `GL_RENDERER`/extension suffix or a one-shot file/log from a known new code
+   path.
+2. Reselect MobileGlues in FCL, or clear the renderer cache, then relaunch.
+3. Verify the marker, then run the format probe.
+
+Do not claim device support for `98058e3` until this is resolved. The last
+current-pack run only proves regression, not that the new image path executed.
+
+## Missing work, in order
+
+The full evidence and exact designs are in
+`docs/mobileglues-googlebook/desktop-gl-gap-closure.md` (G0–G14). Summary:
+
+### P0 — verify the current build and close the source-order failure
+
+- **G0:** the late-uniform hoist has a host implementation but **no dedicated
+  host regression test** and no device-qualified result. If Bliss is used only
+  as a probe, add a host test for `mg_hoist_late_global_uniforms` and re-run
+  its original default S0. Do **not** add another blind regex: dump the exact
+  driver-bound source if it still fails.
+- Verify FCL is loading the 2.0.1 core.
+
+### P1 — legal image-format table
+
+- Complete `r8/r16/r16f→r32f`, `r8i/r16i→r32i` qualifier lowering.
+- Widen `RG32F` image storage to `RGBA32F`; add a test for storage/binding size
+  compatibility.
+- Add `RGBA8_SNORM` and the remaining legal integer formats to the immutable
+  image allowlist.
+- Fix `mg_image_unit_format` returning non-Table-8.27 `GL_RGBA16` for a
+  data-backed RGBA16 image; null/storage RGBA16 already lowers to RGBA32F.
+- Run a device wrapper probe that compiles, binds, writes, and reads each
+  format; host qualifier tests are not device evidence.
+
+### P1 — probes for existing advanced paths
+
+- Image atomics: 2D/3D, fragment/compute/geometry, with readback and
+  `glMemoryBarrier`. Expected to work through ES 3.2 / provider
+  `GL_OES_shader_image_atomic`, but unverified.
+- Subgroup lowering: device semantics for virtual 32-lane IDs, inclusive add,
+  quad swaps, SPD and XOR-partition duplicate suppression. Host tests pass;
+  residual constructs must fail loudly.
+- Vertex/geometry multi-image capacity and atomics.
+
+### P2 — optional missing desktop features
+
+- **1D textures/images:** virtualize as 2D `width×1`; rewrite `image1D` to
+  `image2D`, wrap image coordinates, and add clear/query/copy paths. Image-only
+  phase first; `sampler1D` must fail loudly until implemented. Exact design is
+  G2 in the closure doc.
+- Mutable multi-level 2D/3D images: either report an explicit error for level>0
+  on wrapper-created immutable storage, or allocate the full chain.
+- Default tessellation levels: explicit `GL_INVALID_OPERATION` today; only
+  synthesize a TCS if a concrete pack needs it.
+
+### P3 — hard provider/API boundaries
+
+Keep explicit failures and document, do not fake:
+- SSBO `MAX_SHADER_STORAGE_BLOCK_SIZE=134,217,728`; WSR 256 blocked.
+- No texture barriers or texture views; no bindless/SSO.
+- `clip_cull_distance=0`; glslang limits should be gated to 0 so failure happens
+  at translation, not later at the driver.
+- Default tessellation levels unavailable.
+
+## Files and docs
+
+| Path | Purpose |
+|---|---|
+| `desktop-gl-vs-mobileglues-gap.md` | Initial comparison |
+| `desktop-gl-gap-closure.md` | **Authoritative** row-by-row verification, G0–G14 designs, probes |
+| `shaderpack-support/audits/2026-10-20-bliss-static-audit.md` | Bliss feature trace |
+| `shaderpack-support/audits/2026-10-20-solas-static-audit.md` | Solas images/compute |
+| `shaderpack-support/audits/2026-10-20-iterationrp-static-audit.md` | iterationRP subgroups/images/SSBO |
+| `feature-matrix.md` | Historical probe/status matrix; some rows are stale per closure doc |
+| `execution-state.md` | Named deviations and stage state |
+| `2026-10-21-image-lowering-and-current-pack-regression.md` | Latest host/device validation |
+
+## Build and test commands
+
+```sh
+# Host tests
+sh MobileGlues-cpp/tests/run.sh
+
+# Core release build
+cmake --build build/android-arm64-release -j 24
+
+# Plugin APK (separate repo)
+cd /home/polar/MobileGlues-plugin
+sh gradlew :app:assembleDebug --no-daemon
+adb -s C1L63708PZ install -r app/build/outputs/apk/debug/app-debug.apk
+
+# Verify extracted native lib
+APK=$(adb -s C1L63708PZ shell pm path com.fcl.plugin.mobileglues | sed 's/package://' | tr -d '\r')
+adb -s C1L63708PZ shell "ls -l $(dirname "$APK")/lib/arm64/libmobileglues.so"
+```
+
+Current Iris config is in
+`/storage/emulated/10/Android/data/com.tungsten.fcl/files/.minecraft/config/iris.properties`
+and is edited through FCL's content provider, not shell filesystem access.
+
+## Engineering constraints
+
+- Do not modify original shaderpack archives.
+- Do not add shaderpack-specific behavior to core just to make one pack pass.
+- Do not raise advertised limits or add extensions without backend semantics.
+- Keep compile/link failures observable; never mask them as success.
+- Keep wrapper lowering, bridge source transforms, provider limits, and
+  unverified behavior separate in claims.
+- Preserve the user's `.gitignore`, `.vscode/`, and unrelated work.
+- Device evidence needs a readback or a visible frame; compile-only is not a
+  device pass.
+- The plugin submodule is dirty with deliberate local changes (hoist, image
+  lowering, 2.0.1 packaging). Decide and record whether it is committed before
+  another session rewrites it.
+
+## Recommended first action
+
+Add the core build marker, confirm the 2.0.1 library is actually loaded, then
+run one explicit `r16ui`/`r8ui`/`rg32ui` device image probe with readback. That
+closes the only uncertain link between the host tests and the installed
+renderer.
