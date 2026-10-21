@@ -510,3 +510,11 @@ and colored; only the sky is black. Screenshot SHA-256 `c951638e1d641dd56b91852e
 
 Terrain-color root cause is therefore the colortex0 side used by the final
 copy. The remaining sky failure is separate and is now the only S1 blocker.
+
+## Sun/moon visible
+
+User reports sun and moon are visible while the sky background is dark and
+light/shadow effects are absent. Sky geometry is therefore working; the zero
+contribution is consistent with the atmosphere/lighting LUT sampler or its
+sun/sky radiance inputs, not a skipped sky pass. Prioritize atmoLut3D draw-time
+sampling/unit and the lighting inputs.
