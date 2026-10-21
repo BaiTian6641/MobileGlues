@@ -14,7 +14,7 @@ All are All-Rights-Reserved local fixtures.
 | SILD-04 | Device S1 pipeline route (world/sky/water/hand/HUD) | NOT RUN | S0 visual only; 60 s route required |
 | SILD-05 | S2 named-effect matrix | NOT RUN | effects in `goals.md` |
 | SILD-06 | S3 lifecycle/performance/thermal | NOT RUN | fixed profile, 20 min |
-| SILD-07 | Enhanced Default and Basic regression after Vibrant fixes | NOT RUN | no Vibrant regression |
+| SILD-07 | Enhanced Default and Basic regression after Vibrant fixes | PARTIAL | Enhanced S0 pass; Basic NOT RUN (selection did not apply) |
 
 ## Audit conclusion
 
