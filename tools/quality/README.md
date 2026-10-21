@@ -6,6 +6,8 @@ compiles the owned shader-source/image translation units with `-Wall -Wextra
 rejects process-execution references in that AST inventory, and runs the real FSR session ownership API against a recording
 backend to verify teardown after a context replacement. The recording backend
 is a host fixture and does not qualify GPU behavior.
+The real image-uniform validation helper also compiles with strict warnings and
+runs its scalar/array/error-state contract tests.
 
 The compiler parses each complete translation unit. The smaller emitted AST
 inventory deliberately excludes unrelated vendor/header declarations and is
@@ -35,6 +37,14 @@ three adjacent EGL argument warnings reflect the existing EGL API and wrapper
 signatures. The direct FSR path's four int-to-float conversions and three
 dimension parameter warnings predate the lifecycle correction. These exact
 rules and counts are the baseline for those two added audit files.
+
+The image-uniform correction adds `drawing.cpp` and `image_bindings.cpp` to the
+Android audit. Their seven existing warnings cover one static sampler cache,
+two adjacent-parameter pairs, two unchecked diagnostic writes, the existing
+base-vertex fallback switch, and `atoi` on driver-reported array indices. They
+were reviewed against the unchanged source sections, not introduced by the
+null-unbind or image-uniform-write corrections. The complete nine-file native
+baseline now contains 26 diagnostics; new rules or increased counts fail CI.
 
 With the Android NDK compiler on an x86_64 Linux host, the host check can use:
 

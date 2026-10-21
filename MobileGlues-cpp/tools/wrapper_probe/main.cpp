@@ -7,7 +7,8 @@
 //
 // Usage: wrapper_probe [case]
 //   all (default), source_multi, source_embedded_nul, compile_failure,
-//   get_error, limits, strings
+//   get_error, limits, strings; advanced_images and subgroup_semantics are
+//   opt-in readback suites for image atomics and the virtual 32-lane lowering.
 // Each case runs in the process named by the caller; run "all" in a child process
 // so a frontend defect cannot take the harness's launcher with it.
 
@@ -21,6 +22,8 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <utility>
+#include <type_traits>
 #include <unistd.h>
 #include <chrono>
 
@@ -1451,6 +1454,11 @@ void main() {}
 
 Result test_image_array_uniform_iv() {
     Result r;
+    std::string phase_errors;
+    auto trace = [&](const char* phase) {
+        const GLenum error = api.glGetError();
+        if (error != GL_NO_ERROR) phase_errors += " phase=" + std::string(phase) + " error=" + std::to_string(error);
+    };
     // A 1iv write over an image array names one element per value. Each element
     // is an active image uniform with its own canonical unit; remapping only
     // the base location leaves the second store aimed at a unit the pack never
@@ -1523,42 +1531,64 @@ void main() {
     api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
     api.glBufferData(GL_SHADER_STORAGE_BUFFER, 16, nullptr, GL_DYNAMIC_COPY);
     api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+    trace("buffer_setup");
 
     GLuint values[2] = {};
     bool dispatched = false;
     const GLint write_units[2] = {3, 4};
     if (write_program) {
         const GLint loc = api.glGetUniformLocation(write_program, "img");
+        trace("writer_location");
         api.glUseProgram(write_program);
+        trace("writer_use");
         api.glUniform1iv(loc, 2, write_units);
+        trace("uniform_array");
         api.glDispatchCompute(1, 1, 1);
+        trace("dispatch");
         api.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
         dispatched = loc >= 0;
     }
     if (read_program) {
         const GLint loc = api.glGetUniformLocation(read_program, "img");
+        trace("reader_location");
         api.glUseProgram(read_program);
+        trace("reader_use");
         api.glUniform1iv(loc, 2, write_units);
+        trace("uniform_array");
         api.glDispatchCompute(1, 1, 1);
+        trace("dispatch");
         api.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
         api.glFinish();
+        trace("finish");
         void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(values), GL_MAP_READ_BIT);
         if (ptr) {
             memcpy(values, ptr, sizeof(values));
             api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
         }
+        trace("readback");
     }
     r.ok = bind_error == GL_NO_ERROR && write_program != 0 && read_program != 0 && dispatched &&
-           values[0] == 11u && values[1] == 22u;
+           values[0] == 11u && values[1] == 22u && phase_errors.empty();
     r.detail = "bind_error=" + std::to_string(bind_error) + " write_program=" + std::to_string(write_program) +
                " read_program=" + std::to_string(read_program) + " values=" + std::to_string(values[0]) + "," +
                std::to_string(values[1]) + (write_log.empty() ? "" : " write_log=" + write_log) +
                (read_log.empty() ? "" : " read_log=" + read_log);
+    r.detail += phase_errors;
+    auto check_cleanup = [&](const char* phase) {
+        const GLenum error = api.glGetError();
+        if (error != GL_NO_ERROR) { r.ok = false; r.detail += " phase=" + std::string(phase) + " error=" + std::to_string(error); }
+    };
+    check_cleanup("before_cleanup");
     if (write_program) api.glDeleteProgram(write_program);
+    check_cleanup("delete_writer");
     if (read_program) api.glDeleteProgram(read_program);
+    check_cleanup("delete_reader");
     api.glDeleteBuffers(1, &buffer);
+    check_cleanup("delete_buffer");
     api.glDeleteTextures(1, &tex0);
+    check_cleanup("delete_texture0");
     api.glDeleteTextures(1, &tex1);
+    check_cleanup("delete_texture1");
     return r;
 }
 
@@ -1987,7 +2017,9 @@ Result test_blit_depth_mismatch() {
 static Result run_stage_draw(GLenum draw_mode, GLuint* shaders, int shader_count, const char* label,
                              bool need_patch_vertices, const char* tcs_log, const char* tes_log) {
     Result r;
-    GLint statuses[3] = {GL_FALSE, GL_FALSE, GL_FALSE};
+    // Tessellation supplies four stages (VS/TCS/TES/FS); a fixed three-element
+    // array overflows before the probe can report its compile status.
+    std::vector<GLint> statuses(static_cast<size_t>(shader_count), GL_FALSE);
     std::string logs;
     for (int i = 0; i < shader_count; ++i) {
         api.glGetShaderiv(shaders[i], GL_COMPILE_STATUS, &statuses[i]);
@@ -3411,41 +3443,537 @@ Result test_clear_buffer_subdata() {
     return r;
 }
 
-Result test_integer_image_binding() {
+GLuint compile_compute_probe(const std::string& source, std::string& log) {
+    const char* text = source.c_str();
+    GLuint shader = api.glCreateShader(GL_COMPUTE_SHADER);
+    api.glShaderSource(shader, 1, &text, nullptr);
+    api.glCompileShader(shader);
+    GLint compiled = GL_FALSE;
+    api.glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+    log = shader_log(shader);
+    GLuint program = 0;
+    if (compiled) {
+        program = api.glCreateProgram();
+        api.glAttachShader(program, shader);
+        api.glLinkProgram(program);
+        GLint linked = GL_FALSE;
+        api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+        if (!linked) {
+            GLint length = 0;
+            api.glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
+            if (length > 0) {
+                std::string link_log(static_cast<size_t>(length), '\0');
+                api.glGetProgramInfoLog(program, length, nullptr, link_log.data());
+                log += link_log;
+            }
+            api.glDeleteProgram(program);
+            program = 0;
+        }
+    }
+    api.glDeleteShader(shader);
+    return program;
+}
+
+Result test_image_format_components(GLenum format, const char* qualifier, bool floating, int channels) {
     Result r;
-    // ESSL 3.10 cannot name an r16ui image on this provider. The frontend must
-    // report that refusal; an r32ui image is the current legal fallback. When
-    // the loader implements the r16ui/r8ui lowering, replace this with an
-    // imageStore/readback test instead of weakening the assertion.
-    GLuint tex16 = 0;
-    api.glGenTextures(1, &tex16);
-    api.glBindTexture(GL_TEXTURE_2D, tex16);
-    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_R16UI, 1, 1);
+    // This pins representable component round trips. Out-of-range stores and
+    // logical missing-channel conversion remain separate qualification gates.
+    const std::string header = std::string("#version 310 es\nprecision highp float;\n") +
+        "layout(local_size_x=1) in;\nlayout(binding=5," + qualifier + ") uniform highp " +
+        (floating ? "image2D" : "uimage2D") + " img;\n";
+    std::string write_header = header;
+    write_header.insert(write_header.find("uniform highp"), "writeonly ");
+    std::string read_header = header;
+    read_header.insert(read_header.find("uniform highp"), "readonly ");
+    const std::string write = write_header + "void main(){ imageStore(img,ivec2(0)," +
+        (floating ? "vec4(0.5,0.25,0.0,1.0)" : "uvec4(17u,23u,0u,1u)") + "); }\n";
+    const std::string read = read_header +
+        "layout(std430,binding=1) buffer Output { uvec4 value; } outb;\nvoid main(){ outb.value=" +
+        (floating ? "floatBitsToUint(imageLoad(img,ivec2(0)))" : "imageLoad(img,ivec2(0))") + "; }\n";
     while (api.glGetError() != GL_NO_ERROR) {}
-    api.glBindImageTexture(0, tex16, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R16UI);
-    const GLenum e16 = api.glGetError();
-
-    GLuint tex32 = 0;
-    api.glGenTextures(1, &tex32);
-    api.glBindTexture(GL_TEXTURE_2D, tex32);
-    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32UI, 1, 1);
-    while (api.glGetError() != GL_NO_ERROR) {}
-    api.glBindImageTexture(1, tex32, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32UI);
-    const GLenum e32 = api.glGetError();
-
-    r.ok = (e16 == GL_NO_ERROR && e32 == GL_NO_ERROR);
-    r.detail = "r16ui=" + std::string(e16 == GL_NO_ERROR ? "accepted via R32UI" : "refused") +
-               " error=" + std::to_string(e16) +
-               " r32ui=" + std::string(e32 == GL_NO_ERROR ? "accepted" : "refused") +
-               " error=" + std::to_string(e32);
-    api.glDeleteTextures(1, &tex16);
-    api.glDeleteTextures(1, &tex32);
+    GLuint texture = 0, buffer = 0;
+    api.glGenTextures(1, &texture);
+    api.glBindTexture(GL_TEXTURE_2D, texture);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, format, 1, 1);
+    const GLenum storage_error = api.glGetError();
+    api.glBindImageTexture(5, texture, 0, GL_FALSE, 0, GL_READ_WRITE, format);
+    const GLenum bind_error = api.glGetError();
+    std::string write_log, read_log;
+    const GLuint writer = compile_compute_probe(write, write_log);
+    const GLuint reader = compile_compute_probe(read, read_log);
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    const GLuint zero[4] = {};
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(zero), zero, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+    if (writer && reader && storage_error == GL_NO_ERROR && bind_error == GL_NO_ERROR) {
+        api.glUseProgram(writer);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        api.glUseProgram(reader);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    }
+    GLuint got[4] = {};
+    void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(got), GL_MAP_READ_BIT);
+    const bool mapped = ptr != nullptr;
+    bool unmapped = false;
+    if (ptr) { memcpy(got, ptr, sizeof(got)); unmapped = api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER); }
+    const GLenum end_error = api.glGetError();
+    GLuint expected[4] = {17, 23, 0, 1};
+    if (floating) {
+        const float values[4] = {0.5f, 0.25f, 0.0f, 1.0f};
+        memcpy(expected, values, sizeof(expected));
+    }
+    bool equal = true;
+    for (int i = 0; i < channels; ++i) equal = equal && got[i] == expected[i];
+    r.ok = writer && reader && mapped && unmapped && equal && storage_error == GL_NO_ERROR &&
+           bind_error == GL_NO_ERROR && end_error == GL_NO_ERROR;
+    r.detail = std::string(qualifier) + " represented_components=" + std::to_string(channels) +
+        " storage_error=" + std::to_string(storage_error) + " bind_error=" + std::to_string(bind_error) +
+        " end_error=" + std::to_string(end_error) + " first=" + std::to_string(got[0]) +
+        " second=" + std::to_string(got[1]) + " writer=" + std::to_string(writer) +
+        " reader=" + std::to_string(reader) + " logs=" + write_log + read_log;
+    api.glUseProgram(0);
+    if (writer) api.glDeleteProgram(writer);
+    if (reader) api.glDeleteProgram(reader);
+    api.glDeleteBuffers(1, &buffer);
+    api.glBindImageTexture(5, 0, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
+    api.glDeleteTextures(1, &texture);
     return r;
 }
 
-void print_result(const char* name, const Result& r) {
-    printf("  \"%s\": {\"pass\": %s, \"detail\": %s}%s\n", name, r.ok ? "true" : "false",
-           escape(r.detail).c_str(), ",");
+// Link only successfully compiled stages; a compile failure cannot become a
+// draw with stale program state. Logs identify the failing stage or link.
+GLuint compile_graphics_probe(const std::vector<std::pair<GLenum, std::string>>& stages, std::string& log) {
+    const GLuint program = api.glCreateProgram();
+    bool compiled = true;
+    for (const auto& stage : stages) {
+        const GLuint shader = api.glCreateShader(stage.first);
+        const char* text = stage.second.c_str();
+        api.glShaderSource(shader, 1, &text, nullptr);
+        api.glCompileShader(shader);
+        GLint status = GL_FALSE;
+        api.glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+        compiled = compiled && status == GL_TRUE;
+        log += " stage=" + std::to_string(stage.first) + ":" + shader_log(shader);
+        if (status == GL_TRUE) api.glAttachShader(program, shader);
+        api.glDeleteShader(shader);
+    }
+    GLint linked = GL_FALSE;
+    if (compiled) {
+        api.glLinkProgram(program);
+        api.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+        GLint length = 0;
+        api.glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
+        if (length > 0) {
+            std::string link_log(static_cast<size_t>(length), '\0');
+            api.glGetProgramInfoLog(program, length, nullptr, link_log.data());
+            log += " link=" + link_log;
+        }
+    }
+    if (linked == GL_TRUE) return program;
+    api.glDeleteProgram(program);
+    return 0;
+}
+
+Result test_image_null_unbind() {
+    Result r;
+    const auto bind_images = reinterpret_cast<void (*)(GLuint, GLsizei, const GLuint*)>(
+        dlsym(g_lib, "glBindImageTextures"));
+    const auto get_indexed = reinterpret_cast<void (*)(GLenum, GLuint, GLint*)>(
+        dlsym(g_lib, "glGetIntegeri_v"));
+    if (!bind_images || !get_indexed) { r.detail = "missing_image_multibind_or_query"; return r; }
+    GLuint texture = 0;
+    api.glGenTextures(1, &texture);
+    api.glBindTexture(GL_TEXTURE_2D, texture);
+    api.glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32UI, 1, 1);
+    api.glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
+    GLint before = 0, after_direct = -1, after_multi = -1;
+    get_indexed(GL_IMAGE_BINDING_NAME, 0, &before);
+    const GLenum setup_error = api.glGetError();
+    api.glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_R8);
+    get_indexed(GL_IMAGE_BINDING_NAME, 0, &after_direct);
+    const GLenum direct_error = api.glGetError();
+    api.glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
+    bind_images(0, 1, nullptr);
+    get_indexed(GL_IMAGE_BINDING_NAME, 0, &after_multi);
+    const GLenum multi_error = api.glGetError();
+    api.glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_ONLY, GL_NONE);
+    const GLenum invalid_error = api.glGetError();
+    api.glDeleteTextures(1, &texture);
+    const GLenum cleanup_error = api.glGetError();
+    r.ok = before == static_cast<GLint>(texture) && after_direct == 0 && after_multi == 0 &&
+           setup_error == GL_NO_ERROR && direct_error == GL_NO_ERROR && multi_error == GL_NO_ERROR &&
+           invalid_error == GL_INVALID_VALUE && cleanup_error == GL_NO_ERROR;
+    r.detail = "binding=" + std::to_string(before) + "," + std::to_string(after_direct) + "," +
+               std::to_string(after_multi) + " errors=" + std::to_string(setup_error) + "," +
+               std::to_string(direct_error) + "," + std::to_string(multi_error) + "," +
+               std::to_string(invalid_error) + "," + std::to_string(cleanup_error);
+    return r;
+}
+
+Result test_image_uniform_errors() {
+    Result r;
+    std::string log;
+    const GLuint program = compile_compute_probe(R"(#version 310 es
+layout(local_size_x=1) in;
+layout(r32ui,binding=0) writeonly uniform highp uimage2D singleImage;
+layout(r32ui,binding=1) writeonly uniform highp uimage2D images[2];
+uniform int ordinary;
+void main() {
+ imageStore(singleImage,ivec2(0),uvec4(uint(ordinary)));
+ imageStore(images[0],ivec2(0),uvec4(2));
+ imageStore(images[1],ivec2(0),uvec4(3));
+}
+)", log);
+    if (!program) { r.detail = "compile_or_link_failed " + log; return r; }
+    GLint max_units = 0;
+    api.glGetIntegerv(GL_MAX_IMAGE_UNITS, &max_units);
+    const GLint scalar = api.glGetUniformLocation(program, "singleImage");
+    const GLint array = api.glGetUniformLocation(program, "images");
+    const GLint ordinary = api.glGetUniformLocation(program, "ordinary");
+    api.glUseProgram(program);
+    r.ok = scalar >= 0 && array >= 0 && ordinary >= 0 && max_units >= 3;
+    unsigned checked = 0;
+    auto expect = [&](GLenum expected, const char* label) {
+        const GLenum actual = api.glGetError();
+        ++checked;
+        if (actual != expected) {
+            r.ok = false;
+            r.detail += " mismatch=" + std::string(label) + " got=" + std::to_string(actual) +
+                        " expected=" + std::to_string(expected);
+        }
+    };
+    expect(GL_NO_ERROR, "setup");
+    api.glUniform1i(scalar, -1); expect(GL_INVALID_VALUE, "negative_unit");
+    api.glUniform1i(scalar, max_units); expect(GL_INVALID_VALUE, "out_of_range_unit");
+    const GLint values[] = {0, 1, -1};
+    api.glUniform1iv(scalar, 2, values); expect(GL_INVALID_OPERATION, "scalar_count");
+    api.glUniform1iv(array, -1, values); expect(GL_INVALID_VALUE, "negative_count");
+    api.glUniform1iv(array, 0, values); expect(GL_NO_ERROR, "zero_count");
+    api.glUniform1iv(array, 3, values); expect(GL_NO_ERROR, "excess_array_ignored");
+    api.glUniform1i(-1, -1); expect(GL_NO_ERROR, "minus_one_location");
+    api.glUniform1i(0x7fffffff, 0); expect(GL_INVALID_OPERATION, "invalid_location");
+    api.glUniform1iv(0x7fffffff, 1, values); expect(GL_INVALID_OPERATION, "invalid_vector_location");
+    // Differential evidence for the provider's invalid-location handling.
+    void* provider = dlopen("libGLESv2.so", RTLD_NOW | RTLD_LOCAL);
+    if (provider) {
+        const auto raw_uniform = reinterpret_cast<PFNGLUNIFORM1IPROC>(dlsym(provider, "glUniform1i"));
+        const auto raw_error = reinterpret_cast<PFNGLGETERRORPROC>(dlsym(provider, "glGetError"));
+        if (raw_uniform && raw_error) {
+            raw_uniform(0x7fffffff, 0);
+            r.detail += " raw_system_gles_invalid_location_error=" + std::to_string(raw_error());
+        }
+        dlclose(provider);
+    }
+    api.glUniform1i(ordinary, 17); expect(GL_NO_ERROR, "ordinary_uniform");
+    api.glUseProgram(0); expect(GL_NO_ERROR, "release_current_program");
+    api.glProgramUniform1i(program, 0x7fffffff, 0); expect(GL_INVALID_OPERATION, "inactive_invalid_location");
+    api.glProgramUniform1iv(program, 0x7fffffff, 1, values);
+    expect(GL_INVALID_OPERATION, "inactive_invalid_vector_location");
+    api.glProgramUniform1i(program, scalar, -1); expect(GL_INVALID_VALUE, "inactive_negative_unit");
+    api.glProgramUniform1i(program, scalar, 2); expect(GL_NO_ERROR, "inactive_scalar");
+    api.glProgramUniform1iv(program, array, 3, values); expect(GL_NO_ERROR, "inactive_array");
+    api.glDeleteProgram(program); expect(GL_NO_ERROR, "cleanup");
+    r.detail.insert(0, "checked_errors=" + std::to_string(checked));
+    return r;
+}
+
+Result test_image_atomics(GLenum stage, bool volume, bool direct_geometry = false) {
+    Result r;
+    // Every operation's return value and the three final texels are checked.
+    // The 3D case accesses layer one, so a mistaken layer-zero bind cannot pass.
+    const std::string image = volume ? "uimage3D" : "uimage2D";
+    const std::string coord = volume ? "ivec3" : "ivec2";
+    const std::string p = coord + (volume ? "(0,0,1)" : "(0,0)");
+    const std::string q = coord + (volume ? "(1,0,1)" : "(1,0)");
+    const std::string t = coord + (volume ? "(2,0,1)" : "(2,0)");
+    const std::string image_decl = "layout(r32ui,binding=3) uniform highp " + image + " img;\n";
+    const std::string output = "layout(std430,binding=1) buffer Output { uint value[12]; } outb;\n";
+    const std::string compute = direct_geometry ?
+        "#version 320 es\nprecision highp float;\nprecision highp int;\nlayout(local_size_x=1) in;\n" :
+        "#version 430 core\nlayout(local_size_x=1) in;\n";
+    const std::string init_source = compute + image_decl +
+        "void main(){imageStore(img," + p + ",uvec4(0u));imageStore(img," + q +
+        ",uvec4(0u));imageStore(img," + t + ",uvec4(60u));}\n";
+    const std::string operations =
+        "atomicAdd(outb.value[11],1u);\n"
+        "outb.value[0]=imageAtomicMax(img," + p + ",7u);\n" +
+        "outb.value[1]=imageAtomicMin(img," + p + ",3u);\n" +
+        "outb.value[2]=imageAtomicAdd(img," + q + ",5u);\n" +
+        "outb.value[3]=imageAtomicAnd(img," + t + ",15u);\n" +
+        "outb.value[4]=imageAtomicOr(img," + t + ",48u);\n" +
+        "outb.value[5]=imageAtomicXor(img," + t + ",15u);\n" +
+        "outb.value[6]=imageAtomicExchange(img," + t + ",9u);\n" +
+        "outb.value[7]=imageAtomicCompSwap(img," + t + ",9u,11u);\n";
+    const std::string read_source = compute + image_decl + output +
+        "void main(){outb.value[8]=imageLoad(img," + p + ").r;outb.value[9]=imageLoad(img," + q +
+        ").r;outb.value[10]=imageLoad(img," + t + ").r;}\n";
+    std::string init_log, worker_log, read_log;
+    while (api.glGetError() != GL_NO_ERROR) {}
+    const GLuint initializer = compile_compute_probe(init_source, init_log);
+    const GLuint reader = compile_compute_probe(read_source, read_log);
+    GLuint worker = 0;
+    if (stage == GL_COMPUTE_SHADER) {
+        worker = compile_compute_probe(compute + image_decl + output + "void main(){" + operations + "}\n", worker_log);
+    } else {
+        const std::string graphics_version = direct_geometry ? "#version 320 es\nprecision highp float;\nprecision highp int;\n" : "#version 430 core\n";
+        const std::string vertex = graphics_version + "void main(){vec2 p=vec2(float((gl_VertexID<<1)&2),"
+            "float(gl_VertexID&2));gl_Position=vec4(p*2.0-1.0,0.0,1.0);}\n";
+        std::vector<std::pair<GLenum, std::string>> stages = {{GL_VERTEX_SHADER, vertex}};
+        if (stage == GL_GEOMETRY_SHADER) {
+            stages.emplace_back(GL_GEOMETRY_SHADER, graphics_version + "layout(triangles) in;\n"
+                "layout(triangle_strip,max_vertices=3) out;\n" + image_decl + output +
+                "void main(){" + operations + "for(int i=0;i<3;++i){gl_Position=gl_in[i].gl_Position;"
+                "EmitVertex();}EndPrimitive();}\n");
+        }
+        stages.emplace_back(GL_FRAGMENT_SHADER, graphics_version + "layout(location=0) out vec4 color;\n" +
+            (stage == GL_FRAGMENT_SHADER ? image_decl + output : "") + "void main(){" +
+            (stage == GL_FRAGMENT_SHADER ? operations : "") + "color=vec4(1.0);}\n");
+        worker = compile_graphics_probe(stages, worker_log);
+    }
+    const GLenum compile_error = api.glGetError();
+    GLuint texture = 0, buffer = 0, vao = 0;
+    const GLenum target = volume ? GL_TEXTURE_3D : GL_TEXTURE_2D;
+    api.glGenTextures(1, &texture);
+    api.glBindTexture(target, texture);
+    if (volume) api.glTexStorage3D(target, 1, GL_R32UI, 3, 1, 2);
+    else api.glTexStorage2D(target, 1, GL_R32UI, 3, 1);
+    api.glBindImageTexture(3, texture, 0, volume ? GL_TRUE : GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
+    GLuint got[12];
+    for (auto& value : got) value = 0xdeadbeefu;
+    got[11] = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(got), got, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+    api.glGenVertexArrays(1, &vao);
+    api.glBindVertexArray(vao);
+    api.glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    api.glViewport(0, 0, 1, 1);
+    api.glDisable(GL_SCISSOR_TEST);
+    api.glDisable(GL_DEPTH_TEST);
+    api.glDisable(GL_CULL_FACE);
+    api.glDisable(GL_BLEND);
+    api.glDisable(GL_RASTERIZER_DISCARD);
+    const GLenum setup_error = api.glGetError();
+    if (initializer && worker && reader && compile_error == GL_NO_ERROR && setup_error == GL_NO_ERROR) {
+        api.glUseProgram(initializer);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        api.glUseProgram(worker);
+        if (stage == GL_COMPUTE_SHADER) api.glDispatchCompute(1, 1, 1);
+        else api.glDrawArrays(GL_TRIANGLES, 0, 3);
+        api.glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+        api.glUseProgram(reader);
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    }
+    void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(got), GL_MAP_READ_BIT);
+    const bool mapped = ptr != nullptr;
+    bool unmapped = false;
+    if (ptr) { memcpy(got, ptr, sizeof(got)); unmapped = api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER); }
+    const GLenum end_error = api.glGetError();
+    const GLuint expected[] = {0, 7, 0, 60, 12, 60, 51, 9, 3, 5, 11, 1};
+    size_t mismatch = 0;
+    while (mismatch < 12 && got[mismatch] == expected[mismatch]) ++mismatch;
+    r.ok = initializer && worker && reader && mapped && unmapped && mismatch == 12 &&
+           compile_error == GL_NO_ERROR && setup_error == GL_NO_ERROR && end_error == GL_NO_ERROR;
+    r.detail = std::string(volume ? "3D layer=1" : "2D") + " stage=" + std::to_string(stage) +
+        " checked_words=12 compile_error=" + std::to_string(compile_error) + " setup_error=" + std::to_string(setup_error) +
+        " end_error=" + std::to_string(end_error) + " mapped=" + std::to_string(mapped) +
+        " unmapped=" + std::to_string(unmapped) + " programs=" + std::to_string(initializer) + "," +
+        std::to_string(worker) + "," + std::to_string(reader);
+    if (mismatch < 12) r.detail += " mismatch=" + std::to_string(mismatch) + " got=" + std::to_string(got[mismatch]) +
+        " expected=" + std::to_string(expected[mismatch]);
+    r.detail += " invocation_count=" + std::to_string(got[11]) + " values=";
+    for (size_t i = 0; i < 11; ++i) r.detail += (i == 0 ? "" : ",") + std::to_string(got[i]);
+    r.detail += " direct_geometry=" + std::to_string(direct_geometry);
+    r.detail += " logs=" + init_log + worker_log + read_log;
+    api.glUseProgram(0);
+    if (initializer) api.glDeleteProgram(initializer);
+    if (worker) api.glDeleteProgram(worker);
+    if (reader) api.glDeleteProgram(reader);
+    api.glBindImageTexture(3, 0, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI);
+    api.glDeleteTextures(1, &texture);
+    api.glDeleteBuffers(1, &buffer);
+    api.glBindVertexArray(0);
+    api.glDeleteVertexArrays(1, &vao);
+    api.glViewport(0, 0, 64, 64);
+    return r;
+}
+
+// Diagnostic control: all GL calls below go directly through the system GLES
+// dispatcher; only context creation remains the harness's wrapper EGL setup.
+// Run in its own mode so bypassing frontend state cannot contaminate a suite.
+Result test_provider_geometry_atomics() {
+    void* library = dlopen("libGLESv2.so", RTLD_NOW | RTLD_LOCAL);
+    if (!library) return {false, "could not load system libGLESv2.so"};
+    const Api wrapper_api = api;
+    bool complete = true;
+    auto bind = [&](auto& entry, const char* name) {
+        void* pointer = dlsym(library, name);
+        if (!pointer) complete = false;
+        else entry = reinterpret_cast<std::remove_reference_t<decltype(entry)>>(pointer);
+    };
+    bind(api.glGetError, "glGetError");
+    bind(api.glCreateShader, "glCreateShader");
+    bind(api.glShaderSource, "glShaderSource");
+    bind(api.glCompileShader, "glCompileShader");
+    bind(api.glGetShaderiv, "glGetShaderiv");
+    bind(api.glGetShaderInfoLog, "glGetShaderInfoLog");
+    bind(api.glCreateProgram, "glCreateProgram");
+    bind(api.glAttachShader, "glAttachShader");
+    bind(api.glLinkProgram, "glLinkProgram");
+    bind(api.glGetProgramiv, "glGetProgramiv");
+    bind(api.glGetProgramInfoLog, "glGetProgramInfoLog");
+    bind(api.glDeleteShader, "glDeleteShader");
+    bind(api.glDeleteProgram, "glDeleteProgram");
+    bind(api.glGenTextures, "glGenTextures");
+    bind(api.glBindTexture, "glBindTexture");
+    bind(api.glTexStorage3D, "glTexStorage3D");
+    bind(api.glTexStorage2D, "glTexStorage2D");
+    bind(api.glBindImageTexture, "glBindImageTexture");
+    bind(api.glGenBuffers, "glGenBuffers");
+    bind(api.glBindBuffer, "glBindBuffer");
+    bind(api.glBufferData, "glBufferData");
+    bind(api.glBindBufferBase, "glBindBufferBase");
+    bind(api.glGenVertexArrays, "glGenVertexArrays");
+    bind(api.glBindVertexArray, "glBindVertexArray");
+    bind(api.glBindFramebuffer, "glBindFramebuffer");
+    bind(api.glViewport, "glViewport");
+    bind(api.glDisable, "glDisable");
+    bind(api.glUseProgram, "glUseProgram");
+    bind(api.glDispatchCompute, "glDispatchCompute");
+    bind(api.glMemoryBarrier, "glMemoryBarrier");
+    bind(api.glDrawArrays, "glDrawArrays");
+    bind(api.glMapBufferRange, "glMapBufferRange");
+    bind(api.glUnmapBuffer, "glUnmapBuffer");
+    bind(api.glDeleteTextures, "glDeleteTextures");
+    bind(api.glDeleteBuffers, "glDeleteBuffers");
+    bind(api.glDeleteVertexArrays, "glDeleteVertexArrays");
+    Result result = complete ? test_image_atomics(GL_GEOMETRY_SHADER, true, true) :
+        Result{false, "system GLES dispatcher lacks a required entry point"};
+    result.detail.insert(0, "raw_system_gles=1 context_lane_recorded_at_top_level=1 ");
+    api = wrapper_api;
+    dlclose(library);
+    return result;
+}
+
+Result test_subgroup_semantics() {
+    // All calls are unconditional: the lowering introduces workgroup barriers.
+    // Two workgroups of 128 lanes test four virtual subgroups per workgroup and
+    // scratch reuse between workgroups. This qualifies virtual linear-lane
+    // semantics only, not any hardware subgroup or hardware quad arrangement.
+    const std::string source = R"(#version 450 core
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+#extension GL_KHR_shader_subgroup_quad : enable
+layout(local_size_x=128) in;
+struct Row { uvec4 ids; vec4 scan; vec4 horizontal; vec4 vertical; vec4 diagonal; };
+layout(std430,binding=1) buffer Output { Row rows[256]; } outb;
+void main(){
+    uint local=gl_LocalInvocationIndex;
+    uint index=gl_GlobalInvocationID.x;
+    float scalar=subgroupInclusiveAdd(float(local+1u));
+    vec2 scan2=subgroupInclusiveAdd(vec2(1.0,2.0));
+    vec3 scan3=subgroupInclusiveAdd(vec3(1.0,2.0,3.0));
+    vec4 scan4=subgroupInclusiveAdd(vec4(1.0,2.0,3.0,4.0));
+    vec4 inputValue=vec4(float(index),float(index)+0.25,float(index)+0.5,float(index)+0.75);
+    vec4 horizontal=subgroupQuadSwapHorizontal(inputValue);
+    vec4 vertical=subgroupQuadSwapVertical(inputValue);
+    vec4 diagonal=subgroupQuadSwapDiagonal(inputValue);
+    outb.rows[index].ids=uvec4(gl_SubgroupInvocationID,gl_SubgroupSize,gl_SubgroupID,gl_NumSubgroups);
+    outb.rows[index].scan=vec4(scalar,scan2.x,scan3.y,scan4.z);
+    outb.rows[index].horizontal=horizontal;
+    outb.rows[index].vertical=vertical;
+    outb.rows[index].diagonal=diagonal;
+}
+)";
+    while (api.glGetError() != GL_NO_ERROR) {}
+    std::string log;
+    const GLuint program = compile_compute_probe(source, log);
+    const GLenum compile_error = api.glGetError();
+    std::vector<GLuint> got(256 * 20, 0xdeadbeefu);
+    GLuint buffer = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, static_cast<GLsizeiptr>(got.size() * sizeof(GLuint)), got.data(), GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+    const GLenum setup_error = api.glGetError();
+    if (program && compile_error == GL_NO_ERROR && setup_error == GL_NO_ERROR) {
+        api.glUseProgram(program);
+        api.glDispatchCompute(2, 1, 1);
+        api.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    }
+    void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, static_cast<GLsizeiptr>(got.size() * sizeof(GLuint)), GL_MAP_READ_BIT);
+    const bool mapped = ptr != nullptr;
+    bool unmapped = false;
+    if (ptr) { memcpy(got.data(), ptr, got.size() * sizeof(GLuint)); unmapped = api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER); }
+    const GLenum end_error = api.glGetError();
+    std::vector<GLuint> expected(got.size());
+    for (unsigned index = 0; index < 256; ++index) {
+        const unsigned local = index % 128, lane = local % 32, count = lane + 1, base = local - lane;
+        const size_t offset = index * 20;
+        expected[offset] = lane; expected[offset + 1] = 32;
+        expected[offset + 2] = local / 32; expected[offset + 3] = 4;
+        const float scan[] = {static_cast<float>(count * (base + 1) + lane * count / 2),
+                              static_cast<float>(count), static_cast<float>(2 * count), static_cast<float>(3 * count)};
+        memcpy(expected.data() + offset + 4, scan, sizeof(scan));
+        for (unsigned swap = 1; swap <= 3; ++swap) {
+            const float other = static_cast<float>(index ^ swap);
+            const float values[] = {other, other + 0.25f, other + 0.5f, other + 0.75f};
+            memcpy(expected.data() + offset + 4 + 4 * swap, values, sizeof(values));
+        }
+    }
+    size_t mismatch = 0;
+    while (mismatch < got.size() && got[mismatch] == expected[mismatch]) ++mismatch;
+    Result r;
+    r.ok = program && mapped && unmapped && mismatch == got.size() && compile_error == GL_NO_ERROR &&
+           setup_error == GL_NO_ERROR && end_error == GL_NO_ERROR;
+    r.detail = "virtual_width=32 workgroups=2 local_size=128 checked_words=" + std::to_string(got.size()) +
+        " compile_error=" + std::to_string(compile_error) + " setup_error=" + std::to_string(setup_error) +
+        " end_error=" + std::to_string(end_error) + " mapped=" + std::to_string(mapped) +
+        " unmapped=" + std::to_string(unmapped) + " program=" + std::to_string(program);
+    if (mismatch < got.size()) r.detail += " mismatch_row=" + std::to_string(mismatch / 20) +
+        " word=" + std::to_string(mismatch % 20) + " got=" + std::to_string(got[mismatch]) +
+        " expected=" + std::to_string(expected[mismatch]);
+    r.detail += " log=" + log;
+    api.glUseProgram(0);
+    if (program) api.glDeleteProgram(program);
+    api.glDeleteBuffers(1, &buffer);
+    return r;
+}
+
+Result test_late_uniform() {
+    std::string log;
+    const GLuint program = compile_compute_probe(
+        "#version 310 es\nprecision highp float;\nlayout(local_size_x=1) in;\n"
+        "layout(std430,binding=1) buffer Out { uint value; } outb;\n"
+        "uint helper(){ return 7u; }\nuniform uint amount;\n"
+        "void main(){outb.value=amount+helper();}\n", log);
+    GLuint buffer = 0, value = 0;
+    api.glGenBuffers(1, &buffer);
+    api.glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    api.glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(value), &value, GL_DYNAMIC_COPY);
+    api.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, buffer);
+    if (program) {
+        api.glUseProgram(program);
+        // The default uniform value is zero; readback must be exactly seven.
+        api.glDispatchCompute(1, 1, 1);
+        api.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    }
+    void* ptr = api.glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(value), GL_MAP_READ_BIT);
+    const bool mapped = ptr != nullptr;
+    bool unmapped = false;
+    if (ptr) { memcpy(&value, ptr, sizeof(value)); unmapped = api.glUnmapBuffer(GL_SHADER_STORAGE_BUFFER); }
+    const GLenum error = api.glGetError();
+    api.glUseProgram(0);
+    if (program) api.glDeleteProgram(program);
+    api.glDeleteBuffers(1, &buffer);
+    return {program != 0 && mapped && unmapped && value == 7 && error == GL_NO_ERROR,
+            "value=" + std::to_string(value) + " error=" + std::to_string(error) + " log=" + log};
 }
 
 } // namespace
@@ -3583,19 +4111,71 @@ int main(int argc, char** argv) {
     api.glDisable = sym<PFNGLDISABLEPROC>("glDisable");
     api.glBlendFunc = sym<PFNGLBLENDFUNCPROC>("glBlendFunc");
 
+    const bool native_context = !strcmp(mode, "provider_geometry_atomics_native");
+    if (native_context) {
+        // This control creates EGL and dispatches GL through system libraries.
+        // MobileGlues is loaded for a common harness, but its EGL/GL entry
+        // points do not participate in this control's context or shader work.
+        void* native_egl = dlopen("libEGL.so", RTLD_NOW | RTLD_LOCAL);
+        void* native_gles = dlopen("libGLESv2.so", RTLD_NOW | RTLD_LOCAL);
+        bool complete = native_egl && native_gles;
+        auto bind_native = [&](auto& entry, void* library_handle, const char* name) {
+            void* pointer = library_handle ? dlsym(library_handle, name) : nullptr;
+            if (!pointer) complete = false;
+            else entry = reinterpret_cast<std::remove_reference_t<decltype(entry)>>(pointer);
+        };
+        bind_native(api.eglGetDisplay, native_egl, "eglGetDisplay");
+        bind_native(api.eglInitialize, native_egl, "eglInitialize");
+        bind_native(api.eglBindAPI, native_egl, "eglBindAPI");
+        bind_native(api.eglChooseConfig, native_egl, "eglChooseConfig");
+        bind_native(api.eglCreatePbufferSurface, native_egl, "eglCreatePbufferSurface");
+        bind_native(api.eglCreateContext, native_egl, "eglCreateContext");
+        bind_native(api.eglMakeCurrent, native_egl, "eglMakeCurrent");
+        bind_native(api.eglDestroySurface, native_egl, "eglDestroySurface");
+        bind_native(api.eglDestroyContext, native_egl, "eglDestroyContext");
+        bind_native(api.eglTerminate, native_egl, "eglTerminate");
+        bind_native(api.glGetString, native_gles, "glGetString");
+        bind_native(api.glGetError, native_gles, "glGetError");
+        bind_native(api.glUseProgram, native_gles, "glUseProgram");
+        if (!complete) { fprintf(stderr, "missing native EGL/GLES control symbols\n"); return 93; }
+    }
     if (!make_context()) {
         fprintf(stderr, "failed to create a MobileGlues context\n");
         return 92;
     }
 
     fprintf(g_out, "{\n");
+    fprintf(g_out, "  \"context_lane\": %s,\n", escape(native_context ? "native-system-egl" : "wrapper-egl").c_str());
     fprintf(g_out, "  \"wrapper\": {\"library\": %s, \"renderer\": %s, \"version\": %s, \"shading\": %s},\n",
            escape(library).c_str(), escape(gl_string(GL_RENDERER)).c_str(),
            escape(gl_string(GL_VERSION)).c_str(), escape(gl_string(GL_SHADING_LANGUAGE_VERSION)).c_str());
+    fprintf(g_out, "  \"provider\": {\"vendor\": %s, \"renderer\": %s, \"version\": %s, \"shading\": %s},\n",
+           escape(gl_string(GL_VENDOR + (native_context ? 0 : GL_BACKEND_GETTER_MG))).c_str(),
+           escape(gl_string(GL_RENDERER + (native_context ? 0 : GL_BACKEND_GETTER_MG))).c_str(),
+           escape(gl_string(GL_VERSION + (native_context ? 0 : GL_BACKEND_GETTER_MG))).c_str(),
+           escape(gl_string(GL_SHADING_LANGUAGE_VERSION + (native_context ? 0 : GL_BACKEND_GETTER_MG))).c_str());
 
+    const auto build_id = reinterpret_cast<const char* (*)()>(dlsym(g_lib, "mg_get_build_id"));
+    fprintf(g_out, "  \"build_id\": %s,\n", escape(build_id ? build_id() : "unidentified").c_str());
     bool first = true;
+    bool all_passed = true;
     auto run = [&](const char* name, Result (*fn)()) {
         Result r = fn();
+        // Attribute errors left by a case (including its resource teardown) to
+        // that case. Do not silently let the next probe consume or erase them.
+        for (unsigned count = 0; count < 16; ++count) {
+            const GLenum pending = api.glGetError();
+            if (pending == GL_NO_ERROR) break;
+            r.ok = false;
+            r.detail += " pending_after_case=" + std::to_string(pending);
+        }
+        api.glUseProgram(0);
+        const GLenum reset_error = api.glGetError();
+        if (reset_error != GL_NO_ERROR) {
+            r.ok = false;
+            r.detail += " program_reset_error=" + std::to_string(reset_error);
+        }
+        all_passed = all_passed && r.ok;
         if (!first) fprintf(g_out, ",\n");
         first = false;
         fprintf(g_out, "  \"%s\": {\"pass\": %s, \"detail\": %s}", name, r.ok ? "true" : "false",
@@ -3660,15 +4240,37 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "all") || !strcmp(mode, "duplicate_image")) run("duplicate_image_binding", test_duplicate_image_binding);
     if (!strcmp(mode, "all") || !strcmp(mode, "program_uniform_image")) run("program_uniform_image_binding", test_program_uniform_image_binding);
     if (!strcmp(mode, "all") || !strcmp(mode, "image_array_uniform_iv")) run("image_array_uniform_iv", test_image_array_uniform_iv);
-    if (!strcmp(mode, "all") || !strcmp(mode, "integer_image")) run("integer_image", test_integer_image_binding);
+    if (!strcmp(mode, "all") || !strcmp(mode, "image_uniform_errors")) run("image_uniform_errors", test_image_uniform_errors);
+    if (!strcmp(mode, "all") || !strcmp(mode, "image_null_unbind")) run("image_null_unbind", test_image_null_unbind);
+    if (!strcmp(mode, "all") || !strcmp(mode, "late_uniform")) run("late_uniform", test_late_uniform);
+    if (!strcmp(mode, "all") || !strcmp(mode, "integer_image") || !strcmp(mode, "image_formats")) {
+        run("r8ui_components", [] { return test_image_format_components(GL_R8UI, "r8ui", false, 1); });
+        run("r16ui_components", [] { return test_image_format_components(GL_R16UI, "r16ui", false, 1); });
+        run("rg32ui_components", [] { return test_image_format_components(GL_RG32UI, "rg32ui", false, 2); });
+        run("rg32f_components", [] { return test_image_format_components(GL_RG32F, "rg32f", true, 2); });
+    }
+    if (!strcmp(mode, "advanced_images") || !strcmp(mode, "image_atomic_2d"))
+        run("image_atomic_2d", [] { return test_image_atomics(GL_COMPUTE_SHADER, false); });
+    if (!strcmp(mode, "advanced_images") || !strcmp(mode, "image_atomic_3d"))
+        run("image_atomic_3d", [] { return test_image_atomics(GL_COMPUTE_SHADER, true); });
+    if (!strcmp(mode, "advanced_images") || !strcmp(mode, "image_atomic_fragment"))
+        run("image_atomic_fragment", [] { return test_image_atomics(GL_FRAGMENT_SHADER, false); });
+    if (!strcmp(mode, "advanced_images") || !strcmp(mode, "image_atomic_geometry"))
+        run("image_atomic_geometry", [] { return test_image_atomics(GL_GEOMETRY_SHADER, true); });
+    if (!strcmp(mode, "image_atomic_geometry_es"))
+        run("image_atomic_geometry_es", [] { return test_image_atomics(GL_GEOMETRY_SHADER, true, true); });
+    if (!strcmp(mode, "provider_geometry_atomics") || native_context)
+        run(native_context ? "provider_geometry_atomics_native" : "provider_geometry_atomics", test_provider_geometry_atomics);
+    if (!strcmp(mode, "subgroup_semantics")) run("subgroup_semantics", test_subgroup_semantics);
     if (!strcmp(mode, "all") || !strcmp(mode, "act_volume")) run("act_volume", test_act_volume);
     if (!strcmp(mode, "all") || !strcmp(mode, "act_pingpong")) run("act_pingpong", test_act_pingpong);
     if (!strcmp(mode, "all") || !strcmp(mode, "act_pingpong_binding")) run("act_pingpong_binding", test_act_pingpong_binding);
     if (!strcmp(mode, "all") || !strcmp(mode, "r32ui_volume")) run("r32ui_volume", test_r32ui_volume);
     if (!strcmp(mode, "all") || !strcmp(mode, "clear_buffer")) run("clear_buffer_subdata", test_clear_buffer_subdata);
+    if (first) fprintf(g_out, "  \"error\": \"unknown probe case\"");
     fprintf(g_out, "\n}\n");
 
     destroy_context();
     if (g_out != stdout) fclose(g_out);
-    return 0;
+    return (!first && all_passed) ? 0 : 1;
 }

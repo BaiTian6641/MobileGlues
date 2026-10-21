@@ -22,7 +22,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 CPP = ROOT / "MobileGlues-cpp"
 HOST_SOURCES = ("gl/shader_source.cpp", "gl/image_metadata.cpp", "gl/glsl/compat_image.cpp")
 NATIVE_SOURCES = HOST_SOURCES + (
-    "upscaling/mg_fsr.cpp", "upscaling/mg_fsr_jni.cpp", "gl/FSR3Direct.cpp", "egl/context.cpp"
+    "gl/drawing.cpp", "gl/image_bindings.cpp", "upscaling/mg_fsr.cpp",
+    "upscaling/mg_fsr_jni.cpp", "gl/FSR3Direct.cpp", "egl/context.cpp"
 )
 TIDY_CHECKS = "-*,clang-analyzer-*,bugprone-*,cert-*,performance-*,readability-misleading-indentation"
 
@@ -120,6 +121,10 @@ def host_checks(args, output):
                      str(CPP / "upscaling/mg_fsr.cpp"), "-o", str(executable)],
             output / "fsr-lifecycle-build.log")
     execute([str(executable)], output / "fsr-lifecycle.log")
+    uniform_test = output / "image_uniform_write_test"
+    execute(flags + [str(CPP / "tests/image_uniform_write_test.cpp"), "-o", str(uniform_test)],
+            output / "image-uniform-build.log")
+    execute([str(uniform_test)], output / "image-uniform.log")
     return result
 
 

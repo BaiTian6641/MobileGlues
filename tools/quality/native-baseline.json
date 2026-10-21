@@ -2,6 +2,13 @@
   "gl/shader_source.cpp": {},
   "gl/image_metadata.cpp": {},
   "gl/glsl/compat_image.cpp": {},
+  "gl/drawing.cpp": {
+    "cert-err58-cpp": 1,
+    "bugprone-easily-swappable-parameters": 2,
+    "cert-err33-c": 2,
+    "bugprone-switch-missing-default-case": 1
+  },
+  "gl/image_bindings.cpp": {"cert-err34-c": 1},
   "upscaling/mg_fsr.cpp": {"cert-err33-c": 2},
   "upscaling/mg_fsr_jni.cpp": {
     "cert-err58-cpp": 1,
