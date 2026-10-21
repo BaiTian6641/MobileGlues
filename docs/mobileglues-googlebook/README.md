@@ -8,6 +8,8 @@ directory does not contain release claims. Machine-readable distribution inputs 
 
 | File | Purpose |
 | --- | --- |
+| [FSR3 universal rendering research](2026-10-21-fsr3-universal-rendering-research.md) | Eight exact adapter locks, primary-source API families from 1.17 through 26.2, rendering contracts and future qualification gaps. |
+| [FSR3 depth contract and runtime status](2026-10-21-fsr3-depth-contract-and-runtime-status.md) | Native `4d93e41`, packaging `2.0.5-dev`, bridge `0.2.2` ownership/protocol, Create/Steadfast visual pass, 26.2 rendering failure and remaining device gates. |
 | `execution-state.md` | Current task, repository identity, confirmed progress, blockers and next action. |
 | `feature-matrix.md` | Evidence rows for renderer builds, provider gates, pack/effect attempts and device gates. |
 | `decisions.md` | Architecture decisions with evidence and consequences. |

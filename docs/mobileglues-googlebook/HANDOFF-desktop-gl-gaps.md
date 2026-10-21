@@ -2,7 +2,11 @@
 
 Continuation on 2026-10-21: see
 [desktop GL, bridge and CI execution](2026-10-21-desktop-gl-bridge-ci.md) and
-[independent review](2026-10-21-review.md). They supersede the immediate-state
+[independent review](2026-10-21-review.md). Later FSR3 findings are in
+[universal rendering research](2026-10-21-fsr3-universal-rendering-research.md) and
+[depth contract and runtime status](2026-10-21-fsr3-depth-contract-and-runtime-status.md),
+which record the `2.0.5-dev` / bridge `0.2.2` 26.2 rendering failure and remaining
+device gates. These records supersede the immediate-state
 table and next-action list below. The original handoff is retained as the
 baseline; it is not a description of the latest branch or artifacts.
 
