@@ -288,7 +288,16 @@ void mg_materialize_image_bindings() {
         if (binding.texture == 0) continue;
         GLuint physical = logical;
         auto it = state->image_unit_remap.find(logical);
-        if (it != state->image_unit_remap.end()) physical = it->second;
+        if (it != state->image_unit_remap.end()) {
+            physical = it->second;
+        } else if (!state->image_unit_remap.empty()) {
+            // Only units the current program maps are authoritative. Replaying
+            // a remembered but inactive logical unit can land on the same
+            // physical unit as an active remapped image and overwrite it
+            // (e.g. logical 0 -> physical 2, while stale logical 2 also replays
+            // to physical 2). Leave inactive bindings untouched.
+            continue;
+        }
         if (physical >= MG_TRACKED_IMAGE_UNITS) continue;
         // The shader was compiled against either a formatless writeonly image
         // or the fallback float qualifier; both follow the texture's actual

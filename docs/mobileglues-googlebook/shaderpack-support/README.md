@@ -8,8 +8,9 @@ Current evidence:
 - Sildur Vibrant: provisional S1 (world route, no compile errors).
 - Sildur Enhanced Default: provisional S0; S1 not captured.
 - Sildur Basic: provisional S1.
-- iterationRP original: S0 PASS, S1 FAIL (full frame at NativeAA but brown/black;
-  scaled scene splits into a 960x528 lower-left region).
+- iterationRP original: S0 PASS, S1 FAIL (red/green/orange terrain and black sky).
+  The [G10 no-final guard](../validation/2026-10-20-g10-no-final-guard.md) has a
+  recorded full-frame pass; remaining color/sky analysis is linked below.
 - Bliss candidate: S0 FAIL (`deferred.fsh` uniform syntax error).
 - Solas candidate: provisional S0; washed frame, S1 unverified.
 
@@ -47,6 +48,8 @@ parallel at the host-translation and import-gate level.
 | [gate-definitions.md](gate-definitions.md) | Reusable S0-S3 evidence and acceptance rules |
 | [audits/2026-10-20-sildur-static-audit.md](audits/2026-10-20-sildur-static-audit.md) | Sildur legacy/format/FBO findings and first probes |
 | [audits/2026-10-20-iterationrp-static-audit.md](audits/2026-10-20-iterationrp-static-audit.md) | iterationRP format/stage/program findings |
+| [audits/2026-10-20-iterationrp-color-sky-analysis.md](audits/2026-10-20-iterationrp-color-sky-analysis.md) | stronger red/green, black-sky, GS and replay analysis |
+| [audits/2026-10-20-iterationrp-color-sky-analysis.md](audits/2026-10-20-iterationrp-color-sky-analysis.md) | Current color/sky source review, offline evidence, corrected exclusions and next diagnostic boundaries |
 | [audits/2026-10-20-bliss-static-audit.md](audits/2026-10-20-bliss-static-audit.md) | Bliss default/LPV risks |
 | [audits/2026-10-20-solas-static-audit.md](audits/2026-10-20-solas-static-audit.md) | Solas image/compute risks |
 | [bliss-solas-ledger.md](bliss-solas-ledger.md) | Candidate Bliss/Solas gates |

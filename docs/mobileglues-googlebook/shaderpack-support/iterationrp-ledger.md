@@ -12,11 +12,18 @@ Target: original `iterationRP Alpha 0.8.31.zip`
 | ITRP-03 | Core-only deterministic image units (G2) | PROOF GAP | core resolver exists; no original-pack no-bridge run |
 | ITRP-04 | SSBO clear reachability (G3) | NOT A DEFAULT BLOCKER | 4 KiB SSBO fully written by SSBOUpdate_CS |
 | ITRP-05 | Graphics-stage image rewriting (G4) | NOT RUN | `PixelData_VS`, `shadow.gsh` |
-| ITRP-06 | Device S0/S1 on default profile | **S0 PASS; S1 FAIL** | red/green + black sky; depthtexS/normal-buffer contract leading; `audits/2026-10-20-iterationrp-redgreen-audit.md` |
+| ITRP-06 | Device S0/S1 on default profile | **S0 PASS; S1 FAIL** | red/green + black sky; F6 image-replay fixed; F3 anisotropic control pending; `audits/2026-10-20-iterationrp-color-sky-analysis.md` |
 | ITRP-07 | S2 effect matrix on default profile | NOT RUN | no missing effects |
 | ITRP-08 | Advanced ACT/WSR/RTW profiles | NOT RUN | separate profile gates |
 
 ## Promotion rule
+
+The [2026-10-20 detailed color/sky review](audits/2026-10-20-iterationrp-color-sky-analysis.md)
+adds offline evidence for a terrain geometry-output lifetime hazard and a core
+image-replay collision, while keeping their device relevance unproven. It also
+corrects the earlier exposure exclusion: manual exposure still uses
+`pixelData2D`. The first target observations remain depthtexS and per-pass
+sampler/image/FBO identities. No row is promoted by these offline checks.
 
 The private `iterationRP-X1E-port-0.8.31*.zip` results do not close any row.
 A row passes only with the original archive hash, the exact core/bridge pair,

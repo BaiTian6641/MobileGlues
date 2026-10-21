@@ -1,0 +1,280 @@
+{
+  "scope": "offline source, CPU asset and saved-capture review; no device interaction",
+  "head": "96716e1a59994f7ba0d4c478e40df88482169727",
+  "pack": {
+    "path": "/home/polar/MobileGlues/references/iterationRP Alpha 0.8.31.zip",
+    "sha256": "334d0b0dadb5e2b927b992f2b93596c4cc1a518305c1e2a9b175c754a4d946e8"
+  },
+  "source_members": {
+    "shaders/Lib/Programs/Gbuffers/Terrain_GS.glsl": "c6f483cda5ba6849191f7ddf6faf9806ea7ac4bf1026a2fdb0df7294fec198e4",
+    "shaders/Lib/Programs/Gbuffers/Terrain_FS.glsl": "c6fc5f6d84d406f0cf3077b543293269928dfa819152225765b3947627731ca8",
+    "shaders/Lib/Programs/Composite/Exposure_CS.glsl": "2c211b22508525c7e3f79ef8733e3c19fd11f381fa1c39086f622f6012a6c48d",
+    "shaders/Lib/Programs/Composite/Sky_Overworld_FS.glsl": "b73dea36b732a4c56992d60fe0dbbbf0991509762b3859d5a46723fa48eacd5b",
+    "shaders/Lib/Programs/Composite/Image_Clear_Screen_CS.glsl": "9a0320da5a7dc544be7353b8471e9e7a89e9622221f158f6459cbb60c11dcc97",
+    "shaders/Lib/Programs/Final_FS.glsl": "d3045f92e5ea90e030574338bdcdfa1632cdb1646a18de89da94897bb977ab8c",
+    "shaders/Lib/BasicFunctions/PrecomputedAtmosphere.glsl": "6c0aaf5a8d26f887d892d9a74f190596ec418fa316490aeddeb182bf383cab04"
+  },
+  "lut": {
+    "member": "shaders/texture/AtmoData_620_540_440_n4_16f.bin",
+    "sha256": "282826edfb4f216a0a90bb49b4780da5c38bfdf880d8e03d6ed3da168a309de4",
+    "bytes": 17301504,
+    "layout": "little-endian binary16 RGBA; x fastest, then y, then z",
+    "components": 8650752,
+    "finite": 8650752,
+    "negative": 0,
+    "nonzero": 6769686,
+    "minimum": 0.0,
+    "maximum": 3.0390625,
+    "samples": [
+      {
+        "xyz": [
+          0,
+          0,
+          0
+        ],
+        "rgba": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "bytes_hex": "0000000000000000"
+      },
+      {
+        "xyz": [
+          511,
+          127,
+          31
+        ],
+        "rgba": [
+          1.2158203125,
+          1.6474609375,
+          2.73046875,
+          0.0831298828125
+        ],
+        "bytes_hex": "dd3c973e7641522d"
+      },
+      {
+        "xyz": [
+          0,
+          0,
+          32
+        ],
+        "rgba": [
+          0.90234375,
+          0.86328125,
+          0.76220703125,
+          0.0
+        ],
+        "bytes_hex": "383be83a193a0000"
+      },
+      {
+        "xyz": [
+          128,
+          32,
+          32
+        ],
+        "rgba": [
+          0.431396484375,
+          0.390869140625,
+          0.339111328125,
+          0.0
+        ],
+        "bytes_hex": "e73641366d350000"
+      },
+      {
+        "xyz": [
+          32,
+          72,
+          32
+        ],
+        "rgba": [
+          0.0010766983032226562,
+          0.002071380615234375,
+          0.0050811767578125,
+          0.0
+        ],
+        "bytes_hex": "69143e18341d0000"
+      },
+      {
+        "xyz": [
+          63,
+          79,
+          32
+        ],
+        "rgba": [
+          4.947185516357422e-06,
+          9.715557098388672e-06,
+          2.4497509002685547e-05,
+          0.0
+        ],
+        "bytes_hex": "5300a3009b010000"
+      }
+    ]
+  },
+  "manual_exposure_default_ev14": {
+    "calculated": 9.1552734375,
+    "binary16_roundtrip": 9.15625
+  },
+  "packed16_cpu_roundtrip": {
+    "values": 65536,
+    "float32_mismatches": 0,
+    "float16_mismatches": 60415,
+    "limitation": "CPU IEEE arithmetic only; no sampler, raster or translated-shader proof"
+  },
+  "image_replay": {
+    "source": "MobileGlues-cpp/gl/drawing.cpp",
+    "source_sha256": "936ba0029dd43ee0d2a6106990f60ff603494baba57b2d1bebdc4c9217739b31",
+    "function_sha256": "9cac45cdd4711bd36571636eabd589097273b3b24289b616a21c5b6467ac2b5b",
+    "evidence_level": "actual function with host state/driver doubles; not GPU execution",
+    "stdout": "bind 2 101\nbind 2 202\nactive_unit=2 expected_texture=101 actual_texture=202\nbind 2 101\nafter_active_rebind=101\n",
+    "collision_reproduced": true,
+    "explicit_active_rebind_restores": true
+  },
+  "geometry": {
+    "compile_exit": 0,
+    "preparation": "ZIP include expansion; 430 compatibility to core; IS_IRIS and MC_VERSION=12101; actual lower_const_transpose function",
+    "compiler": "Glslang Version: 11:16.2.0",
+    "limitation": "standalone desktop-SPIR-V inspection; not actual runtime Iris/Sodium preprocessing, MobileGlues ESSL or target GPU",
+    "lower_function_sha256": "36300805b0575b1e9a252fd97f01f7e8694c7a711a99833dc28bf174af8b73a2",
+    "input_sha256": "f1aad271b0ab6b7371ae5bf174747ab637bebebec4395da9a25ef193c26c89f1",
+    "spirv_sha256": "cf1bb2f9e037ef360ddedb0dab295eceb260efd73d885fca3c805d220619a98b",
+    "texture_resolution_stores_before_loop": 2,
+    "texture_resolution_stores_after_loop_header": 0,
+    "emit_vertex_in_loop": true
+  },
+  "captures": [
+    {
+      "path": "/tmp/itrp-redgreen.png",
+      "sha256": "6e8a1fe3057d9e749328815424917ff3b8b27de9db20e9bb8cd664fed212f503",
+      "dimensions": [
+        2880,
+        1800
+      ],
+      "regions": [
+        {
+          "label": "terrain",
+          "box_xyxy": [
+            800,
+            1300,
+            1300,
+            1600
+          ],
+          "mode_rgb": [
+            221,
+            94,
+            71
+          ],
+          "mode_count": 149810,
+          "pixels": 150000,
+          "mode_fraction": 0.9987333333333334
+        },
+        {
+          "label": "sky",
+          "box_xyxy": [
+            650,
+            350,
+            1300,
+            650
+          ],
+          "mode_rgb": [
+            0,
+            0,
+            0
+          ],
+          "mode_count": 195000,
+          "pixels": 195000,
+          "mode_fraction": 1.0
+        }
+      ]
+    },
+    {
+      "path": "/tmp/itrp-manualexp.png",
+      "sha256": "0d41fb855ea37583ff4cdb8006b8b98f9a0b2d4891bac87ec64c55ea1a59b364",
+      "dimensions": [
+        2880,
+        1800
+      ],
+      "regions": [
+        {
+          "label": "terrain",
+          "box_xyxy": [
+            800,
+            1300,
+            1300,
+            1600
+          ],
+          "mode_rgb": [
+            221,
+            94,
+            71
+          ],
+          "mode_count": 149810,
+          "pixels": 150000,
+          "mode_fraction": 0.9987333333333334
+        },
+        {
+          "label": "sky",
+          "box_xyxy": [
+            650,
+            350,
+            1300,
+            650
+          ],
+          "mode_rgb": [
+            0,
+            0,
+            0
+          ],
+          "mode_count": 195000,
+          "pixels": 195000,
+          "mode_fraction": 1.0
+        }
+      ]
+    },
+    {
+      "path": "/tmp/itrp-g10-full.png",
+      "sha256": "bb65153312686d94a8deed3deffa0b08c5748019e08d4c09fbfddfe514d928d8",
+      "dimensions": [
+        2880,
+        1800
+      ],
+      "regions": [
+        {
+          "label": "terrain",
+          "box_xyxy": [
+            800,
+            1300,
+            1300,
+            1600
+          ],
+          "mode_rgb": [
+            221,
+            94,
+            71
+          ],
+          "mode_count": 149810,
+          "pixels": 150000,
+          "mode_fraction": 0.9987333333333334
+        },
+        {
+          "label": "sky",
+          "box_xyxy": [
+            650,
+            350,
+            1300,
+            650
+          ],
+          "mode_rgb": [
+            0,
+            0,
+            0
+          ],
+          "mode_count": 195000,
+          "pixels": 195000,
+          "mode_fraction": 1.0
+        }
+      ]
+    }
+  ]
+}
