@@ -1,6 +1,7 @@
 # Shaderpack support program
 
-Status: **planning and investigation. No new pack is supported yet.**
+Status: **static audits complete; host/device gates NOT RUN. No new pack is
+supported yet.**
 
 This program tracks adoption of original shaderpack archives on the X1E
 Googlebook tuple. The fixed support boundary is **(MobileGlues core, Iris
@@ -29,6 +30,8 @@ parallel at the host-translation and import-gate level.
 | [sildurs-ledger.md](sildurs-ledger.md) | Sildur task ledger and gates |
 | [iterationrp-ledger.md](iterationrp-ledger.md) | iterationRP task ledger and gates |
 | [gate-definitions.md](gate-definitions.md) | Reusable S0-S3 evidence and acceptance rules |
+| [audits/2026-10-20-sildur-static-audit.md](audits/2026-10-20-sildur-static-audit.md) | Sildur legacy/format/FBO findings and first probes |
+| [audits/2026-10-20-iterationrp-static-audit.md](audits/2026-10-20-iterationrp-static-audit.md) | iterationRP format/stage/program findings |
 | [../backend-support-fixing-plan.md](../backend-support-fixing-plan.md) | Shared backend fix order (G1-G8) |
 
 ## Reporting rule

@@ -37,6 +37,31 @@ Do not edit original shaderpacks. Keep compile/link/FBO failures truthful.
 | G6 | Pack lifecycle state: bridge unit/format maps and core fallback map persist across reload/switch; 32-name cap reuses unit 0 | bridge `ImageBindingRegistry.java`, `gl/image_bindings.cpp`, S9 NOT RUN | wrapper+bridge defect | Clear maps on pack load/unload/reload/context loss; fail loudly on unit exhaustion. | A→B→A pack switch and same-pack reload preserve distinct units; no silent reuse. |
 | G7 | ACT/WSR staging beyond r5.9.2: r5.9.3 and Unbound; residual half-rate floodfill circle | `feature-matrix.md:116-121`, `execution-state.md`, AuroraLumen audit | qualification (`d`) | Same profile matrix on r5.9.3 and Unbound; 8 s clips; compare floodfill behavior to desktop reference. | Staged ACT 192 / WSR 128 on r5.9.2, r5.9.3, Unbound; no fallback; player refs off. |
 | G8 | BSL and effect fidelity; AuroraLumen private boundary | `feature-matrix.md:88-93,122-124`, AuroraLumen validations | qualification (`d`) | Import original BSL default; run named-effect matrix on original packs. Keep AuroraLumen private-only. | BSL pipeline active with named effects; per-effect matrix recorded; private derivative never used as original-pack evidence. |
+| G9 | RGB8/RGB10_A2 render-target completeness for Sildur: Vibrant colortex1/3 `RGB8`, Enhanced `gnormalFormat=RGB10_A2` | `shaderpack-support/audits/2026-10-20-sildur-static-audit.md`; Iris keeps comments and parses `const` directives; X1E RGB8 unprobed, RGB8_SNORM not color-renderable | provider/FBO format + metadata | Host F0 FBO probe; extend the core legal/renderable target table; if RGB8 is incomplete, widen the internal target truthfully (RGBA8) without editing the pack; verify RGB10_A2 | FBO complete, source compiles, S0/S1; Basic RGBA8 control unaffected |
+
+### iterationRP refinement (from the 2026-10-20 static audit)
+
+- **G1 is the first hard blocker.** The original default graph has 15 active
+  illegal qualifier sites: 9x `rgba16`, 1x `rg16`, 5x `rg16f`. Current core
+  already partially handles `rgba16`/`rg16`; `rg16f`/`rg32f`, `RG16F` storage
+  allowlisting, and target-aware attachment policy remain. The first gate is
+  the five `img_pixelData2D` programs, not a full-pack rewrite.
+- **G4 is the second hard blocker.** `PixelData_VS` declares a vertex
+  `image2D`; `shadow.gsh` declares three `uimage3D`s and uses
+  `imageAtomicMax`. Rewriting must be stage-scoped; do not apply the
+  compute-only bridge to graphics stages.
+- **G2 is a proof gap, not yet a demonstrated failure.** Prove the core
+  resolver on the original pack with the bridge removed, especially the
+  six-image `Composite_Copy_CS` and three-image `shadow.gsh`.
+- **G3 is not a default-profile iterationRP blocker.** Its 4 KiB SSBO is fully
+  written by `SSBOUpdate_CS`; keep G3 on the WSR/shared path.
+- **G6 is S3 work.** The first import does not need pack switching, but the
+  32-name fallback must never silently reuse unit 0.
+
+The private X1E ports widen formats and rewrite subgroup/BackwardAnalysis/SH
+semantics. They are not original-pack evidence and must not be used as the
+correctness reference. See
+`shaderpack-support/audits/2026-10-20-iterationrp-static-audit.md`.
 
 ### Evidence corrections
 
@@ -62,6 +87,21 @@ Order: **G1 → G2 → G3 → G4 → G6**.
 Exit gate: original r5.9.2 ACT 192 + WSR 128 with **no bridge**; original
 iterationRP compiles/renders previously failing programs; vertex multi-image
 passes; A→B→A reload passes; every failure is observable.
+
+### Sildur entry path (parallel to Phase 1)
+
+Sildur does not require images/SSBO, so it does not wait for G1-G4. Start with
+**G9/F0**:
+
+1. Host FBO probe for RGB8, RGB10_A2, RGB16F, R11F and RGBA8.
+2. Fix only the core legal/renderable target table if RGB8/RGB10_A2 fail.
+3. Host-compile Vibrant `gbuffers_textured`, `composite1`, `deferred` through
+   the Iris-preprocessed/patched source.
+4. Device S0/S1: Vibrant first; Basic is the all-RGBA8 control if Vibrant
+   fails before shader compilation; Enhanced follows.
+
+Exit gate: Vibrant S0/S1 with no fallback and no format failure; Basic and
+Enhanced S0/S1 controls; S2 effect matrix remains separate.
 
 ### Phase 2 — Original-pack metadata and advanced effects
 

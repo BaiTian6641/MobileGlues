@@ -29,7 +29,8 @@ compatibility, not new GPU features. Confirm by static compile and device import
 | SHA-256 | `334d0b0dadb5e2b927b992f2b93596c4cc1a518305c1e2a9b175c754a4d946e8` |
 | License | Copyright 2025 Tahnass, All Rights Reserved; private modification allowed, redistribution not |
 | Required Iris features | `CUSTOM_IMAGES`, `SSBO` |
-| Known local derived fixtures | `iterationRP-X1E-port-0.8.31.zip` `5b061ae6…`; `-r2.zip` `46a0224b…` |
+| Known local derived fixtures | `iterationRP-X1E-port-0.8.31.zip` `5b061ae6ae8ef2c0d278ca9458f37747c6b73898e4572a91e0e00433977b78b4`; `-r2.zip` `46a0224b664fbbe56e22e240cff960f83373c0e864157e1da9af0dae9f50461e` |
+| Derived hash conflict | Earlier `2026-10-19-iterationrp-port.md` records base-port `0cdd9259acb75fc311a7fdc7d5d927448ccfcd325c9a2fd59430e1b167f72921`; current bytes are `5b061ae6…`. Do not attribute derived results without the exact bytes. |
 | Derived status | Research-only, not a support target |
 
 The private ports are evidence for the size of the work, not a qualification
