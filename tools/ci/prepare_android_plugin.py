@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Package this core in a disposable, pinned upstream launcher plugin checkout.
 
+The reviewed FSR3 settings patch is applied to the pinned upstream source.
 The maintained local plugin checkout is deliberately never used or modified.
 Build each native ABI first, then pass --library ABI=/absolute/libmobileglues.so.
 """
@@ -14,6 +15,7 @@ import subprocess
 
 PLUGIN_COMMIT = "f5105e4ddd1752cccdcc6421c402960d40ec3d9d"
 GRADLE_SHA256 = "20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78"
+CI_DIRECTORY = Path(__file__).resolve().parent
 
 
 def replace_once(text, old, new):
@@ -47,11 +49,19 @@ def main():
         if library.read_bytes()[:4] != b"\x7fELF":
             parser.error(f"Not an ELF library: {library}")
         libraries[abi] = library
+    # Upstream does not yet contain our FSR3 switch, quality selector or codec.
+    # Keep these app changes in the same reviewed source tree as the core so
+    # local and Actions APKs cannot silently fall back to the older FSR1-only UI.
+    patch = CI_DIRECTORY / "patches/fsr3-settings.patch"
+    subprocess.run(["git", "-C", str(plugin), "apply", "--check", str(patch)], check=True)
+    subprocess.run(["git", "-C", str(plugin), "apply", str(patch)], check=True)
+    regression_test = CI_DIRECTORY / "plugin-tests/Fsr3ConfigTest.kt"
+    shutil.copyfile(regression_test, plugin / "app/src/test/java/com/fcl/plugin/mobileglues/settings/Fsr3ConfigTest.kt")
     app_file = plugin / "app/build.gradle.kts"
     app = app_file.read_text()
     app = replace_once(app, 'ndkVersion = "27.3.13750724"', 'ndkVersion = "28.2.13676358"')
-    app = replace_once(app, "versionCode = 2000", "versionCode = 2002")
-    app = replace_once(app, 'versionName = "2.0.0"', 'versionName = "2.0.2-dev"')
+    app = replace_once(app, "versionCode = 2000", "versionCode = 2003")
+    app = replace_once(app, 'versionName = "2.0.0"', 'versionName = "2.0.3-dev"')
     abi_list = ", ".join(json.dumps(abi) for abi in sorted(libraries))
     app = replace_once(app, "        minSdk = 26", f"        minSdk = 26\n        ndk {{ abiFilters += listOf({abi_list}) }}")
     # CI produces a debug-signed qualification APK and an unsigned release APK.
@@ -93,7 +103,13 @@ android {
     source = module / "src/main"
     source.mkdir(parents=True, exist_ok=True)
     (source / "AndroidManifest.xml").write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android"/>\n')
-    manifest = {"plugin_commit": commit, "ndk": "28.2.13676358", "libraries": {}}
+    manifest = {
+        "plugin_commit": commit,
+        "fsr3_settings_patch_sha256": hashlib.sha256(patch.read_bytes()).hexdigest(),
+        "fsr3_config_test_sha256": hashlib.sha256(regression_test.read_bytes()).hexdigest(),
+        "ndk": "28.2.13676358",
+        "libraries": {},
+    }
     for abi, library in libraries.items():
         target = source / "jniLibs" / abi / "libmobileglues.so"
         target.parent.mkdir(parents=True, exist_ok=True)

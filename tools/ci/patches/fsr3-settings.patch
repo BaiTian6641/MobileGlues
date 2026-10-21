@@ -1,0 +1,271 @@
+diff --git a/app/src/main/java/com/fcl/plugin/mobileglues/settings/MGConfig.kt b/app/src/main/java/com/fcl/plugin/mobileglues/settings/MGConfig.kt
+index 17a5751..c6d2fa8 100644
+--- a/app/src/main/java/com/fcl/plugin/mobileglues/settings/MGConfig.kt
++++ b/app/src/main/java/com/fcl/plugin/mobileglues/settings/MGConfig.kt
+@@ -310,6 +310,21 @@ enum class Fsr1Preset(override val wire: Int) : WireValue {
+     Performance(4),
+ }
+ 
++/** `fsr3Setting`: experimental presentation FSR3, independent of the FSR1 presets. */
++enum class Fsr3Mode(override val wire: Int) : WireValue {
++    Disabled(0),
++    Experimental(1),
++}
++
++/** FSR3 reconstruction preset. NativeAA keeps 1:1; the rest request a lower internal render extent. */
++enum class Fsr3Quality(override val wire: Int) : WireValue {
++    NativeAA(0),
++    Quality(1),
++    Balanced(2),
++    Performance(3),
++    UltraPerformance(4),
++}
++
+ /** `maxGlslCacheSize`。把「关闭」这个用负数表达的状态显式建模出来。 */
+ sealed interface GlslCacheSize {
+ 
+@@ -371,8 +386,11 @@ data class MGConfig(
+     val extTimerQuery: Boolean = true,
+     val extDirectStateAccess: Boolean = false,
+     val fsr1: Fsr1Preset = Fsr1Preset.Disabled,
++    val fsr3: Fsr3Mode = Fsr3Mode.Disabled,
++    val fsr3Quality: Fsr3Quality = Fsr3Quality.NativeAA,
+ ) {
+     val fsr1Enabled: Boolean get() = fsr1 != Fsr1Preset.Disabled
++    val fsr3Enabled: Boolean get() = fsr3 != Fsr3Mode.Disabled
+ 
+     companion object {
+         val Default = MGConfig()
+diff --git a/app/src/main/java/com/fcl/plugin/mobileglues/settings/MGConfigCodec.kt b/app/src/main/java/com/fcl/plugin/mobileglues/settings/MGConfigCodec.kt
+index 34db84c..ae1b4ae 100644
+--- a/app/src/main/java/com/fcl/plugin/mobileglues/settings/MGConfigCodec.kt
++++ b/app/src/main/java/com/fcl/plugin/mobileglues/settings/MGConfigCodec.kt
+@@ -34,6 +34,8 @@ internal object MGConfigCodec {
+     private const val KEY_DEPTH_CLEAR_FIX = "angleDepthClearFixMode"
+     private const val KEY_GL_VERSION = "customGLVersion"
+     private const val KEY_FSR1 = "fsr1Setting"
++    private const val KEY_FSR3 = "fsr3Setting"
++    private const val KEY_FSR3_QUALITY = "fsr3Quality"
+ 
+     private val KNOWN_KEYS = listOf(
+         KEY_ANGLE,
+@@ -48,6 +50,8 @@ internal object MGConfigCodec {
+         KEY_DEPTH_CLEAR_FIX,
+         KEY_GL_VERSION,
+         KEY_FSR1,
++        KEY_FSR3,
++        KEY_FSR3_QUALITY,
+     ) + MultidrawEntry.entries.flatMap { listOf(it.orderKey, it.legacyModeKey) }
+ 
+     fun decode(root: JsonObject): MGConfig {
+@@ -69,6 +73,8 @@ internal object MGConfigCodec {
+             extDirectStateAccess = root.boolOrNull(KEY_EXT_DIRECT_STATE_ACCESS)
+                 ?: defaults.extDirectStateAccess,
+             fsr1 = Fsr1Preset.entries.fromWire(root.intOrNull(KEY_FSR1), defaults.fsr1),
++            fsr3 = Fsr3Mode.entries.fromWire(root.intOrNull(KEY_FSR3), defaults.fsr3),
++            fsr3Quality = Fsr3Quality.entries.fromWire(root.intOrNull(KEY_FSR3_QUALITY), defaults.fsr3Quality),
+         )
+     }
+ 
+@@ -83,6 +89,8 @@ internal object MGConfigCodec {
+             addProperty(KEY_DEPTH_CLEAR_FIX, config.depthClearFix.wire)
+             addProperty(KEY_GL_VERSION, config.glVersion.wire)
+             addProperty(KEY_FSR1, config.fsr1.wire)
++            addProperty(KEY_FSR3, config.fsr3.wire)
++            addProperty(KEY_FSR3_QUALITY, config.fsr3Quality.wire)
+             encodeMultidraw(config.multidraw)
+         }
+ 
+diff --git a/app/src/main/java/com/fcl/plugin/mobileglues/ui/AppController.kt b/app/src/main/java/com/fcl/plugin/mobileglues/ui/AppController.kt
+index 60c80d9..e77eb6f 100644
+--- a/app/src/main/java/com/fcl/plugin/mobileglues/ui/AppController.kt
++++ b/app/src/main/java/com/fcl/plugin/mobileglues/ui/AppController.kt
+@@ -22,6 +22,8 @@ import com.fcl.plugin.mobileglues.settings.ConfigLoadResult
+ import com.fcl.plugin.mobileglues.settings.ConfigStoreEvent
+ import com.fcl.plugin.mobileglues.settings.DepthClearFixMode
+ import com.fcl.plugin.mobileglues.settings.Fsr1Preset
++import com.fcl.plugin.mobileglues.settings.Fsr3Mode
++import com.fcl.plugin.mobileglues.settings.Fsr3Quality
+ import com.fcl.plugin.mobileglues.settings.GlVersion
+ import com.fcl.plugin.mobileglues.settings.GlslCacheScale
+ import com.fcl.plugin.mobileglues.settings.GlslCacheSize
+@@ -484,6 +486,21 @@ class AppController(
+ 
+     fun setExtDirectStateAccess(enabled: Boolean) = update { it.copy(extDirectStateAccess = enabled) }
+ 
++    fun setFsr3(enabled: Boolean) {
++        val current = configStore.config.value ?: return
++        if (enabled == current.fsr3Enabled) return
++        if (enabled) {
++            confirmThenUpdate(R.string.warning_fsr3_enable) { it.copy(fsr3 = Fsr3Mode.Experimental) }
++        } else {
++            update { it.copy(fsr3 = Fsr3Mode.Disabled) }
++        }
++    }
++
++    fun setFsr3Quality(position: Int) {
++        val quality = Fsr3Quality.entries.getOrNull(position) ?: return
++        update { it.copy(fsr3Quality = quality) }
++    }
++
+     fun setFsr1(enabled: Boolean) {
+         val current = configStore.config.value ?: return
+         if (enabled == current.fsr1Enabled) return
+diff --git a/app/src/main/java/com/fcl/plugin/mobileglues/ui/material/MaterialSettings.kt b/app/src/main/java/com/fcl/plugin/mobileglues/ui/material/MaterialSettings.kt
+index 6d4d2e7..a4cb2ce 100644
+--- a/app/src/main/java/com/fcl/plugin/mobileglues/ui/material/MaterialSettings.kt
++++ b/app/src/main/java/com/fcl/plugin/mobileglues/ui/material/MaterialSettings.kt
+@@ -36,6 +36,7 @@ import com.fcl.plugin.mobileglues.settings.AngleConfig
+ import com.fcl.plugin.mobileglues.settings.DepthClearFixMode
+ import com.fcl.plugin.mobileglues.settings.GlVersion
+ import com.fcl.plugin.mobileglues.settings.GlslCacheScale
++import com.fcl.plugin.mobileglues.settings.Fsr3Quality
+ import com.fcl.plugin.mobileglues.settings.MGConfig
+ import com.fcl.plugin.mobileglues.settings.NoErrorConfig
+ import com.fcl.plugin.mobileglues.settings.SpinnerOption
+@@ -155,6 +156,12 @@ private fun ConfigSections(controller: AppController, config: MGConfig) {
+                 checked = config.fsr1Enabled,
+                 onCheckedChange = controller::setFsr1,
+             )
++            SwitchPreferenceRow(
++                title = stringResource(R.string.option_enable_fsr3),
++                checked = config.fsr3Enabled,
++                onCheckedChange = controller::setFsr3,
++            )
++            Fsr3QualitySlider(controller, config)
+         }
+ 
+         PreferenceGroup(title = stringResource(R.string.settings_group_cache)) {
+@@ -254,6 +261,27 @@ private fun ConfigSections(controller: AppController, config: MGConfig) {
+ 
+ }
+ 
++/** Five native FSR3 quality presets, persisted through the shared renderer config. */
++@Composable
++private fun Fsr3QualitySlider(controller: AppController, config: MGConfig) {
++    val labels = listOf(
++        stringResource(R.string.option_fsr3_quality_native),
++        stringResource(R.string.option_fsr3_quality_quality),
++        stringResource(R.string.option_fsr3_quality_balanced),
++        stringResource(R.string.option_fsr3_quality_performance),
++        stringResource(R.string.option_fsr3_quality_ultra),
++    )
++    var drag by remember { mutableStateOf<Int?>(null) }
++    SliderPreferenceRow(
++        title = stringResource(R.string.option_fsr3_quality),
++        valueLabel = labels[config.fsr3Quality.wire],
++        position = drag ?: config.fsr3Quality.wire,
++        steps = Fsr3Quality.entries.size - 1,
++        onPositionChange = { drag = it; controller.setFsr3Quality(it) },
++        onDragFinished = { drag = null },
++    )
++}
++
+ /**
+  * 缓存上限滑块。
+  *
+diff --git a/app/src/main/java/com/fcl/plugin/mobileglues/ui/miuix/MiuixSettings.kt b/app/src/main/java/com/fcl/plugin/mobileglues/ui/miuix/MiuixSettings.kt
+index f54a807..21d9a29 100644
+--- a/app/src/main/java/com/fcl/plugin/mobileglues/ui/miuix/MiuixSettings.kt
++++ b/app/src/main/java/com/fcl/plugin/mobileglues/ui/miuix/MiuixSettings.kt
+@@ -32,6 +32,7 @@ import com.fcl.plugin.mobileglues.settings.AngleConfig
+ import com.fcl.plugin.mobileglues.settings.DepthClearFixMode
+ import com.fcl.plugin.mobileglues.settings.GlVersion
+ import com.fcl.plugin.mobileglues.settings.GlslCacheScale
++import com.fcl.plugin.mobileglues.settings.Fsr3Quality
+ import com.fcl.plugin.mobileglues.settings.MGConfig
+ import com.fcl.plugin.mobileglues.settings.NoErrorConfig
+ import com.fcl.plugin.mobileglues.settings.SpinnerOption
+@@ -170,6 +171,12 @@ private fun ConfigSections(controller: AppController, config: MGConfig) {
+                 checked = config.fsr1Enabled,
+                 onCheckedChange = controller::setFsr1,
+             )
++            MiuixSwitchRow(
++                title = stringResource(R.string.option_enable_fsr3),
++                checked = config.fsr3Enabled,
++                onCheckedChange = controller::setFsr3,
++            )
++            Fsr3QualitySlider(controller, config)
+         }
+ 
+         MiuixGroup(title = stringResource(R.string.settings_group_cache)) {
+@@ -231,6 +238,27 @@ private fun ConfigSections(controller: AppController, config: MGConfig) {
+ 
+ }
+ 
++/** Five native FSR3 quality presets, persisted through the shared renderer config. */
++@Composable
++private fun Fsr3QualitySlider(controller: AppController, config: MGConfig) {
++    val labels = listOf(
++        stringResource(R.string.option_fsr3_quality_native),
++        stringResource(R.string.option_fsr3_quality_quality),
++        stringResource(R.string.option_fsr3_quality_balanced),
++        stringResource(R.string.option_fsr3_quality_performance),
++        stringResource(R.string.option_fsr3_quality_ultra),
++    )
++    var drag by remember { mutableStateOf<Int?>(null) }
++    MiuixSliderRow(
++        title = stringResource(R.string.option_fsr3_quality),
++        valueLabel = labels[config.fsr3Quality.wire],
++        position = drag ?: config.fsr3Quality.wire,
++        steps = Fsr3Quality.entries.size - 1,
++        onPositionChange = { drag = it; controller.setFsr3Quality(it) },
++        onDragFinished = { drag = null },
++    )
++}
++
+ /**
+  * 缓存上限滑块。
+  *
+diff --git a/app/src/main/res/values-zh/strings.xml b/app/src/main/res/values-zh/strings.xml
+index 4d34009..cee42b1 100644
+--- a/app/src/main/res/values-zh/strings.xml
++++ b/app/src/main/res/values-zh/strings.xml
+@@ -95,6 +95,13 @@
+     <string name="option_ext_timer_query">禁用推荐的 timer_query 扩展</string>
+     <string name="option_ext_direct_state_access">启用高级的 direct_state_access 扩展</string>
+     <string name="option_enable_fsr1">(实验性) 启用内置的 FSR1</string>
++    <string name="option_enable_fsr3">（实验性）启用内置 FSR3</string>
++    <string name="option_fsr3_quality">FSR3 质量</string>
++    <string name="option_fsr3_quality_native">原生 AA</string>
++    <string name="option_fsr3_quality_quality">质量</string>
++    <string name="option_fsr3_quality_balanced">平衡</string>
++    <string name="option_fsr3_quality_performance">性能</string>
++    <string name="option_fsr3_quality_ultra">极限性能</string>
+ 
+     <string name="option_custom_gl_version">自定义目标 OpenGL 版本</string>
+     <string name="option_custom_gl_version_default">不启用</string>
+@@ -137,6 +144,7 @@
+     <string name="warning_adreno_740_angle">在 Adreno 740 设备上启用 ANGLE 极有可能导致严重渲染错误，是否继续？</string>
+     <string name="warning_enabling_angle_clear_workaround">启用 ANGLE Depth Clear 修复会修复 ANGLE 在 Minecraft 1.21.5+ 原版中的手持物品被遮挡的问题，但会导致性能下降，是否继续？</string>
+     <string name="warning_fsr1_enable">启用内置的 FSR1 可能会在部分驱动下造成图像损坏。\n如果您的设备搭载了 Adreno GPU，请启用 ANGLE以确保渲染正常。\n已知此功能与 ANGLE 同时启用会导致性能下降，请谨慎启用。</string>
++    <string name="warning_fsr3_enable">FSR3 为实验性功能，优先于 FSR1。降低场景分辨率需要兼容的 FSR3 桥接模组；未安装桥接模组时，FSR3 仅处理已完成的原生分辨率画面。画质和性能取决于渲染器和光影包。更改 FSR3 设置后请重启游戏。</string>
+ 
+     <string name="menu_item_reset">撤销授权或重置 MobileGlues</string>
+     <string name="reset_option_revoke">仅撤销授权</string>
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index 9012301..8811973 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -107,6 +107,13 @@
+     <string name="option_ext_timer_query">Disable Recommended \'timer_query\' Extension</string>
+     <string name="option_ext_direct_state_access">Enable Advanced \'direct_state_access\' Extension</string>
+     <string name="option_enable_fsr1" tools:ignore="Typos">(Experimental) Enable built-in FSR1</string>
++    <string name="option_enable_fsr3">(Experimental) Enable built-in FSR3</string>
++    <string name="option_fsr3_quality">FSR3 quality</string>
++    <string name="option_fsr3_quality_native">Native AA</string>
++    <string name="option_fsr3_quality_quality">Quality</string>
++    <string name="option_fsr3_quality_balanced">Balanced</string>
++    <string name="option_fsr3_quality_performance">Performance</string>
++    <string name="option_fsr3_quality_ultra">Ultra performance</string>
+ 
+     <string name="option_custom_gl_version">Custom target OpenGL Version</string>
+     <string name="option_custom_gl_version_default">Disable</string>
+@@ -151,6 +158,7 @@
+     <string name="warning_adreno_740_angle">Enabling ANGLE on Adreno 740 devices is highly likely to cause severe rendering issues. Are you sure you want to continue?</string>
+     <string name="warning_enabling_angle_clear_workaround">Enabling the ANGLE Depth Clear Workaround fixes the issue of the handheld items being obscured in vanilla Minecraft 1.21.5+, but may cause performance degradation. Are you sure you want to continue?</string>
+     <string name="warning_fsr1_enable">Enabling the built-in FSR1 may cause image corruption on some drivers.\nIf your device is equipped with an Adreno GPU, please enable ANGLE to ensure correct rendering.\nIt is known that enabling this feature together with ANGLE can cause performance degradation, so please enable with caution.</string>
++    <string name="warning_fsr3_enable">FSR3 is experimental and takes priority over FSR1. Reduced scene resolution requires a compatible FSR3 bridge; without it, FSR3 processes the finished native-resolution frame. Image quality and performance depend on the renderer and shader pack. Restart the game after changing FSR3 settings.</string>
+ 
+     <string name="menu_item_reset">Revoke authorization or reset MobileGlues</string>
+     <string name="reset_option_revoke">Revoke authorization only</string>

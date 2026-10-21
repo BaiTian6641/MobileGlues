@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify both ABI payloads and 16 KB ELF load-segment alignment in an APK."""
+"""Verify FSR3 app controls, both ABI payloads and 16 KB ELF alignment in an APK."""
 
 import argparse
 import hashlib
@@ -12,6 +12,19 @@ import zipfile
 def verify(path):
     result = {"apk": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "libraries": {}}
     with zipfile.ZipFile(path) as archive:
+        resources = archive.read("resources.arsc")
+        # Check the packaged UI, not native strings: a valid core previously
+        # shipped inside an older app that had no FSR3 switch or quality control.
+        for value in ("Enable built-in FSR3", "FSR3 quality", "Native AA",
+                      "Quality", "Balanced", "Performance", "Ultra performance"):
+            if value.encode() not in resources and value.encode("utf-16-le") not in resources:
+                raise ValueError(f"Missing FSR3 app resource: {value}")
+        dex_files = [archive.read(name) for name in archive.namelist()
+                     if name.startswith("classes") and name.endswith(".dex")]
+        for key in (b"fsr3Setting", b"fsr3Quality"):
+            if not any(key in dex for dex in dex_files):
+                raise ValueError(f"Missing app config key: {key.decode()}")
+        result["fsr3_app_controls"] = "present"
         for abi, machine in (("arm64-v8a", 183), ("x86_64", 62)):
             prefix = f"lib/{abi}/"
             core = prefix + "libmobileglues.so"
