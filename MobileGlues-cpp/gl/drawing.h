@@ -52,6 +52,9 @@ extern "C"
 
     // GL 4.2 base instance. GLES has none, so these forward and report a
     // non-zero base instance once; they used to be stubs that drew nothing.
+    GLAPI GLAPIENTRY void glDrawArraysInstanced(GLenum mode, GLint first, GLsizei count, GLsizei instancecount);
+    GLAPI GLAPIENTRY void glDrawArraysIndirect(GLenum mode, const void* indirect);
+    GLAPI GLAPIENTRY void glDrawElementsIndirect(GLenum mode, GLenum type, const void* indirect);
     GLAPI GLAPIENTRY void glDrawArraysInstancedBaseInstance(GLenum mode, GLint first, GLsizei count,
                                                             GLsizei instancecount, GLuint baseinstance);
     GLAPI GLAPIENTRY void glDrawElementsInstancedBaseInstance(GLenum mode, GLsizei count, GLenum type,
