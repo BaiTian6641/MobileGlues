@@ -28,8 +28,10 @@ int main() {
           "layout(rgba32f)\nuniform image2D d[2];\n");
     check("rgba16f-untouched", mg_lower_legacy_image_formats("layout(rgba16f) uniform image2D e;\n"),
           "layout(rgba16f) uniform image2D e;\n");
-    check("rg16f-untouched", mg_lower_legacy_image_formats("layout(rg16f) uniform image2D f;\n"),
-          "layout(rg16f) uniform image2D f;\n");
+    check("rg16f-widened", mg_lower_legacy_image_formats("layout(rg16f) uniform image2D f;\n"),
+          "layout(rgba16f) uniform image2D f;\n");
+    check("rg32f-widened", mg_lower_legacy_image_formats("layout(rg32f) uniform image2D f32;\n"),
+          "layout(rgba32f) uniform image2D f32;\n");
     check("r16f-untouched", mg_lower_legacy_image_formats("layout(r16f) uniform image2D rf;\n"),
           "layout(r16f) uniform image2D rf;\n");
     check("rgba16ui-untouched", mg_lower_legacy_image_formats("layout(rgba16ui) uniform uimage2D g;\n"),

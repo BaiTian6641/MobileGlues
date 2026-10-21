@@ -58,7 +58,10 @@ GLenum mg_image_backing_format(GLenum logical_format) {
     case GL_R16F:
         return GL_R32F;
     case GL_RG16F:
-        return GL_RG16F;
+        // ANGLE rejects rg16f image declarations/format qualification. Widen
+        // to RGBA16F storage and use the legal rgba16f qualifier; the shader
+        // observes the same two channels.
+        return GL_RGBA16F;
     case GL_RGBA16F:
         return GL_RGBA16F;
     // ES 3.2 has no unorm16 image format qualifier. RGBA32F/RG32F preserve

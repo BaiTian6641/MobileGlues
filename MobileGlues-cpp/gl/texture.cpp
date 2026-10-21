@@ -543,6 +543,11 @@ static GLenum mg_lower_16bit_image_storage(GLenum internal_format) {
         return GL_RGBA32F;
     case GL_RG16:
         return GL_RGBA32F;
+    case GL_RG16F:
+        // The provider rejects rg16f image qualifiers and image binding on
+        // RG16F. RGBA16F is the narrowest legal float backing with the same
+        // two-channel payload.
+        return GL_RGBA16F;
     default:
         return internal_format;
     }

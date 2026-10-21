@@ -8,7 +8,7 @@ Target: original `iterationRP Alpha 0.8.31.zip`
 | --- | --- | --- | --- |
 | ITRP-00 | Lock original archive, license, local path | DONE | `targets.md` |
 | ITRP-01 | Static feature/API map against current backend | DONE | [static audit](audits/2026-10-20-iterationrp-static-audit.md) |
-| ITRP-02 | Shared legal image-format table (G1) | BLOCKED ON BACKEND | 15 default illegal qualifier sites; G1 |
+| ITRP-02 | Shared legal image-format table (G1) | PARTIAL | RG16F/RG32F lowering + host tests; target-aware attachments/units/stages open; `validation/2026-10-20-g1-rg16f-rg32f-lowering.md` |
 | ITRP-03 | Core-only deterministic image units (G2) | PROOF GAP | core resolver exists; no original-pack no-bridge run |
 | ITRP-04 | SSBO clear reachability (G3) | NOT A DEFAULT BLOCKER | 4 KiB SSBO fully written by SSBOUpdate_CS |
 | ITRP-05 | Graphics-stage image rewriting (G4) | NOT RUN | `PixelData_VS`, `shadow.gsh` |

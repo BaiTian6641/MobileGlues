@@ -43,8 +43,9 @@ std::string join_layout_items(const std::vector<std::string>& items) {
 std::string mg_lower_legacy_image_formats(const std::string& glsl) {
     // ES 3.2 has no unorm16 image qualifier. Widen only the desktop unorm
     // formats: rgba16 -> rgba32f (or rgba16f for colorimg8, whose backing is
-    // RGBA16F) and rg16 -> rgba32f (backing RGBA32F). The legal ES qualifiers
-    // rgba16f/rg16f are left alone; ANGLE rejects rg32f.
+    // RGBA16F) and rg16 -> rgba32f (backing RGBA32F). The provider also rejects
+    // rg16f and rg32f image qualifiers; widen those to the RGBA backing the
+    // core storage path actually allocates.
     static const std::regex decl(
         R"((layout\s*\()([^)]*)(\))([^;{}]*?)\b(u?image(?:1D|2D|3D|Cube|CubeArray|2DArray|Buffer))\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:\[[^\]]*\])?\s*;)");
 
@@ -65,6 +66,16 @@ std::string mg_lower_legacy_image_formats(const std::string& glsl) {
                 changed = true;
             } else if (item == "rg16") {
                 // RG16 unorm backs are widened to RGBA32F by the storage path.
+                item = "rgba32f";
+                changed = true;
+            } else if (item == "rg16f") {
+                // The provider rejects rg16f; RG16F storage is widened to
+                // RGBA16F by glTexImage/glTexStorage.
+                item = "rgba16f";
+                changed = true;
+            } else if (item == "rg32f") {
+                // The provider rejects rg32f; RG32F storage is widened to
+                // RGBA32F by the storage path.
                 item = "rgba32f";
                 changed = true;
             }
