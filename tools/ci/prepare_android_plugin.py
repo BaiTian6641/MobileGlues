@@ -60,8 +60,8 @@ def main():
     app_file = plugin / "app/build.gradle.kts"
     app = app_file.read_text()
     app = replace_once(app, 'ndkVersion = "27.3.13750724"', 'ndkVersion = "28.2.13676358"')
-    app = replace_once(app, "versionCode = 2000", "versionCode = 2003")
-    app = replace_once(app, 'versionName = "2.0.0"', 'versionName = "2.0.3-dev"')
+    app = replace_once(app, "versionCode = 2000", "versionCode = 2004")
+    app = replace_once(app, 'versionName = "2.0.0"', 'versionName = "2.0.4-dev"')
     abi_list = ", ".join(json.dumps(abi) for abi in sorted(libraries))
     app = replace_once(app, "        minSdk = 26", f"        minSdk = 26\n        ndk {{ abiFilters += listOf({abi_list}) }}")
     # CI produces a debug-signed qualification APK and an unsigned release APK.
