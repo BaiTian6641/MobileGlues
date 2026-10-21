@@ -526,3 +526,12 @@ textured but unlit/albedo-like, sky remains black, and no light/shadow effects
 appear. This is not a twilight/night explanation. The result is consistent with
 presenting the G-buffer albedo rather than the lit final composite: the final
 write or its selected colortex0 side is still wrong.
+
+## colortex6 presentation test
+
+Presenting `colortex6` main and, separately, `colortex6` alt both produced a
+uniform cleared-blue frame. Neither side contained the lit scene. The bridge was
+reverted to the known terrain-correct colortex0 main baseline. This makes a
+missing/lost composite80-85 color write more likely than a simple target-side
+choice. The next probe must capture the actual draw attachment and program pass,
+not guess another texture index.
