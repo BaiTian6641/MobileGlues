@@ -248,6 +248,8 @@ struct global_settings_t {
     // The direct presenter consumes the composed frame; menu/title frames must
     // stay native. The Minecraft bridge owns all world presentation.
     bool fsr3_direct_present = false;
+    // Skip temporal FSR3 passes; keep the scene scale and spatial output path.
+    bool fsr3_spatial_only = false;
     HideMGEnvLevel hide_mg_env_level;
 };
 

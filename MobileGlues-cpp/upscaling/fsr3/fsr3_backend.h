@@ -165,8 +165,12 @@ private:
     Texture dilated_depth_{};
     Texture recon_depth_{};
     Texture lanczos_lut_{};
+    Texture spatial_color_{};
+    bool spatial_bilinear_ = false;
 
     GLuint clear_fbo_ = 0;
+    GLuint spatial_read_fbo_ = 0;
+    GLuint spatial_draw_fbo_ = 0;
     GLuint ubo_fsr_ = 0;
     GLuint ubo_spd_ = 0;
     GLuint ubo_rcas_ = 0;

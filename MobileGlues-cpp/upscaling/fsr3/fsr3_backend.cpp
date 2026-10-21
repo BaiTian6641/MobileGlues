@@ -22,6 +22,10 @@
 #include <sstream>
 
 #include "../../gles/gles.h"
+#include "../../config/settings.h"
+#ifdef __ANDROID__
+#include <sys/system_properties.h>
+#endif
 
 namespace mg_fsr3 {
 namespace {
@@ -341,6 +345,7 @@ bool Backend::create_textures() {
     if (!make(dilated_depth_, GL_R32F, rw, rh, 1)) return false;
     if (!make(recon_depth_, GL_R32UI, rw, rh, 1)) return false;
     if (!make(lanczos_lut_, GL_R16F, 128, 1, 1)) return false;
+    if (!make(spatial_color_, GL_RGBA8, ow, oh, 1)) return false;
     return true;
 }
 
@@ -353,6 +358,7 @@ void Backend::destroy_textures() {
     del(input_reactive_);
     del(input_transparency_);
     if (output_owned_) del(output_);
+    del(spatial_color_);
     output_owned_ = false;
     for (auto& t : acc_) del(t);
     for (auto& t : luma_) del(t);
@@ -534,7 +540,9 @@ bool Backend::create_programs() {
 
 bool Backend::create_constants() {
     GLES.glGenFramebuffers(1, &clear_fbo_);
-    if (!clear_fbo_) return false;
+    GLES.glGenFramebuffers(1, &spatial_read_fbo_);
+    GLES.glGenFramebuffers(1, &spatial_draw_fbo_);
+    if (!clear_fbo_ || !spatial_read_fbo_ || !spatial_draw_fbo_) return false;
     GLES.glGenBuffers(1, &ubo_fsr_);
     GLES.glGenBuffers(1, &ubo_spd_);
     GLES.glGenBuffers(1, &ubo_rcas_);
@@ -559,7 +567,9 @@ void Backend::destroy_programs() {
     if (ubo_spd_) GLES.glDeleteBuffers(1, &ubo_spd_);
     if (ubo_rcas_) GLES.glDeleteBuffers(1, &ubo_rcas_);
     if (clear_fbo_) GLES.glDeleteFramebuffers(1, &clear_fbo_);
-    ubo_fsr_ = ubo_spd_ = ubo_rcas_ = clear_fbo_ = 0;
+    if (spatial_read_fbo_) GLES.glDeleteFramebuffers(1, &spatial_read_fbo_);
+    if (spatial_draw_fbo_) GLES.glDeleteFramebuffers(1, &spatial_draw_fbo_);
+    ubo_fsr_ = ubo_spd_ = ubo_rcas_ = clear_fbo_ = spatial_read_fbo_ = spatial_draw_fbo_ = 0;
 }
 
 void Backend::abandon() {
@@ -572,9 +582,9 @@ void Backend::abandon() {
     for (auto& t : iuc_) drop(t);
     drop(intermediate_); drop(new_locks_); drop(dilated_reactive_); drop(shading_change_);
     drop(spd_mips_); drop(farthest_mip1_); drop(spd_atomic_); drop(frame_info_);
-    drop(dilated_motion_); drop(dilated_depth_); drop(recon_depth_); drop(lanczos_lut_);
+    drop(dilated_motion_); drop(dilated_depth_); drop(recon_depth_); drop(lanczos_lut_); drop(spatial_color_);
     programs_.clear();
-    ubo_fsr_ = ubo_spd_ = ubo_rcas_ = clear_fbo_ = 0;
+    ubo_fsr_ = ubo_spd_ = ubo_rcas_ = clear_fbo_ = spatial_read_fbo_ = spatial_draw_fbo_ = 0;
     output_owned_ = false;
     initialized_ = false;
     failed_ = false;
@@ -688,7 +698,7 @@ bool Backend::resolve_sampler(const std::string& base, Texture*& texture, int& l
     if (base == "r_internal_upscaled_color") return set(&iuc_[odd ? 1 : 0]);
     if (base == "r_accumulation") return set(&acc_[odd ? 1 : 0]);
     if (base == "r_shading_change") return set(&shading_change_);
-    if (base == "r_rcas_input") return set(&iuc_[odd ? 0 : 1]);
+    if (base == "r_rcas_input") return set(spatial_bilinear_ ? &spatial_color_ : &iuc_[odd ? 0 : 1]);
     if (base == "r_lanczos_lut") return set(&lanczos_lut_);
     if (base == "r_new_locks") return set(&new_locks_);
     if (base == "r_frame_info") return set(&frame_info_);
@@ -819,6 +829,17 @@ bool Backend::run_pass(size_t index, uint32_t width, uint32_t height) {
     return GLES.glGetError() == GL_NO_ERROR;
 }
 
+static bool spatial_only_requested() {
+    if (global_settings.fsr3_spatial_only) return true;
+#ifdef __ANDROID__
+    char value[PROP_VALUE_MAX] = {};
+    return __system_property_get("debug.mgfsr3.spatial", value) > 0 && value[0] == '1';
+#else
+    const char* value = std::getenv("MG_FSR3_SPATIAL_ONLY");
+    return value != nullptr && value[0] == '1';
+#endif
+}
+
 bool Backend::dispatch(const Inputs& in) {
     if (!initialized_) {
         set_error("FSR3 backend is not initialized");
@@ -856,28 +877,33 @@ bool Backend::dispatch(const Inputs& in) {
 
     DispatchGuard guard;
 
-    const bool reset = first_frame_ || in.reset_history;
+    const bool spatial = spatial_only_requested();
+    const bool reset = spatial || first_frame_ || in.reset_history;
     if (reset) {
         frame_index_ = 0;
         previous_render_width_ = previous_render_height_ = 0;
         previous_output_width_ = previous_output_height_ = 0;
         previous_jitter_x_ = previous_jitter_y_ = 0.0f;
         previous_pre_exposure_ = 1.0f;
-        for (auto& t : acc_) if (!clear_float(t, 0, 0, 0, 0, 0)) { set_error("FSR3 acc clear failed"); return false; }
-        for (auto& t : luma_) if (!clear_float(t, 0, 0, 0, 0, 0)) { set_error("FSR3 luma clear failed"); return false; }
-        for (auto& t : lh_) if (!clear_float(t, 0, 0, 0, 0, 0)) { set_error("FSR3 history clear failed"); return false; }
-        for (auto& t : iuc_) if (!clear_float(t, 0, 0, 0, 0, 0)) { set_error("FSR3 upscaled history clear failed"); return false; }
-        if (!clear_float(frame_info_, 0, -1.0f, 1.0f, 0.0f, 0.0f)) { set_error("FSR3 frame-info clear failed"); return false; }
+        if (!spatial) {
+            for (auto& t : acc_) if (!clear_float(t, 0, 0, 0, 0, 0)) { set_error("FSR3 acc clear failed"); return false; }
+            for (auto& t : luma_) if (!clear_float(t, 0, 0, 0, 0, 0)) { set_error("FSR3 luma clear failed"); return false; }
+            for (auto& t : lh_) if (!clear_float(t, 0, 0, 0, 0, 0)) { set_error("FSR3 history clear failed"); return false; }
+            for (auto& t : iuc_) if (!clear_float(t, 0, 0, 0, 0, 0)) { set_error("FSR3 upscaled history clear failed"); return false; }
+            if (!clear_float(frame_info_, 0, -1.0f, 1.0f, 0.0f, 0.0f)) { set_error("FSR3 frame-info clear failed"); return false; }
+        }
     }
-    if (!clear_uint(recon_depth_, 0, 0x3F800000u)) { set_error("FSR3 depth clear failed"); return false; }
-    if (!clear_uint(spd_atomic_, 0, 0)) { set_error("FSR3 SPD clear failed"); return false; }
-    if (!clear_float(new_locks_, 0, 0, 0, 0, 0)) { set_error("FSR3 locks clear failed"); return false; }
-    if (!clear_float(shading_change_, 0, 0, 0, 0, 0)) { set_error("FSR3 shading-change clear failed"); return false; }
-    if (!clear_float(dilated_reactive_, 0, 0, 0, 0, 0)) { set_error("FSR3 reactive clear failed"); return false; }
-    if (!clear_float(intermediate_, 0, 0, 0, 0, 0)) { set_error("FSR3 intermediate clear failed"); return false; }
-    for (int level = 0; level < spd_mips_.levels; ++level)
-        if (!clear_float(spd_mips_, level, 0, 0, 0, 0)) { set_error("FSR3 SPD mips clear failed"); return false; }
-    if (!clear_float(farthest_mip1_, 0, 0, 0, 0, 0)) { set_error("FSR3 farthest clear failed"); return false; }
+    if (!spatial) {
+        if (!clear_uint(recon_depth_, 0, 0x3F800000u)) { set_error("FSR3 depth clear failed"); return false; }
+        if (!clear_uint(spd_atomic_, 0, 0)) { set_error("FSR3 SPD clear failed"); return false; }
+        if (!clear_float(new_locks_, 0, 0, 0, 0, 0)) { set_error("FSR3 locks clear failed"); return false; }
+        if (!clear_float(shading_change_, 0, 0, 0, 0, 0)) { set_error("FSR3 shading-change clear failed"); return false; }
+        if (!clear_float(dilated_reactive_, 0, 0, 0, 0, 0)) { set_error("FSR3 reactive clear failed"); return false; }
+        if (!clear_float(intermediate_, 0, 0, 0, 0, 0)) { set_error("FSR3 intermediate clear failed"); return false; }
+        for (int level = 0; level < spd_mips_.levels; ++level)
+            if (!clear_float(spd_mips_, level, 0, 0, 0, 0)) { set_error("FSR3 SPD mips clear failed"); return false; }
+        if (!clear_float(farthest_mip1_, 0, 0, 0, 0, 0)) { set_error("FSR3 farthest clear failed"); return false; }
+    }
 
     FsrConsts k{};
     k.renderSize[0] = static_cast<int32_t>(render_width_);
@@ -991,22 +1017,56 @@ bool Backend::dispatch(const Inputs& in) {
         }
     } timing;
     timing.mark();
-    if (!run_pass(0, render_width_, render_height_)) { first_frame_ = true; return false; }
-    timing.mark();
-    if (!run_pass(1, render_width_, render_height_)) { first_frame_ = true; return false; }
-    timing.mark();
-    if (!run_pass(2, render_width_, render_height_)) { first_frame_ = true; return false; }
-    timing.mark();
-    if (!run_pass(3, std::max(1u, render_width_ / 2), std::max(1u, render_height_ / 2))) { first_frame_ = true; return false; }
-    timing.mark();
-    if (!run_pass(4, render_width_, render_height_)) { first_frame_ = true; return false; }
-    timing.mark();
-    if (!run_pass(5, render_width_, render_height_)) { first_frame_ = true; return false; }
-    timing.mark();
-    if (!run_pass(6, output_width_, output_height_)) { first_frame_ = true; return false; }
-    timing.mark();
-    if (!run_pass(7, output_width_, output_height_)) { first_frame_ = true; return false; }
-    timing.mark();
+    if (spatial) {
+        // Spatial path: bilinear scene->native into the output-sized RCAS
+        // input, then the existing RCAS pass. No temporal resources are read.
+        const GLenum draw_buffer = GL_COLOR_ATTACHMENT0;
+        GLES.glBindFramebuffer(GL_READ_FRAMEBUFFER, spatial_read_fbo_);
+        GLES.glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frame_color_, 0);
+        GLES.glReadBuffer(GL_COLOR_ATTACHMENT0);
+        GLES.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, spatial_draw_fbo_);
+        GLES.glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, spatial_color_.texture, 0);
+        GLES.glDrawBuffers(1, &draw_buffer);
+        if (GLES.glCheckFramebufferStatus(GL_READ_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE ||
+            GLES.glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            set_error("FSR3 spatial framebuffer incomplete");
+            first_frame_ = true;
+            return false;
+        }
+        GLES.glDisable(GL_SCISSOR_TEST);
+        GLES.glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        GLES.glViewport(0, 0, static_cast<GLsizei>(output_width_), static_cast<GLsizei>(output_height_));
+        GLES.glBlitFramebuffer(0, 0, static_cast<GLint>(render_width_), static_cast<GLint>(render_height_),
+                               0, 0, static_cast<GLint>(output_width_), static_cast<GLint>(output_height_),
+                               GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        if (GLES.glGetError() != GL_NO_ERROR) {
+            set_error("FSR3 spatial blit failed");
+            first_frame_ = true;
+            return false;
+        }
+        spatial_bilinear_ = true;
+        const bool rcas_ok = run_pass(7, output_width_, output_height_);
+        spatial_bilinear_ = false;
+        if (!rcas_ok) { first_frame_ = true; return false; }
+        timing.mark();
+    } else {
+        if (!run_pass(0, render_width_, render_height_)) { first_frame_ = true; return false; }
+        timing.mark();
+        if (!run_pass(1, render_width_, render_height_)) { first_frame_ = true; return false; }
+        timing.mark();
+        if (!run_pass(2, render_width_, render_height_)) { first_frame_ = true; return false; }
+        timing.mark();
+        if (!run_pass(3, std::max(1u, render_width_ / 2), std::max(1u, render_height_ / 2))) { first_frame_ = true; return false; }
+        timing.mark();
+        if (!run_pass(4, render_width_, render_height_)) { first_frame_ = true; return false; }
+        timing.mark();
+        if (!run_pass(5, render_width_, render_height_)) { first_frame_ = true; return false; }
+        timing.mark();
+        if (!run_pass(6, output_width_, output_height_)) { first_frame_ = true; return false; }
+        timing.mark();
+        if (!run_pass(7, output_width_, output_height_)) { first_frame_ = true; return false; }
+        timing.mark();
+    }
 
     previous_render_width_ = render_width_;
     previous_render_height_ = render_height_;
