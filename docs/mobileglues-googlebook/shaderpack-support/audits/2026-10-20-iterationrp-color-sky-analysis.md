@@ -471,3 +471,10 @@ A private `iterationRP-noTAA-test.zip` (`ec47c972…`) was created by disabling
 a clear visual or interval change, and the observed reset interval is much
 longer than the 617-frame TAA jitter cycle. TAA is therefore **not** treated as
 a proven cause. Restore the original pack selection.
+
+## Correction: no-TAA control was not run
+
+The saved log shows `Using shaderpack: iterationRP Alpha 0.8.31.zip`; the
+private `iterationRP-noTAA-test.zip` was never selected. The previous
+"inconclusive" note is withdrawn. TAA/colortex7 remains a live temporal
+candidate, alongside IRC accumulation and RTW refresh.
