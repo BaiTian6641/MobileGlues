@@ -29,3 +29,17 @@ The bridge's shadow/viewport mixins are trace-only, FSR3 submit is inactive,
 and the Complementary reference uses the same Iris shadow targets. No
 wrapper-wide shadow-pass failure is demonstrated. BSL's hard shadow look is
 its pack-side shadow algorithm/settings, not a reason to change MobileGlues.
+
+## BSL shadow follow-up
+
+Deferred at user request. BSL's raw shadow map is non-empty and the live
+`shadowtex0` state is comparison-enabled, `LEQUAL`, linear-filtered, with a
+valid 2048x2048 depth texture. No shader compile error appears. The remaining
+symptom is a player-relative/offset shadow; attempts to tune Iris shadow
+distance and grid snapping were inconclusive or black.
+
+A diagnostic bridge `glGetTexParameteriv` call crashed with a heap-typed
+`IntBuffer`; the same call with a direct buffer is the valid LWJGL contract.
+The crash was diagnostic-side, not a MobileGlues getter defect. All probes and
+derived BSL packs were removed, and the device is back on Complementary with
+the stable bridge/core.
