@@ -38,3 +38,14 @@ SHA-256 `00accade848dbbe4a04ed0a8481f1e3f1edb9eb549be3ca34e0e8fe0b149b224`. Log:
 
 S1 remains FAIL. The next isolation is FSR fully off; the bridge must not be a
 prerequisite for original-pack support.
+
+## FSR correction
+
+FSR fully off produces the same brown/black lighting as NativeAA; the FSR split
+only appears when the scene is scaled. Therefore the remaining S1 failure is
+not FSR. The current diagnostic target is Iris custom-image metadata:
+`mgirisbridge` is not installed, while the core log shows image units being
+assigned but no format producer.
+
+An image-bridge JAR is a **diagnostic only**; it is not a support dependency and
+does not qualify the original pack.
