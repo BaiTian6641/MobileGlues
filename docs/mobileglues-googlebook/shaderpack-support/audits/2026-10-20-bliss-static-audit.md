@@ -32,3 +32,67 @@ block default import. DH and other option lanes are separate and NOT RUN.
 4. Device S0, then 60-second S1. LPV only afterward.
 
 No support claim follows from this audit.
+
+## 2026-10-20 source trace: feature usage
+
+Archive SHA-256 `f41db92acc585fe9ffe0cc124d6ecaea27cef9ded91129ebc2a8e60226947b2c`.
+No pack edits.
+
+### Program shape
+
+| Feature | Evidence |
+|---|---|
+| Legacy graphics | 226 files `#version 120` |
+| Compatibility graphics | 12 files `#version 330 compatibility` |
+| Compute | 6 files `#version 430 compatibility` (`setup.csh`, `shadowcomp.csh` per dimension) |
+| Compute workgroups | `setup.csh` 8x8x1; `shadowcomp.csh` 8x8x8 (512 invocations) |
+| Shared memory | `shadowcomp.csh`: `shared vec4 lpvSharedData[10*10*10]`, `shared uint voxelSharedData[10*10*10]`, `barrier()` |
+| No SSBO | no `std140`/`std430` buffer declarations |
+| No subgroup/geometry/tessellation | source scan empty |
+| Legacy builtins | 28 files use `ftransform`; 8 use `shadow2D` |
+
+### LPV is optional, not the default path
+
+`lib/settings.glsl:746` has `//#define LPV_ENABLED`. `shaders.properties`
+disables `setup` and `shadowcomp` when LPV is off. The default Bliss path is
+therefore legacy graphics only; image/compute failures are not the first S0
+blocker.
+
+### Optional LPV resources
+
+| Resource | Format | Dimensions | Use |
+|---|---|---:|---|
+| `imgBlockData` | RG32UI, 1D | 2048 | imageLoad/imageStore in setup and shadowcomp |
+| `imgVoxelMask` | R16UI, 3D | 64/128/256 cubed | imageStore from `shadow.vsh`; imageLoad in shadowcomp |
+| `imgLpv1`, `imgLpv2` | RGBA8, 3D | 64/128/256 cubed | ping-pong LPV image load/store |
+
+Declared with explicit formats (`layout(r16ui)`, `layout(rgba8)`,
+`layout(rg32ui)`) in `lib/voxel_common.glsl`, `lib/lpv_buffer.glsl`, and
+`lib/lpv_blocks.glsl`.
+
+### MobileGlues support mapping
+
+| Bliss need | Current MobileGlues status | Consequence |
+|---|---|---|
+| Compute 8x8x8, 512 invocations | supported; 512-invocation probe passes | not a blocker |
+| 20 KiB shared + barrier | supported within the tested 32 KiB shared budget | not a blocker |
+| 3D RGBA8 image | allowed by `mg_is_image_storage_format`; immutable 3D path exists | likely usable, not device-tested with Bliss |
+| 3D R16UI image | allocation name recognized, but **R8UI/R16UI lowering is not implemented**; binding is refused | LPV blocker |
+| Vertex `imageStore` on R16UI 3D | vertex image store passes for tested formats; R16UI path inherits the missing lowering | LPV blocker |
+| 1D RG32UI image | RG32UI is absent from the image-storage allowlist and `glTexImage1D` is not implemented | LPV blocker |
+| `BLOCK_EMISSION_ATTRIBUTE` | optional Iris feature; no local BlocK-emission qualification | shadow-entity fidelity risk |
+
+No image/SSBO/compute feature is a reason for the default `deferred.fsh`
+failure. That failure is a source-order issue: Iris emits `uniform ivec2
+eyeBrightness;` after a function, which desktop GLSL accepts but ANGLE rejects.
+A bridge hoist of 16/22 late uniforms runs, but the driver still reports the same
+`0:948 'uniform'` error; the exact offending source has not yet been isolated.
+
+### Format risks for the graphics path
+
+Bliss requests `RGBA16`, `RGBA16F`, `R11F_G11F_B10F`, and `RGBA8` color
+targets. `RGBA16F` and `R11F_G11F_B10F` are recorded passes; `RGBA16` is not
+listed as a qualified attachment format and needs a device check once the
+compile ordering failure is resolved.
+
+No support level is promoted by this audit.
