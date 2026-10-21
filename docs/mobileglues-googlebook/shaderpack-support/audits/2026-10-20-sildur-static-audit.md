@@ -29,8 +29,10 @@ capacity. S0/S1 remains **NOT RUN**.
 | B6 | Enhanced `shadow.fsh` | `DRAWBUFFERS:02` on shadow program | Iris directive/FBO quirk | Verify shadow FBO draw state | S1/S2 |
 | B7 | DH/Voxy programs | `dh_terrain`, `voxy.json` / `voxy.glsl` | Host-only optional mods | Exclude from first import; separate lane | NOT RUN |
 
-`RGB16F` and `R11F_G11F_B10F` have prior X1E FBO evidence. `RGB8` is untested;
-`RGB8_SNORM` was already texture-valid but not color-renderable.
+SILD-02A now confirms plain RGB8 and RGB10_A2 are FBO-complete on the target
+provider (`validation/2026-10-20-x1e-sildur-format-probe.md`). `RGB8_SNORM`
+remains non-renderable, but Sildur does not request it. The B1/B2 format-creation
+risks are closed; host shader compile/link is the next gate.
 
 ## Pack differences
 
