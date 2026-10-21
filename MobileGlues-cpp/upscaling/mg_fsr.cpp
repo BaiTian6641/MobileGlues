@@ -11,6 +11,7 @@
 
 #include "mg_fsr_abi.h"
 #include "mg_fsr_lifecycle.h"
+#include "fsr3_depth_contract.h"
 #include "fsr3/fsr3_backend.h"
 
 #include "../egl/context.h"
@@ -198,8 +199,11 @@ MG_FSR_EXPORT int mg_fsr_dispatch(void* raw, const mg_fsr_dispatch_t* desc) {
         return fail(session, MG_FSR_ERROR_STATE, "dispatch context identity mismatch");
     if (desc->frame_id != 0 && session->last_frame_id != 0 && desc->frame_id <= session->last_frame_id)
         return fail(session, MG_FSR_ERROR_STATE, "non-monotonic frame id");
-    if (desc->depth_reversed || desc->depth_infinite_far)
-        return fail(session, MG_FSR_ERROR_CAPABILITY, "inverted/infinite depth needs the inverted shader permutation");
+    if (!mg_fsr3_depth::supported_dispatch(desc->depth_reversed != 0,
+            desc->depth_infinite_far != 0, desc->reset_history != 0,
+            desc->motion_valid != 0 || desc->motion_confidence != MG_FSR_MOTION_NONE))
+        return fail(session, MG_FSR_ERROR_CAPABILITY,
+                    "raw inverted depth is unsupported; infinite depth requires reset-only spatial input");
     auto valid_tex = [](const mg_fsr_resource_t& r, bool required) {
         if (r.handle == 0) return !required;
         if (r.namespace_id != MG_FSR_NS_GL_FRONTEND) return false;

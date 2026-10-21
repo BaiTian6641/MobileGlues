@@ -15,6 +15,8 @@
 #include "mg_fsr_abi.h"
 #include "mg_fsr_lifecycle.h"
 #include "fsr3_motion_math.h"
+#include "fsr3_depth_contract.h"
+#include "fsr3_input_shader.h"
 #include "../config/settings.h"
 #include "../egl/context.h"
 #include "../gles/gles.h"
@@ -56,6 +58,7 @@ struct JniState {
     GLint u_depth = -1;
     GLint u_camera_delta = -1;
     GLint u_has_prev = -1;
+    GLint u_reverse_depth = -1;
     bool motion_warned = false;
     bool motion_compile_failed = false;
     bool output_logged = false;
@@ -72,6 +75,9 @@ struct JniState {
 
 std::mutex g_mutex;
 std::unordered_map<unsigned long long, JniState> g_states;
+// A game process loads one adapter profile. This is profile metadata, not a GL
+// object; it survives context replacement while each session remains per-context.
+std::atomic<int> g_depth_convention{mg_fsr3_depth::kLegacyForward};
 
 struct CameraState {
     bool valid = false;
@@ -173,49 +179,13 @@ bool attachment_texture(GLenum attachment, GLuint& texture, int& width, int& hei
     return true;
 }
 
-const char* kMotionShader = R"(#version 320 es
-layout(local_size_x = 8, local_size_y = 8) in;
-layout(rgba16f, binding = 0) uniform writeonly highp image2D uMotion;
-layout(r32f, binding = 1) uniform writeonly highp image2D uDepthOut;
-layout(binding = 0) uniform highp sampler2D uDepth;
-uniform highp mat4 uInvVP;
-uniform highp mat4 uPrevVP;
-uniform highp vec2 uSize;
-uniform highp vec3 uCameraDelta;
-uniform int uHasPrev;
-void main() {
-    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
-    if (p.x >= int(uSize.x) || p.y >= int(uSize.y)) return;
-    float d = texelFetch(uDepth, p, 0).x;
-    imageStore(uDepthOut, p, vec4(d, 0.0, 0.0, 1.0));
-    if (uHasPrev == 0) {
-        imageStore(uMotion, p, vec4(0.0));
-        return;
-    }
-    vec2 uv = (vec2(p) + 0.5) / uSize;
-    vec4 clip = uInvVP * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
-    if (abs(clip.w) < 1e-7) {
-        imageStore(uMotion, p, vec4(0.0));
-        return;
-    }
-    vec3 world = clip.xyz / clip.w;
-    vec4 prev = uPrevVP * vec4(world + uCameraDelta, 1.0);
-    if (abs(prev.w) < 1e-7) {
-        imageStore(uMotion, p, vec4(0.0));
-        return;
-    }
-    vec2 prev_uv = prev.xy / prev.w * 0.5 + 0.5;
-    imageStore(uMotion, p, vec4((prev_uv - uv) * uSize, 0.0, 1.0));
-}
-)";
-
 bool ensure_motion_program(JniState& s) {
     if (s.motion_program) return true;
     if (s.motion_compile_failed) return false;
     if (!GLES.glCreateShader || !GLES.glCreateProgram) return false;
     GLuint shader = GLES.glCreateShader(GL_COMPUTE_SHADER);
     if (!shader) return false;
-    GLES.glShaderSource(shader, 1, &kMotionShader, nullptr);
+    GLES.glShaderSource(shader, 1, &mg_fsr3_depth::kInputShader, nullptr);
     GLES.glCompileShader(shader);
     GLint ok = GL_FALSE;
     GLES.glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
@@ -253,8 +223,9 @@ bool ensure_motion_program(JniState& s) {
     s.u_depth = GLES.glGetUniformLocation(program, "uDepth");
     s.u_camera_delta = GLES.glGetUniformLocation(program, "uCameraDelta");
     s.u_has_prev = GLES.glGetUniformLocation(program, "uHasPrev");
+    s.u_reverse_depth = GLES.glGetUniformLocation(program, "uReverseDepth");
     return s.u_inv_vp >= 0 && s.u_prev_vp >= 0 && s.u_size >= 0 && s.u_depth >= 0 &&
-           s.u_camera_delta >= 0 && s.u_has_prev >= 0;
+           s.u_camera_delta >= 0 && s.u_has_prev >= 0 && s.u_reverse_depth >= 0;
 }
 
 struct ImageUnitState {
@@ -264,6 +235,7 @@ struct MotionGuard {
     GLint program = 0;
     GLint active = GL_TEXTURE0;
     GLint texture = 0;
+    GLint sampler = 0;
     ImageUnitState images[2];
     bool image_valid[2]{};
     MotionGuard() {
@@ -271,6 +243,8 @@ struct MotionGuard {
         GLES.glGetIntegerv(GL_ACTIVE_TEXTURE, &active);
         GLES.glActiveTexture(GL_TEXTURE0);
         GLES.glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture);
+        GLES.glGetIntegerv(GL_SAMPLER_BINDING, &sampler);
+        GLES.glBindSampler(0, 0);
         if (GLES.glGetIntegeri_v) {
             for (int i = 0; i < 2; ++i) {
                 GLint v = 0;
@@ -297,12 +271,14 @@ struct MotionGuard {
         mg_invalidate_image_binding_shadow();
         GLES.glActiveTexture(GL_TEXTURE0);
         GLES.glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(texture));
+        GLES.glBindSampler(0, static_cast<GLuint>(sampler));
         GLES.glActiveTexture(static_cast<GLenum>(active));
         GLES.glUseProgram(static_cast<GLuint>(program));
     }
 };
 
-bool run_camera_motion(JniState& s, GLuint depth, int width, int height, bool allow_motion, bool& motion_active) {
+bool run_camera_motion(JniState& s, GLuint depth, int width, int height, mg_fsr3_depth::SampleOrder order,
+                       bool allow_motion, bool& motion_active) {
     motion_active = false;
     CameraState camera;
     bool has_prev = false;
@@ -338,6 +314,7 @@ bool run_camera_motion(JniState& s, GLuint depth, int width, int height, bool al
     GLES.glUniform2f(s.u_size, static_cast<float>(width), static_cast<float>(height));
     GLES.glUniform3f(s.u_camera_delta, camera_delta[0], camera_delta[1], camera_delta[2]);
     GLES.glUniform1i(s.u_has_prev, has_prev ? 1 : 0);
+    GLES.glUniform1i(s.u_reverse_depth, order == mg_fsr3_depth::SampleOrder::Reversed ? 1 : 0);
     GLES.glActiveTexture(GL_TEXTURE0);
     GLES.glBindTexture(GL_TEXTURE_2D, depth);
     GLES.glUniform1i(s.u_depth, 0);
@@ -399,7 +376,8 @@ void destroy_state(JniState& s) {
     s.motion = s.color_input = s.depth_synth = 0;
     s.input_fbo = s.output_fbo = s.attached_output = 0;
     s.motion_program = 0;
-    s.u_inv_vp = s.u_prev_vp = s.u_size = s.u_depth = s.u_camera_delta = s.u_has_prev = -1;
+    s.u_inv_vp = s.u_prev_vp = s.u_size = s.u_depth = s.u_camera_delta = s.u_has_prev =
+        s.u_reverse_depth = -1;
     s.motion_compile_failed = false;
     s.width = s.height = 0;
     s.render_width = s.render_height = 0;
@@ -425,6 +403,18 @@ void mg_fsr_jni_forget_context(unsigned long long context_id) {
 extern "C" JNIEXPORT void JNICALL
 Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeBridgeMode(JNIEnv*, jclass) {
     FSR3SetBridgeMode();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeDepthConvention(JNIEnv*, jclass, jint convention) {
+    if (!mg_fsr3_depth::supported_convention(convention)) return JNI_FALSE;
+    const int previous = g_depth_convention.exchange(convention);
+    if (previous != convention) {
+        std::lock_guard<std::mutex> lock(g_camera_mutex);
+        g_camera.valid = false;
+        g_camera.has_previous = false;
+    }
+    return JNI_TRUE;
 }
 
 extern "C" JNIEXPORT jfloat JNICALL
@@ -555,6 +545,21 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     const float scene_scale = fsr3_quality_scale(global_settings.fsr3_quality);
     const int rw = std::max(64, static_cast<int>(std::lround(width / scene_scale)));
     const int rh = std::max(64, static_cast<int>(std::lround(height / scene_scale)));
+    const int convention = g_depth_convention.load();
+    mg_fsr3_depth::Projection projection{0.1f, 1000.0f, 1.0471975511965976f, false};
+    if (convention == mg_fsr3_depth::kReversedSample) {
+        std::lock_guard<std::mutex> camera_lock(g_camera_mutex);
+        if (!g_camera.valid || !mg_fsr3_depth::forward_projection(g_camera.projection, projection)) {
+            bridge_fail("reversed depth needs a recognized captured Iris projection");
+            return -1;
+        }
+    }
+    if (depth_width < rw || depth_height < rh ||
+        (convention == mg_fsr3_depth::kReversedSample &&
+         (depth_width != rw || depth_height != rh))) {
+        bridge_fail("scene depth does not cover the required dispatch extent");
+        return -1;
+    }
     if (!s.session || s.width != width || s.height != height ||
         s.render_width != rw || s.render_height != rh) {
         if (s.session) destroy_state(s);
@@ -589,14 +594,21 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     // Stable spatial profile: advertise no motion when history is off. The
     // backend always samples the motion texture, so zero it via uHasPrev=0
     // instead of feeding camera-only vectors for hands/sky.
-    const bool history_enabled = history_requested();
+    const bool history_enabled = mg_fsr3_depth::history_allowed(convention, history_requested());
     bool motion_active = false;
-    const bool depth_input_ready = run_camera_motion(s, depth, rw, rh, history_enabled, motion_active);
-    const int input_w = depth_input_ready ? rw : width;
-    const int input_h = depth_input_ready ? rh : height;
-    const GLuint color_input = depth_input_ready ? s.color_input : color;
-    const GLuint depth_input = depth_input_ready ? s.depth_synth : depth;
-    const GLenum depth_format = depth_input_ready ? GL_R32F : GL_DEPTH_COMPONENT24;
+    const auto sample_order = convention == mg_fsr3_depth::kReversedSample
+        ? mg_fsr3_depth::SampleOrder::Reversed : mg_fsr3_depth::SampleOrder::Forward;
+    if (!run_camera_motion(s, depth, rw, rh, sample_order, history_enabled, motion_active)) {
+        // A failed conversion cannot fall through with raw reversed depth or
+        // motion/color textures describing different extents.
+        bridge_fail("scene depth conversion failed");
+        return -1;
+    }
+    const int input_w = rw;
+    const int input_h = rh;
+    const GLuint color_input = s.color_input;
+    const GLuint depth_input = s.depth_synth;
+    const GLenum depth_format = GL_R32F;
 
     const auto now = std::chrono::steady_clock::now();
     float delta = std::chrono::duration<float>(now - s.last).count();
@@ -623,9 +635,10 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
     desc.color_space = MG_FSR_COLOR_LDR_PERCEPTUAL;
     desc.pre_exposure = 1.0f;
     desc.depth_valid = 1;
-    desc.camera_near = 0.1f;
-    desc.camera_far = 1000.0f;
-    desc.camera_fov_y_radians = 1.0471975511965976f;
+    desc.depth_infinite_far = projection.infinite_far ? 1 : 0;
+    desc.camera_near = projection.near_plane;
+    desc.camera_far = projection.far_plane;
+    desc.camera_fov_y_radians = projection.fov_y;
     desc.motion_valid = history_enabled ? 1 : 0;
     desc.motion_confidence = motion_active ? MG_FSR_MOTION_CAMERA_ONLY : MG_FSR_MOTION_NONE;
     desc.frame_delta_seconds = delta;
@@ -652,6 +665,11 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
         FSR3GetSurfaceSize(sw, sh);
         LOG_W_FORCE("FSR3 bridge: experimental submit %dx%d -> %dx%d (render %dx%d, surface %dx%d); camera_motion=%d, Iris scene adapter",
                       rw, rh, width, height, rw, rh, sw, sh, motion_active ? 1 : 0);
+        if (convention == mg_fsr3_depth::kReversedSample) {
+            LOG_W_FORCE("FSR3 bridge: reversed sample normalized; captured forward projection near=%g far=%g fov_y=%g infinite_far=%d; history reset",
+                        projection.near_plane, projection.far_plane, projection.fov_y,
+                        projection.infinite_far ? 1 : 0);
+        }
     }
     mg_fsr_resource_t out{};
     if (mg_fsr_get_output(s.session, &out) != MG_FSR_OK || out.handle == 0) {
@@ -725,6 +743,8 @@ const char* fsr3_setting_name(FSR3_Mode mode) {
 
 std::string trace_config_json() {
     const bool history = std::getenv("MG_FSR3_HISTORY") != nullptr;
+    const int convention = g_depth_convention.load();
+    const bool effective_history = mg_fsr3_depth::history_allowed(convention, history_requested());
     int surface_w = 0, surface_h = 0;
     FSR3GetSurfaceSize(surface_w, surface_h);
     std::string out = "{";
@@ -755,7 +775,11 @@ std::string trace_config_json() {
     field("history_env_present");
     out += history ? "true" : "false";
     field("motion");
-    out += history ? "\"camera\"" : "\"zero\"";
+    out += effective_history ? "\"camera\"" : "\"zero\"";
+    field("sampled_depth_reversed");
+    out += convention == mg_fsr3_depth::kReversedSample ? "true" : "false";
+    field("captured_projection_range");
+    out += "\"negative-one-to-one\"";
     field("bridge_mode");
     out += FSR3BridgeMode() ? "true" : "false";
     field("surface_width");
