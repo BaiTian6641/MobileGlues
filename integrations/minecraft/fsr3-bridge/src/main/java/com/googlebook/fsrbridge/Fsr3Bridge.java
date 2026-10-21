@@ -137,7 +137,7 @@ public final class Fsr3Bridge {
     }
 
     public static boolean available() {
-        if (!LOADED) return false;
+        if (!LOADED || !packHasFinalPass) return false;
         try {
             boolean available = NativeBridge.available();
             if (available && !warned) {
@@ -157,6 +157,17 @@ public final class Fsr3Bridge {
      * only: this is the optional adapter boundary, not a generic renderer hook.
      */
     private static volatile boolean inFinalPass;
+    private static volatile boolean packHasFinalPass = true;
+
+    /**
+     * Iris' no-final path copies colortex0 into the native main target with
+     * glCopyTexSubImage2D. It cannot consume a bridge-scaled source. Disable
+     * the bridge for such packs rather than producing a lower-left-only frame.
+     */
+    public static void setPackHasFinalPass(boolean hasFinalPass) {
+        packHasFinalPass = hasFinalPass;
+        mark("pack has final pass=" + hasFinalPass);
+    }
 
     public static void beginFinalPass() { inFinalPass = true; }
     public static void endFinalPass() { inFinalPass = false; }
@@ -182,7 +193,7 @@ public final class Fsr3Bridge {
      * texture is owned by the bridge and is not the noHand snapshot.
      */
     public static synchronized int sceneDepthTexture(int original, int width, int height) {
-        if (!LOADED || width <= 0 || height <= 0) return original;
+        if (!LOADED || !packHasFinalPass || width <= 0 || height <= 0) return original;
         try {
             if (NativeBridge.scale() <= 1.001f) return original;
             int format = queryTextureFormat(original);
@@ -328,7 +339,7 @@ public final class Fsr3Bridge {
     }
 
     public static int sceneWidth(int width) {
-        if (width <= 0 || !LOADED) return width;
+        if (width <= 0 || !LOADED || !packHasFinalPass) return width;
         try {
             float scale = NativeBridge.scale();
             if (scale <= 1.001f) return width;
@@ -341,7 +352,7 @@ public final class Fsr3Bridge {
 
     /** Height is kept independent so odd window dimensions do not accumulate rounding. */
     public static int sceneHeight(int height) {
-        if (height <= 0 || !LOADED) return height;
+        if (height <= 0 || !LOADED || !packHasFinalPass) return height;
         try {
             float scale = NativeBridge.scale();
             if (scale <= 1.001f) return height;

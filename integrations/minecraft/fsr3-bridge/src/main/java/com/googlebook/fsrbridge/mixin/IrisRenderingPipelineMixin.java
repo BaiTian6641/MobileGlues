@@ -4,6 +4,8 @@ import com.googlebook.fsrbridge.DiagnosticTrace;
 import com.googlebook.fsrbridge.Fsr3Bridge;
 import net.irisshaders.iris.pipeline.IrisRenderingPipeline;
 import net.irisshaders.iris.pipeline.WorldRenderingPhase;
+import net.irisshaders.iris.shaderpack.loading.ProgramId;
+import net.irisshaders.iris.shaderpack.programs.ProgramSet;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -14,6 +16,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class IrisRenderingPipelineMixin {
     static {
         Fsr3Bridge.mark("IrisRenderingPipelineMixin loaded");
+    }
+
+    @Inject(method = "<init>", at = @At("HEAD"))
+    private static void mgfsr3$detectFinalPass(ProgramSet programSet, CallbackInfo ci) {
+        // RenderTargets is constructed later in this constructor. Decide
+        // before that point so a no-final pack is never bridge-scaled.
+        Fsr3Bridge.setPackHasFinalPass(programSet.get(ProgramId.Final).isPresent());
     }
 
     @Inject(method = "<init>", at = @At("RETURN"))
