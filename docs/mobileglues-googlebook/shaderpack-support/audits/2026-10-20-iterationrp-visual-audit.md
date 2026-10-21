@@ -54,3 +54,16 @@ multiplier or uninitialized image term, not a correctly textured surface.
    and verify the atmosphere LUT against its CPU half-float data.
 
 No support claim. No pack edit.
+
+## Image-format lane closed
+
+The diagnostic `glBindImageTexture` log on the original pack shows:
+
+- `RG16F` logical -> `RGBA16F` bind/internal (texture 135), the G1 widening;
+- `RG16`/`RGBA16` logical -> `RGBA32F` bind/internal;
+- `R32F`, `RGBA8`, `R16UI`-family backings as expected.
+
+No image-format or unit rejection was logged. Therefore the brown/black frame
+is not explained by an illegal image qualifier or a wrong backing format. The
+remaining causes are contents/initialization (especially `pixelData2D` and the
+atmosphere LUT), custom-image clear, or a pack-side post/lighting issue.

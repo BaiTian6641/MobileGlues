@@ -18,6 +18,8 @@
 #include "shader_state.h"
 #include "../egl/context.h"
 
+#include <unordered_set>
+
 #define DEBUG 0
 
 GLuint bufSampelerProg;
@@ -360,6 +362,19 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
         } else {
             gl_state->image_unit_shadow[unit] = desired;
             gl_state->image_unit_shadow_valid[unit] = true;
+#ifdef MG_FSR3_DIAGNOSTICS
+            static std::unordered_set<unsigned long long> logged;
+            const TextureObject* tex = mgGetTexObjectByID(texture);
+            const unsigned long long key =
+                (static_cast<unsigned long long>(texture) << 32) ^
+                (static_cast<unsigned long long>(logical_format) << 16) ^
+                static_cast<unsigned long long>(format);
+            if (logged.insert(key).second) {
+                LOG_W_FORCE("image bind texture=%u logical=0x%x bind=0x%x internal=0x%x level=%d layered=%d",
+                            texture, logical_format, format, tex ? tex->internal_format : 0, level,
+                            backend_layered ? 1 : 0);
+            }
+#endif
         }
     } else {
         GLES.glBindImageTexture(unit, texture, level, backend_layered, backend_layer, access, format);
