@@ -202,7 +202,6 @@ void init_settings() {
     global_settings.angle_config = angleConfig;
     global_settings.angle_supported = isANGLESupported;
     LOG_D("Final ANGLE setting: %d", static_cast<int>(global_settings.angle))
-    global_settings.buffer_coherent_as_flush = (global_settings.angle == AngleMode::Disabled);
 
     if (global_settings.angle == AngleMode::Enabled) {
         // setenv("LIBGL_GLES", "libGLESv2_angle.so", 1);
@@ -252,8 +251,6 @@ void init_settings() {
           static_cast<int>(global_settings.max_glsl_cache_size / 1024 / 1024))
     LOG_V("[MobileGlues] Setting: angleDepthClearFixMode      = %i",
           static_cast<int>(global_settings.angle_depth_clear_fix_mode))
-    LOG_V("[MobileGlues] Setting: bufferCoherentAsFlush       = %i",
-          static_cast<int>(global_settings.buffer_coherent_as_flush))
     if (global_settings.custom_gl_version.isEmpty()) {
         LOG_V("[MobileGlues] Setting: customGLVersion             = (default)");
     } else {
@@ -735,8 +732,6 @@ std::string dump_settings_string(std::string prefix) {
     ss << prefix << "AngleDepthClearFixMode: "
        << (global_settings.angle_depth_clear_fix_mode == AngleDepthClearFixMode::Disabled ? "Disabled" : "Enabled")
        << "\n";
-
-    ss << prefix << "BufferCoherentAsFlush: " << (global_settings.buffer_coherent_as_flush ? "True" : "False") << "\n";
 
     ss << prefix << "CustomGLVersion: "
        << ((GLVersion.toInt(2) == DEFAULT_GL_VERSION) ? "(Default)" : std::to_string(GLVersion.toInt(2))) << "\n";

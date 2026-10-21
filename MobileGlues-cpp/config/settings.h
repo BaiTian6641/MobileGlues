@@ -229,7 +229,6 @@ struct global_settings_t {
     bool ext_compute_shader;
     bool ext_timer_query;
     bool ext_direct_state_access;
-    bool buffer_coherent_as_flush;
     size_t max_glsl_cache_size;
     md_backend_t multidraw_backend[MD_ENTRY_COUNT];
     // Per entry point: the user's preference order over the backends that are a
