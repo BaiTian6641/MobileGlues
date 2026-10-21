@@ -15,7 +15,7 @@ Target: original `iterationRP Alpha 0.8.31.zip`
 | ITRP-06 | Device S0/S1 on default profile | **S0 PASS; S1 FAIL** | depthtexS verified correct; aniso detail only; base color/sky still wrong; `audits/2026-10-20-iterationrp-color-sky-analysis.md` |
 | ITRP-07 | S2 effect matrix on default profile | NOT RUN | no missing effects |
 | ITRP-08 | Advanced ACT/WSR/RTW profiles | NOT RUN | separate profile gates |
-| ITRP-09 | Final/composite sampling and ping-pong identity audit | IN PROGRESS | `IterationRPFinalSamplingAudit` |
+| ITRP-09 | Final/composite sampling and ping-pong identity audit | IN PROGRESS | periodic reset observed; `IterationRPFinalSamplingAudit` |
 | ITRP-10 | Remaining image/sampler/barrier contract audit | IN PROGRESS | `IterationRPImageContractAudit` |
 | ITRP-11 | Atmosphere LUT sampler3D consumption audit | IN PROGRESS | `IterationRPAtmosphereAudit` |
 

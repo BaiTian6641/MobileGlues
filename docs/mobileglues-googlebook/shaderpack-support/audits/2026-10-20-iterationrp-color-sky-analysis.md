@@ -454,3 +454,12 @@ The `debug.mgfsr3.images=1` probe read `img_depthtexS` from program 439
 `depthtexS` is therefore correctly populated and retained. The black sky is
 not caused by a zero/lost depth sentinel. The next boundary is sky output
 (`colortex8`) and final composition/sampling.
+
+## Periodic reset observation
+
+User reports that after iterationRP runs for a while, the red/green terrain
+sometimes disappears for one interval and then starts over. This is a temporal
+state clue: history/ping-pong/reset behavior, not static shader arithmetic.
+Priority for the ongoing final-sampling, image-contract and atmosphere audits:
+check TAA/history, image retention, framebuffer ping-pong, and any periodic
+resource reset against this observation.
