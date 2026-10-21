@@ -795,9 +795,8 @@ size_t get_internal_format_size(GLenum internalformat) {
 
 extern std::string bufSampelerName;
 
-// Report a rejected argument once per site. This layer cannot raise a GL error
-// -- glGetError always answers GL_NO_ERROR by design -- so an unusable argument
-// means "do nothing" plus one line a user can paste into a bug report. LOG_W and
+// Report a diagnostic once per site without changing GL error state.
+// Application errors are recorded separately with mg_set_gl_error. LOG_W and
 // LOG_E compile to nothing in release builds, hence LOG_W_FORCE.
 #define BU_WARN_ONCE(...)                                                                                              \
     do {                                                                                                               \
@@ -1008,26 +1007,67 @@ void glTexBufferRange(GLenum target, GLenum internalformat, GLuint buffer, GLint
 // afterwards. GLES defines it as a generic target with no meaning of its own, so
 // the swap is invisible: nothing observes it, and no draw depends on it.
 namespace {
+    GLenum consume_buffer_backend_errors() {
+        GLenum first = GL_NO_ERROR;
+        // A lost context may keep reporting its loss. A broken provider must
+        // not turn error reporting into an unbounded render-thread loop either.
+        for (unsigned attempt = 0; attempt != 16; ++attempt) {
+            const GLenum error = GLES.glGetError();
+            if (error == GL_NO_ERROR) return first;
+            if (first == GL_NO_ERROR) first = error;
+            if (error == GL_CONTEXT_LOST) return first;
+        }
+        BU_WARN_ONCE("buffer operation: backend error queue did not drain");
+        return first;
+    }
+
+    void discard_buffer_diagnostics() {
+        const GLenum error = consume_buffer_backend_errors();
+        if (error != GL_NO_ERROR)
+            BU_WARN_ONCE("buffer operation: discarded stale internal GLES error 0x%04x", error);
+    }
+
     struct borrowed_target_t {
         GLenum target;
         GLint saved = 0;
         bool borrowed = false;
+        bool ready = true;
+        bool checked = false;
 
-        explicit borrowed_target_t(GLenum requested) : target(requested) {
+        explicit borrowed_target_t(GLenum requested, bool check_setup = false) : target(requested), checked(check_setup) {
             if (requested != GL_PARAMETER_BUFFER) return;
             const GLuint real = find_real_buffer(find_bound_buffer(GL_PARAMETER_BUFFER_BINDING));
+            if (checked && (!GLES.glGetIntegerv || !GLES.glBindBuffer)) {
+                ready = false;
+                BU_WARN_ONCE("buffer operation: missing internal binding entry point");
+                return;
+            }
             GLES.glGetIntegerv(GL_COPY_WRITE_BUFFER_BINDING, &saved);
+            if (checked && consume_buffer_backend_errors() != GL_NO_ERROR) {
+                ready = false;
+                BU_WARN_ONCE("buffer operation: internal binding query failed; application call skipped");
+                return;
+            }
             GLES.glBindBuffer(GL_COPY_WRITE_BUFFER, real);
             target = GL_COPY_WRITE_BUFFER;
             borrowed = true;
+            if (checked && consume_buffer_backend_errors() != GL_NO_ERROR) {
+                ready = false;
+                BU_WARN_ONCE("buffer operation: internal binding failed; application call skipped");
+            }
         }
         ~borrowed_target_t() {
-            if (borrowed) GLES.glBindBuffer(GL_COPY_WRITE_BUFFER, static_cast<GLuint>(saved));
+            if (borrowed) {
+                GLES.glBindBuffer(GL_COPY_WRITE_BUFFER, static_cast<GLuint>(saved));
+                if (checked && consume_buffer_backend_errors() != GL_NO_ERROR)
+                    BU_WARN_ONCE("buffer operation: internal binding restoration failed");
+            }
         }
 
         borrowed_target_t(const borrowed_target_t&) = delete;
         borrowed_target_t& operator=(const borrowed_target_t&) = delete;
     };
+
 } // namespace
 
 void glBufferData(GLenum target, GLsizeiptr size, const void* data, GLenum usage) {
@@ -1219,10 +1259,19 @@ extern "C"
 
 void* glMapBufferRange(GLenum target, GLintptr offset, GLsizeiptr length, GLbitfield access) {
     LOG()
+    if (!GLES.glMapBufferRange || !GLES.glGetError) {
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        return nullptr;
+    }
     // Storage permissions do not make a mapping coherent. Preserve the caller's
     // access flags so explicit flushes retain their visibility guarantee.
-    borrowed_target_t t(target);
-    return GLES.glMapBufferRange(t.target, offset, length, access);
+    discard_buffer_diagnostics();
+    borrowed_target_t t(target, true);
+    if (!t.ready) return nullptr;
+    // Capture only the application operation, before restoring the binding.
+    void* result = GLES.glMapBufferRange(t.target, offset, length, access);
+    mg_set_gl_error(consume_buffer_backend_errors());
+    return result;
 }
 
 GLboolean glUnmapBuffer(GLenum target) {
@@ -1238,19 +1287,31 @@ GLboolean glUnmapBuffer(GLenum target) {
 
 void glBufferStorage(GLenum target, GLsizeiptr size, const void* data, GLbitfield flags) {
     LOG()
-    if (GLES.glBufferStorageEXT) {
-        borrowed_target_t t(target);
-        GLES.glBufferStorageEXT(t.target, size, data, flags);
-        // Allocates storage just as glBufferData does, so it owes the same record.
-        set_buffer_data_size(find_bound_buffer_by_target(target), size);
+    if (!GLES.glBufferStorageEXT || !GLES.glGetError) {
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        return;
     }
-    CHECK_GL_ERROR
+    discard_buffer_diagnostics();
+    borrowed_target_t t(target, true);
+    if (!t.ready) return;
+    GLES.glBufferStorageEXT(t.target, size, data, flags);
+    const GLenum error = consume_buffer_backend_errors();
+    mg_set_gl_error(error);
+    // A rejected allocation leaves the existing store and its size intact.
+    if (error == GL_NO_ERROR) set_buffer_data_size(find_bound_buffer_by_target(target), size);
 }
 
 void glFlushMappedBufferRange(GLenum target, GLintptr offset, GLsizeiptr length) {
     LOG()
-    borrowed_target_t t(target);
+    if (!GLES.glFlushMappedBufferRange || !GLES.glGetError) {
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        return;
+    }
+    discard_buffer_diagnostics();
+    borrowed_target_t t(target, true);
+    if (!t.ready) return;
     GLES.glFlushMappedBufferRange(t.target, offset, length);
+    mg_set_gl_error(consume_buffer_backend_errors());
 }
 
 void glGenVertexArrays(GLsizei n, GLuint* arrays) {
