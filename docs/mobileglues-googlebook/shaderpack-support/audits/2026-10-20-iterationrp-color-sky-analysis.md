@@ -441,3 +441,16 @@ Screenshot: `/home/polar/MobileGlues-fixtures/iterationRP-aniso0.png` SHA-256
 Conclusion: the terrain geometry/output sampling hazard is real and affects
 texture detail, but it is not the primary cause of the constant color or the
 black sky. Restore anisotropic quality to its original value after this test.
+
+## Depth sentinel: verified
+
+The `debug.mgfsr3.images=1` probe read `img_depthtexS` from program 439
+(copy) and program 430 (clear):
+
+- copy: sky `top=0x3f800000` (1.0), terrain `center=0x3f7cb713`;
+- clear: both `0x3f800000`;
+- the pattern repeats every frame.
+
+`depthtexS` is therefore correctly populated and retained. The black sky is
+not caused by a zero/lost depth sentinel. The next boundary is sky output
+(`colortex8`) and final composition/sampling.
