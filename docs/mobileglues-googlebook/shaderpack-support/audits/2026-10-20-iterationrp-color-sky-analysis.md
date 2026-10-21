@@ -518,3 +518,11 @@ light/shadow effects are absent. Sky geometry is therefore working; the zero
 contribution is consistent with the atmosphere/lighting LUT sampler or its
 sun/sky radiance inputs, not a skipped sky pass. Prioritize atmoLut3D draw-time
 sampling/unit and the lighting inputs.
+
+## Fixed day/clear control
+
+With `/time set day`, clear weather, daylight cycle disabled, terrain remains
+textured but unlit/albedo-like, sky remains black, and no light/shadow effects
+appear. This is not a twilight/night explanation. The result is consistent with
+presenting the G-buffer albedo rather than the lit final composite: the final
+write or its selected colortex0 side is still wrong.
