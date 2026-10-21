@@ -266,17 +266,11 @@ void mg_lower_2d_image_layering(GLuint texture, GLboolean& layered, GLint& layer
 }
 
 namespace {
-// compat_image turns write-only rgba16/rg16 declarations into formatless
-// writeonly images, so the unit format has to describe the texture's real
-// backing rather than the desktop logical format. That backing differs per
-// texture: null-allocated custom images are RGBA32F/RG32F while Bloom's alt
-// output is RGBA16F. Other formats keep the fixed widening (R16UI -> R32UI).
+// Resolve from the real allocation; a legal image enum is insufficient when
+// its texel size differs from storage. Invalid formats never reach the driver.
 GLenum image_unit_bind_format(GLenum logical_format, GLuint texture) {
-    if (logical_format == GL_RGBA16 || logical_format == GL_RG16) {
-        const TextureObject* tex = mgGetTexObjectByID(texture);
-        return mg_image_unit_format(logical_format, tex != nullptr ? tex->internal_format : 0);
-    }
-    return mg_image_backing_format(logical_format);
+    const TextureObject* tex = texture != 0 ? mgGetTexObjectByID(texture) : nullptr;
+    return mg_image_unit_format(logical_format, tex != nullptr ? tex->internal_format : 0);
 }
 } // namespace
 
@@ -299,11 +293,15 @@ void mg_materialize_image_bindings() {
             continue;
         }
         if (physical >= MG_TRACKED_IMAGE_UNITS) continue;
-        // The shader was compiled against either a formatless writeonly image
-        // or the fallback float qualifier; both follow the texture's actual
-        // backing format.
+        // Storage may have changed since the logical bind was recorded.
+        // Revalidate before materializing the program's image-unit mapping.
         mg_image_binding_t desired = binding;
         desired.format = image_unit_bind_format(binding.format, binding.texture);
+        if (desired.format == GL_NONE) {
+            mg_set_gl_error(GL_INVALID_OPERATION);
+            gl_state->image_unit_shadow_valid[physical] = false;
+            continue;
+        }
         mg_lower_2d_image_layering(desired.texture, desired.layered, desired.layer);
         if (gl_state->image_unit_shadow_valid[physical] &&
             image_binding_equal(gl_state->image_unit_shadow[physical], desired)) {
@@ -311,6 +309,12 @@ void mg_materialize_image_bindings() {
         }
         GLES.glBindImageTexture(physical, desired.texture, desired.level, desired.layered, desired.layer,
                                 desired.access, desired.format);
+        const GLenum backend_error = GLES.glGetError();
+        if (backend_error != GL_NO_ERROR) {
+            mg_set_gl_error(backend_error);
+            gl_state->image_unit_shadow_valid[physical] = false;
+            continue;
+        }
         gl_state->image_unit_shadow[physical] = desired;
         gl_state->image_unit_shadow_valid[physical] = true;
     }
@@ -335,17 +339,18 @@ void glBindImageTexture(GLuint unit, GLuint texture, GLint level, GLboolean laye
     LOG()
     LOG_D("glBindImageTexture, unit: %d, texture: %d, level: %d, layered: %d, layer: %d, access: %d, format: %d", unit,
           texture, level, layered, layer, access, format)
-    // Retain the application's logical binding. A later glUseProgram may map
-    // this unit to a different physical ESSL unit; replaying the record is what
-    // keeps image binding order independent of the current program.
-    if (unit < MG_TRACKED_IMAGE_UNITS) {
-        gl_state->image_bindings[unit] = {texture, level, layered, layer, access, format};
-    }
-    // A rgba16/rg16 declaration is formatless (write-only) once compat_image
-    // has lowered it, so bind the texture's actual storage format. Other
-    // formats keep the fixed backing mapping.
     const GLenum logical_format = format;
     format = image_unit_bind_format(logical_format, texture);
+    if (format == GL_NONE) {
+        mg_set_gl_error(GL_INVALID_OPERATION);
+        LOG_E("Unsupported image binding: texture=%u logical=0x%x", texture, logical_format)
+        return;
+    }
+    // Validation precedes the shadow update: a rejected format must preserve
+    // the previous logical binding for a later program remap.
+    if (unit < MG_TRACKED_IMAGE_UNITS) {
+        gl_state->image_bindings[unit] = {texture, level, layered, layer, access, logical_format};
+    }
     GLboolean backend_layered = layered;
     GLint backend_layer = layer;
     mg_lower_2d_image_layering(texture, backend_layered, backend_layer);

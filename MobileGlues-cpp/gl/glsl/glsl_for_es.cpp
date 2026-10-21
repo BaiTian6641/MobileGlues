@@ -59,7 +59,7 @@ static TBuiltInResource InitResources() {
     Resources.maxFragmentInputVectors = 15;
     Resources.minProgramTexelOffset = -8;
     Resources.maxProgramTexelOffset = 7;
-    Resources.maxClipDistances = 8;
+    Resources.maxClipDistances = 0;
     Resources.maxComputeWorkGroupCountX = 65535;
     Resources.maxComputeWorkGroupCountY = 65535;
     Resources.maxComputeWorkGroupCountZ = 65535;
@@ -120,8 +120,8 @@ static TBuiltInResource InitResources() {
     Resources.maxAtomicCounterBufferSize = 16384;
     Resources.maxTransformFeedbackBuffers = 4;
     Resources.maxTransformFeedbackInterleavedComponents = 64;
-    Resources.maxCullDistances = 8;
-    Resources.maxCombinedClipAndCullDistances = 8;
+    Resources.maxCullDistances = 0;
+    Resources.maxCombinedClipAndCullDistances = 0;
     Resources.maxSamples = 4;
     Resources.maxMeshOutputVerticesNV = 256;
     Resources.maxMeshOutputPrimitivesNV = 512;
@@ -249,10 +249,13 @@ static TBuiltInResource InitResources() {
         Resources.maxProgramTexelOffset =
             q(GL_MAX_PROGRAM_TEXEL_OFFSET, Resources.maxProgramTexelOffset);
         Resources.maxViewports = q(GL_MAX_VIEWPORTS, Resources.maxViewports);
-        Resources.maxClipDistances = q(GL_MAX_CLIP_DISTANCES, Resources.maxClipDistances);
-        Resources.maxCullDistances = q(GL_MAX_CULL_DISTANCES, Resources.maxCullDistances);
-        Resources.maxCombinedClipAndCullDistances =
-            q(GL_MAX_COMBINED_CLIP_AND_CULL_DISTANCES, Resources.maxCombinedClipAndCullDistances);
+        // These enums are invalid without the extension on ES. Keep zero as
+        // the translator contract and do not leak an internal query error.
+        if (g_gles_caps.GL_EXT_clip_cull_distance) {
+            Resources.maxClipDistances = q(GL_MAX_CLIP_DISTANCES, 0);
+            Resources.maxCullDistances = q(GL_MAX_CULL_DISTANCES, 0);
+            Resources.maxCombinedClipAndCullDistances = q(GL_MAX_COMBINED_CLIP_AND_CULL_DISTANCES, 0);
+        }
     }
 
     Resources.limits.nonInductiveForLoops = true;

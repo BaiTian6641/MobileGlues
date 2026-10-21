@@ -32,19 +32,15 @@ __attribute__((visibility("default"))) void mg_image_metadata_end();
 // empty when the loader supplied nothing.
 std::unordered_map<std::string, GLenum> mg_image_metadata_take();
 
-// The ESSL image qualifier and the texture/binding format used to back a
-// logical desktop format. R8UI/R16UI have no ESSL image qualifier on strict
-// ES 3.10 providers; R32UI is the narrowest legal integer image format.
+// The ESSL qualifier and legal image backing for the logical format. GL_NONE /
+// nullptr means no implemented representation. Existing widening entries do
+// not imply equivalent numeric store conversion; see gl/image_format.h.
 GLenum mg_image_backing_format(GLenum logical_format);
 const char* mg_image_qualifier(GLenum logical_format);
 
-// Backing format for glBindImageTexture. Unorm16 application formats have no
-// ES image qualifier; their write-only declarations are made formatless by
-// compat_image, so the unit must be bound with the texture's real storage
-// format. Null-allocated RGBA16/RG16 become GL_RGBA32F/GL_RG32F
-// (gl/texture.cpp), while a float-backed image such as Bloom's RGBA16F alt
-// output keeps GL_RGBA16F. Every other format keeps the historical
-// mg_image_backing_format mapping (including R16UI -> R32UI).
+// Resolve a legal ES image-unit format against the actual texture storage.
+// Returns GL_NONE if the representation is unmapped or size-incompatible.
+// texture_internal_format == 0 requests only the logical mapping (e.g. unbind).
 GLenum mg_image_unit_format(GLenum logical_format, GLenum texture_internal_format);
 
 // Rewrites formatless image declarations for which metadata exists. The

@@ -92,6 +92,40 @@ static void test_invalid_arguments() {
     check(error == GL_INVALID_VALUE, "null string sets GL_INVALID_VALUE");
 }
 
+static void test_late_uniform_hoist() {
+    const std::string source = "#version 320 es\nprecision highp float;\n"
+        "float f() { return 1.0; }\nuniform highp vec4 tint;\nvoid main() {}\n";
+    const std::string expected = "#version 320 es\nprecision highp float;\n"
+        "uniform highp vec4 tint;\nfloat f() { return 1.0; }\nvoid main() {}\n";
+    check(mg_hoist_late_global_uniforms(source) == expected, "late built-in uniform moves before first function");
+    check(mg_hoist_late_global_uniforms(expected) == expected, "hoist is idempotent");
+    const std::string split = "#version 320 es\nfloat\nf() { return 1.0; }\nuniform float exposure;";
+    check(mg_hoist_late_global_uniforms(split) ==
+          "#version 320 es\nuniform float exposure;\nfloat\nf() { return 1.0; }",
+          "hoist preserves a split return type and missing final newline");
+    const char* unchanged[] = {
+        "#define UNUSED \\\nfloat f() {} \\\nuniform float tint;\n",
+        "/* docs\n*/ float f() {}\nuniform float tint;\n",
+        "/* docs\n*/ float\nf() {}\nuniform float tint;\n",
+        "float f() {}\nprecision\tlowp float;\nuniform float tint;\n",
+        "float f() {}\nprecision lowp float;\nuniform float tint;\n",
+        "float f() {}\nstruct Material { float value; };\nuniform Material material;\n",
+        "float f() {}\nconst int count = 4;\nuniform float weights[count];\n",
+        "float f() {}\n#define SCALE 2\nuniform float scale;\n",
+        "float f() {}\n#extension GL_EXT_test : enable\nuniform float scale;\n",
+        "float f() {}\n#if FEATURE\nuniform float scale;\n#endif\n",
+        "float f() {}\nuniform Block { float scale; };\n",
+        "float f() {}\nlayout(location=0) uniform float scale;\n",
+        "float f() {}\nuniform float\nscale;\n",
+        "float f() {}\n/* comment\nuniform float fake;\n*/\n",
+        "float f() {}\nuniform float scale; /* comment\ncontinued */\n",
+        "float f() {\nuniform float invalidLocal;\n}\n"
+    };
+    for (const char* text : unchanged) {
+        check(mg_hoist_late_global_uniforms(text) == text, "dependent or non-global declaration stays unchanged");
+    }
+}
+
 int main() {
     test_explicit_lengths();
     test_negative_length_means_nul_terminated();
@@ -99,6 +133,7 @@ int main() {
     test_null_lengths();
     test_zero_count();
     test_invalid_arguments();
+    test_late_uniform_hoist();
     if (g_failures) {
         std::fprintf(stderr, "%d shader-source checks failed\n", g_failures);
         return 1;

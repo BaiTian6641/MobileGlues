@@ -7,6 +7,7 @@
 
 #include "texture.h"
 #include "depth_filter.h"
+#include "image_format.h"
 #include "mg.h"
 #include "../config/settings.h"
 #include "../egl/context.h"
@@ -538,29 +539,6 @@ TextureObject* mgGetTexObjectByID(unsigned texture) {
 // first. It matters only where an unsized internalformat has to be resolved: an
 // allocation's `type` describes nothing, so resolving storage from it means
 // resolving it from decoration.
-static GLenum mg_lower_16bit_image_storage(GLenum internal_format) {
-    switch (internal_format) {
-    case GL_RGBA16:
-        return GL_RGBA32F;
-    case GL_RG16:
-        return GL_RGBA32F;
-    case GL_RG16F:
-        // The provider rejects rg16f image qualifiers and image binding on
-        // RG16F. RGBA16F is the narrowest legal float backing with the same
-        // two-channel payload.
-        return GL_RGBA16F;
-    default:
-        return internal_format;
-    }
-}
-
-static bool mg_is_image_storage_format(GLenum internal_format) {
-    return internal_format == GL_R8UI || internal_format == GL_R16UI || internal_format == GL_R32UI ||
-           internal_format == GL_R8I || internal_format == GL_R16I || internal_format == GL_R32I ||
-           internal_format == GL_R32F || internal_format == GL_RGBA16F || internal_format == GL_RGBA32F ||
-           internal_format == GL_RG32F || internal_format == GL_RGBA8 || internal_format == GL_RGBA32UI;
-}
-
 void internal_convert(GLenum* internal_format, GLenum* type, GLenum* format, bool has_data) {
     // GL_BGRA is deliberately not renamed here: a rename converts the enum and
     // not the data. Every pixel-transfer entry point routes through
@@ -789,20 +767,24 @@ void internal_convert(GLenum* internal_format, GLenum* type, GLenum* format, boo
         break;
     case GL_R8UI:
     case GL_R16UI:
-        // ESSL 3.10 has no r8ui/r16ui image qualifier on this provider. R32UI is
-        // the narrowest legal integer image format; the low 8/16 bits of the
-        // stored value are preserved. The texture and image binding use the
-        // same backing format, and the metadata bridge supplies the qualifier
-        // before compilation.
-        *internal_format = GL_R32UI;
-        if (format) *format = GL_RED_INTEGER;
-        if (type) *type = GL_UNSIGNED_INT;
+        // Preserve the established null-allocation image widening. It preserves
+        // in-range values, not narrow-format overflow behavior. Data uploads
+        // keep their original texel layout and cannot be bound as R32UI.
+        if (has_data) {
+            if (format) *format = GL_RED_INTEGER;
+            if (type) *type = *internal_format == GL_R8UI ? GL_UNSIGNED_BYTE : GL_UNSIGNED_SHORT;
+        } else {
+            *internal_format = GL_R32UI;
+            if (format) *format = GL_RED_INTEGER;
+            if (type) *type = GL_UNSIGNED_INT;
+        }
         break;
     case GL_R8I:
     case GL_R16I:
-        *internal_format = GL_R32I;
+        // No signed narrow image-store conversion exists yet. Preserve ordinary
+        // texture storage; image binding reports the missing representation.
         if (format) *format = GL_RED_INTEGER;
-        if (type) *type = GL_INT;
+        if (type) *type = *internal_format == GL_R8I ? GL_BYTE : GL_SHORT;
         break;
     case GL_R32UI:
         if (format) *format = GL_RED_INTEGER;
@@ -845,10 +827,10 @@ void internal_convert(GLenum* internal_format, GLenum* type, GLenum* format, boo
         if (type) *type = GL_SHORT;
         break;
     case GL_RG32UI:
-        // ES has no RG32UI storage format. RGBA32UI keeps both integer
-        // channels and is accepted by glTexStorage/glBindImageTexture.
-        *internal_format = GL_RGBA32UI;
-        if (format) *format = GL_RGBA_INTEGER;
+        // RG32UI is legal texture storage but not an ES image-unit format.
+        // Only null allocations use the existing four-channel image backing.
+        if (!has_data) *internal_format = GL_RGBA32UI;
+        if (format) *format = has_data ? GL_RG_INTEGER : GL_RGBA_INTEGER;
         if (type) *type = GL_UNSIGNED_INT;
         break;
     case GL_RG32I:
@@ -1064,15 +1046,16 @@ void glTexImage2D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
     // rejects it on mutable 3D storage. Iris allocates its 2D custom images and
     // render targets with glTexImage2D(level 0, null); use immutable storage
     // for that one-level allocation so glBindImageTexture can accept them.
-    if (pixels == nullptr) {
-        const GLenum lowered = mg_lower_16bit_image_storage(internalFormat);
+    if (!mg_upload_has_data(pixels)) {
+        const GLenum lowered = mg_lower_image_storage_format(internalFormat);
         if (lowered != internalFormat) {
             internalFormat = static_cast<GLint>(lowered);
             format = GL_RGBA;
             type = GL_FLOAT;
         }
     }
-    if (pixels == nullptr && level == 0 && target == GL_TEXTURE_2D && mg_is_image_storage_format(internalFormat)) {
+    if (!mg_upload_has_data(pixels) && level == 0 && target == GL_TEXTURE_2D &&
+        mg_is_native_image_format(internalFormat)) {
         glTexStorage2D(target, 1, internalFormat, width, height);
         CHECK_GL_ERROR
         return;
@@ -1156,16 +1139,16 @@ void glTexImage3D(GLenum target, GLint level, GLint internalFormat, GLsizei widt
     // GL_INVALID_OPERATION, and the subsequent descriptor setup can fault.
     // Immutable glTexStorage3D storage is the same allocation contract for
     // these one-level image textures and is known-good on the same backend.
-    if (pixels == nullptr) {
-        const GLenum lowered = mg_lower_16bit_image_storage(internalFormat);
+    if (!mg_upload_has_data(pixels)) {
+        const GLenum lowered = mg_lower_image_storage_format(internalFormat);
         if (lowered != internalFormat) {
             internalFormat = static_cast<GLint>(lowered);
             format = GL_RGBA;
             type = GL_FLOAT;
         }
     }
-    if (pixels == nullptr && level == 0 && target == GL_TEXTURE_3D &&
-        mg_is_image_storage_format(internalFormat)) {
+    if (!mg_upload_has_data(pixels) && level == 0 && target == GL_TEXTURE_3D &&
+        mg_is_native_image_format(internalFormat)) {
         glTexStorage3D(target, 1, internalFormat, width, height, depth);
         CHECK_GL_ERROR
         return;
@@ -1282,7 +1265,7 @@ void glTexStorage2D(GLenum target, GLsizei levels, GLenum internalFormat, GLsize
           target, levels, internalFormat, width, height)
 
     internal_convert(&internalFormat, nullptr, nullptr, /*has_data=*/false);
-    internalFormat = mg_lower_16bit_image_storage(internalFormat);
+    internalFormat = mg_lower_image_storage_format(internalFormat);
     GLES.glTexStorage2D(target, levels, internalFormat, width, height);
 
     GET_TEXTURE_OBJECT(target);
@@ -1310,7 +1293,7 @@ void glTexStorage3D(GLenum target, GLsizei levels, GLenum internalFormat, GLsize
           target, levels, internalFormat, width, height, depth)
 
     internal_convert(&internalFormat, nullptr, nullptr, /*has_data=*/false);
-    internalFormat = mg_lower_16bit_image_storage(internalFormat);
+    internalFormat = mg_lower_image_storage_format(internalFormat);
 
     GLES.glTexStorage3D(target, levels, internalFormat, width, height, depth);
 

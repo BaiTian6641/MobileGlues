@@ -5,6 +5,7 @@
 #include <cctype>
 #include <cstring>
 #include <limits>
+#include <regex>
 #include <vector>
 
 bool mg_collect_shader_source(GLsizei count, const GLchar* const* strings, const GLint* lengths,
@@ -107,16 +108,21 @@ bool mg_looks_like_function(const std::string& text) {
     return text.find('(') != std::string::npos && text.find(')') != std::string::npos;
 }
 
+// Only built-in, dependency-free declarations may cross earlier declarations.
+// Custom types, symbolic array sizes, initializers and macros need an AST-aware
+// dependency pass; leave them in place so compilation remains authoritative.
 bool mg_is_plain_uniform(const std::string& text) {
-    if (text.rfind("uniform", 0) != 0) return false;
-    if (text.size() <= 7 || !std::isspace(static_cast<unsigned char>(text[7]))) return false;
-    if (text.back() != ';') return false;
-    return text.find("//") == std::string::npos;
+    static const std::regex declaration(
+        R"(^uniform\s+(?:(?:lowp|mediump|highp)\s+)?(?:bool|int|uint|float|[biu]?vec[234]|mat[234](?:x[234])?)\s+[A-Za-z_][A-Za-z_0-9]*(?:\s*\[\s*[0-9]+\s*\])?\s*;\s*$)");
+    return std::regex_match(text, declaration);
 }
 
 } // namespace
 
 std::string mg_hoist_late_global_uniforms(const std::string& source) {
+    // A continued macro can contain function/declaration-shaped text. This
+    // line-based pass cannot establish its dependencies; leave it to the parser.
+    if (source.find("\\\n") != std::string::npos || source.find("\\\r\n") != std::string::npos) return source;
     std::vector<std::string> lines;
     std::string current;
     for (char c : source) {
@@ -133,9 +139,12 @@ std::string mg_hoist_late_global_uniforms(const std::string& source) {
     int brace_depth = 0;
     int conditional_depth = 0;
     int first_function = -1;
+    int statement_start = -1;
+    bool directive_barrier = false;
     std::vector<int> late_uniforms;
 
     for (size_t i = 0; i < lines.size(); ++i) {
+        const bool started_in_comment = in_block_comment;
         const std::string structural = mg_structural_line(lines[i], in_block_comment);
         const std::string text = mg_trim(structural);
 
@@ -145,17 +154,37 @@ std::string mg_hoist_late_global_uniforms(const std::string& source) {
             if (conditional_depth > 0) --conditional_depth;
         }
 
-        if (conditional_depth == 0 && brace_depth == 0 && first_function < 0 && mg_looks_like_function(text)) {
-            first_function = static_cast<int>(i);
+        const bool directive = !text.empty() && text.front() == '#';
+        const bool precision_statement = text == "precision" ||
+            (text.rfind("precision", 0) == 0 && text.size() > 9 &&
+             std::isspace(static_cast<unsigned char>(text[9])));
+        if (first_function >= 0 && (directive || precision_statement)) {
+            directive_barrier = true;
+        }
+        if (brace_depth == 0 && !text.empty() && !directive && statement_start < 0) {
+            if (started_in_comment) return source;
+            statement_start = static_cast<int>(i);
+        }
+        if (conditional_depth == 0 && brace_depth == 0 && first_function < 0 &&
+            mg_looks_like_function(text)) {
+            // Inserting before a comment terminator would hide the declaration.
+            if (started_in_comment) return source;
+            // Include a return type on the preceding line in the insertion anchor.
+            first_function = statement_start;
         }
         if (first_function >= 0 && static_cast<int>(i) > first_function &&
-            conditional_depth == 0 && brace_depth == 0 && mg_is_plain_uniform(text)) {
+            conditional_depth == 0 && brace_depth == 0 && !directive_barrier &&
+            !started_in_comment && !in_block_comment && mg_is_plain_uniform(text)) {
             late_uniforms.push_back(static_cast<int>(i));
         }
 
         for (char c : structural) {
             if (c == '{') ++brace_depth;
             else if (c == '}' && brace_depth > 0) --brace_depth;
+        }
+        if (directive || (brace_depth == 0 && !text.empty() &&
+                          (text.back() == ';' || text.back() == '}'))) {
+            statement_start = -1;
         }
     }
 
@@ -164,18 +193,20 @@ std::string mg_hoist_late_global_uniforms(const std::string& source) {
     std::vector<bool> late_mask(lines.size(), false);
     for (int index : late_uniforms) late_mask[static_cast<size_t>(index)] = true;
 
-    std::string rewritten;
-    rewritten.reserve(source.size() + 64);
+    std::vector<std::string> reordered;
+    reordered.reserve(lines.size());
     for (size_t i = 0; i < lines.size(); ++i) {
         if (static_cast<int>(i) == first_function) {
-            for (int index : late_uniforms) {
-                rewritten.append(lines[static_cast<size_t>(index)]);
-                rewritten.push_back('\n');
-            }
+            for (int index : late_uniforms) reordered.push_back(lines[static_cast<size_t>(index)]);
         }
-        if (late_mask[i]) continue;
-        rewritten.append(lines[i]);
-        if (i + 1 < lines.size()) rewritten.push_back('\n');
+        if (!late_mask[i]) reordered.push_back(lines[i]);
     }
+    std::string rewritten;
+    rewritten.reserve(source.size());
+    for (size_t i = 0; i < reordered.size(); ++i) {
+        if (i != 0) rewritten.push_back('\n');
+        rewritten.append(reordered[i]);
+    }
+    if (!source.empty() && source.back() == '\n') rewritten.push_back('\n');
     return rewritten;
 }

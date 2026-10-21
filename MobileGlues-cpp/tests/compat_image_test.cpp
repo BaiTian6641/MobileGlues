@@ -32,8 +32,8 @@ int main() {
           "layout(rgba16f) uniform image2D f;\n");
     check("rg32f-widened", mg_lower_legacy_image_formats("layout(rg32f) uniform image2D f32;\n"),
           "layout(rgba32f) uniform image2D f32;\n");
-    check("r16f-untouched", mg_lower_legacy_image_formats("layout(r16f) uniform image2D rf;\n"),
-          "layout(r16f) uniform image2D rf;\n");
+    check("r16f-numerical-semantics-not-implemented", mg_lower_legacy_image_formats("layout(r16f) uniform image2D rf;\n"),
+          "\n#error MG_IMAGE_FORMAT_UNMAPPABLE: rf (r16f; store conversion is not implemented)\nlayout(r16f) uniform image2D rf;\n");
     check("rgba16ui-untouched", mg_lower_legacy_image_formats("layout(rgba16ui) uniform uimage2D g;\n"),
           "layout(rgba16ui) uniform uimage2D g;\n");
     check("r16ui-widened", mg_lower_legacy_image_formats("layout(r16ui) uniform uimage3D v;\n"),
@@ -51,6 +51,34 @@ int main() {
     check("line-lengthening",
           mg_lower_legacy_image_formats("layout(rgba16) uniform image2D j;\nlogical line after\n"),
           "layout(rgba32f) uniform image2D j;\nlogical line after\n");
+    for (const std::string format : {"r8", "r16", "r8i", "r16i"}) {
+        const std::string type = format.back() == 'i' ? "iimage2D" : "image2D";
+        const std::string source = "layout(" + format + ", binding = 3) uniform " + type + " narrow;\n";
+        check(format.c_str(), mg_lower_legacy_image_formats(source),
+              "\n#error MG_IMAGE_FORMAT_UNMAPPABLE: narrow (" + format +
+              "; store conversion is not implemented)\n" + source);
+    }
+    check("unmapped-format-fails-loudly",
+          mg_lower_legacy_image_formats("layout(rgba16_snorm) uniform image2D x;\n"),
+          "\n#error MG_IMAGE_FORMAT_UNMAPPABLE: x (rgba16_snorm)\nlayout(rgba16_snorm) uniform image2D x;\n");
+    for (const std::string source : {
+             "// layout(r16f) uniform image2D example;\n",
+             "/* layout(rgba16) uniform image2D example; */\n",
+             "#define TEXT \"layout(r8) uniform image2D example;\"\n"}) {
+        check("comments-and-strings-untouched", mg_lower_legacy_image_formats(source), source);
+    }
+    check("layout-comment-preserved", mg_lower_legacy_image_formats(
+              "layout(r16ui /* backing */, binding=4) uniform uimage2D x;\n"),
+          "layout(r32ui /* backing */, binding=4) uniform uimage2D x;\n");
+    check("binding-expression-not-a-format", mg_lower_legacy_image_formats(
+              "layout(rgba8, binding=r8) uniform image2D x;\n"),
+          "layout(rgba8, binding=r8) uniform image2D x;\n");
+    for (const std::string source : {
+             "#define UNUSED_IMAGE layout(r8) uniform image2D imageUnused;\n",
+             "  #define UNUSED_IMAGE \\\nlayout(r8) uniform image2D imageUnused;\n",
+             "#define UNUSED_IMAGE \\\r\nlayout(r8) uniform image2D imageUnused;\n"}) {
+        check("unused-macro-is-not-an-active-declaration", mg_lower_legacy_image_formats(source), source);
+    }
     if (failures) {
         printf("%d failures\n", failures);
         return 1;
