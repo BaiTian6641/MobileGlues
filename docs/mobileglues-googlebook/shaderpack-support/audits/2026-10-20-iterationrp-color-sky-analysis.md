@@ -463,3 +463,11 @@ state clue: history/ping-pong/reset behavior, not static shader arithmetic.
 Priority for the ongoing final-sampling, image-contract and atmosphere audits:
 check TAA/history, image retention, framebuffer ping-pong, and any periodic
 resource reset against this observation.
+
+## No-TAA control: inconclusive
+
+A private `iterationRP-noTAA-test.zip` (`ec47c972…`) was created by disabling
+`#define TAA`; the original archive was unchanged. The user could not establish
+a clear visual or interval change, and the observed reset interval is much
+longer than the 617-frame TAA jitter cycle. TAA is therefore **not** treated as
+a proven cause. Restore the original pack selection.
