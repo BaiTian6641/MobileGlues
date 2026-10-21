@@ -23,3 +23,18 @@ Set FSR3 to NativeAA (scale 1.0) and reload the same original pack. If the
 full frame returns, the failure is the FSR bridge scaling/final-viewport path.
 If the split remains, it is the pack's own custom render-resolution/viewport
 path or an image-unit mismatch. Do not edit the pack.
+
+## NativeAA isolation
+
+With FSR3 NativeAA (scale 1.0), the lower-left split disappears and the full
+frame is presented, but terrain is brown/black and the sky is black. This
+isolates two independent defects:
+
+1. FSR scene scaling causes the 960x528 lower-left-only frame.
+2. The pack/render path still produces wrong colors/lighting at NativeAA.
+
+NativeAA screenshot: `/home/polar/MobileGlues-fixtures/iterationRP-original-nativeaa.png`
+SHA-256 `00accade848dbbe4a04ed0a8481f1e3f1edb9eb549be3ca34e0e8fe0b149b224`. Log: `.../iterationRP-original-nativeaa.log`.
+
+S1 remains FAIL. The next isolation is FSR fully off; the bridge must not be a
+prerequisite for original-pack support.
