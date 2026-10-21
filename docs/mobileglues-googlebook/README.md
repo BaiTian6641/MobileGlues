@@ -10,7 +10,7 @@ directory does not contain release claims. Machine-readable distribution inputs 
 | --- | --- |
 | [FSR3 universal rendering research](2026-10-21-fsr3-universal-rendering-research.md) | Eight exact adapter locks, primary-source API families from 1.17 through 26.2, rendering contracts and future qualification gaps. |
 | [Buffer mapping and rendering checkpoint](2026-10-21-buffer-mapping-and-rendering-checkpoint.md) | S4.9 coherent-storage versus mapping correction, exact Sodium comparison, mapping/error corrections, 187-check review, five-case host/provider evidence and unproven terrain causality. |
-| [FSR3 depth contract and runtime status](2026-10-21-fsr3-depth-contract-and-runtime-status.md) | Depth and viewport/buffer checkpoints, verified native 2.0.8 and bridge 0.2.3 CI, Create/Steadfast visual pass, retained 26.2 failure and interrupted control, 2.0.7 full-library error failure, 2.0.8 physical full-library pass, and pending game/bridge lifecycle gates. |
+| [FSR3 depth contract and runtime status](2026-10-21-fsr3-depth-contract-and-runtime-status.md) | Depth and viewport/buffer checkpoints, verified native 2.0.8 and bridge 0.2.4 CI, Create/Steadfast visual pass, retained 26.2 failure and interrupted control, 2.0.7 full-library error failure, 2.0.8 physical full-library pass, reviewed bridge 0.2.4 legacy depth correction, prepared Fabric 1.20.1 payload, and pending game/lifecycle gates. |
 | `execution-state.md` | Current task, repository identity, confirmed progress, blockers and next action. |
 | `feature-matrix.md` | Evidence rows for renderer builds, provider gates, pack/effect attempts and device gates. |
 | `decisions.md` | Architecture decisions with evidence and consequences. |
@@ -43,8 +43,10 @@ and pack tuple.
 The stage table below predates the desktop-GL continuation. Use the dated buffer
 and runtime records above for the latest source, artifacts and physical results:
 2.0.8 has passed independent CI artifact verification and the bounded physical
-full-library buffer suite, including a separate run of the exact CI ARM64 payload. Game rendering and the bridge lifecycle correction
-remain pending. The historical absence/status statements below
+full-library buffer suite, including a separate run of the exact CI ARM64 payload.
+The bridge 0.2.4 legacy depth correction has passed independent host review
+and eight-profile CI/artifact verification. Game rendering and physical bridge
+lifecycle checks remain pending. The historical absence/status statements below
 are not a current feature inventory. New bounded fixes do not automatically
 close their larger stage gates.
 

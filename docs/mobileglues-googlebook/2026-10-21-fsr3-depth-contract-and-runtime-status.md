@@ -477,10 +477,87 @@ separately tested; eight successful adapter builds do not make their physical
 rendering results interchangeable.
 
 
-A separate bridge review is correcting depth-generation handling in the six
-legacy adapter profiles when a quality change replaces the managed depth
-texture or transitions to NativeAA. Its revised source/artifacts and
-qualification are still pending; 0.2.3 remains the last verified CI artifact
-set recorded here. The issue has not been established as the cause of 26.2's
-missing terrain. The native five-case pass does not qualify that bridge fix or
-remove its lifecycle testing requirement.
+## Bridge 0.2.4 legacy depth correction and verified eight-profile CI
+
+The six legacy profiles for 1.18.2, 1.20.1 and 1.21.1 had a distinct depth
+lifecycle bug. They passed a replacement managed texture to Iris/Oculus while
+retaining Minecraft's unchanged depth generation. Each pinned `RenderTargets`
+updates its cached depth and scene framebuffer attachments only when that
+generation changes. A quality switch could therefore leave stale attachments;
+NativeAA could also leave the old managed texture selected for submission.
+
+The correction is committed and pushed at
+[`556cd5daa8f201819005787f65c78521ada63c3a`](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/commit/556cd5daa8f201819005787f65c78521ada63c3a),
+with **0.2.4** versioning separately committed at
+[`3e62436bcb8ada1566d4e6de793e683be64761c4`](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/commit/3e62436bcb8ada1566d4e6de793e683be64761c4).
+The [versioned lifecycle contract](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/blob/3e62436bcb8ada1566d4e6de793e683be64761c4/docs/legacy-depth-lifecycle.md)
+describes the exact behavior and evidence boundaries.
+
+The bridge now tracks source generation, selected integer texture name and
+committed allocation revision together. It supplies that generation to both
+constructor and resize calls, retains replaced resources until adoption returns
+normally, and forces a fresh generation after a throwing attempt. Successful
+same-size adoption still completes even though Iris returns `false`. NativeAA
+and disabled scaling select the original depth and retire the managed resource.
+All six pinned legacy implementations already exclude the independent
+no-hand/no-translucent snapshot framebuffers from their attachment loop and
+resize those snapshot textures in place. Their snapshot policy is preserved;
+the existing 26.2 object-identity path remains unchanged.
+
+Independent review found no blocker. All six generated-handler/pinned-method
+host probes passed **86 checks per profile**. They execute the real bridge Java,
+generated handlers and pinned Iris/Oculus resize/getter bytecode with controlled
+host texture/attachment probes and JNI scale transport. The preserved official
+0.2.3 CI JARs failed the two targeted quality-generation and stale-NativeAA
+witnesses per profile: **12 exact old-JAR failures**. The build also rejected
+**18 deliberately corrupted constructor, resize and field contracts**. Exact
+upstream JAR hashes, method bodies, descriptors and invocation counts are gated.
+The complete eight-profile host suite and Java AST report were reviewed; the
+last two fixture refinements were independently rerun across the six affected
+profiles without intervening production changes.
+
+These tests do not perform a live Mixin transformation, GPU depth rendering or
+game launch. The final **0.2.4** versioned build and host tests passed across all
+eight profiles. [CI run 39580677811](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39580677811)
+succeeded in **8/8 jobs** at exact commit `3e62436bcb8ada1566d4e6de793e683be64761c4`.
+Independent artifact verification found all eight downloaded JARs byte-identical
+to the separately reproduced local builds and all complete build reports equal.
+Every profile records source-tree SHA-256
+`e60c773612da76e9086028f6a7b4fc2b2a0159daa269112a64fa66a696df4ffb`.
+
+Physical quality switching, reloads, dimension changes and save/quit remain
+pending. This legacy correction has not been established as the cause of the
+separate 26.2 missing terrain, and the native five-case pass does not qualify
+the new bridge.
+
+
+| Verified bridge 0.2.4 profile artifact | JAR SHA-256 |
+| --- | --- |
+| [1.18.2-fabric](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39580677811/artifacts/12334884719) | `f0bcc0a23ef64855aa0d8afb37b0cb2c3912822917fd0b766bacdc209b465e69` |
+| [1.18.2-forge](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39580677811/artifacts/12335718400) | `e7d92a8cbd26eafddc078826eb9e2ef3f5e3ef558267b53bc046e0bc7fde836f` |
+| [1.20.1-fabric](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39580677811/artifacts/12335509355) | `9ebb82ad8676753f6355547134123ac1bfdc2ba7c6660fa79677bc881b810005` |
+| [1.20.1-forge](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39580677811/artifacts/12335669497) | `c8232aa943f8c93a9a556db5583ee72d6f378ec294d5168c881381b6e194ad21` |
+| [1.21.1-fabric](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39580677811/artifacts/12335319638) | `555db42674f20772b41035d4495091ae78e3cfc67d4e3307077efaaaca824cc5` |
+| [1.21.1-neoforge](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39580677811/artifacts/12336905041) | `38ad1a7b5b7d7e104711b44627e78367f03eb4b68f6b8b1a06a7cb3574d8ac0a` |
+| [26.2-fabric](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39580677811/artifacts/12336715154) | `20f16c7002a3b175f7b0002bd529b0e0453265116fbdcc3fca0f7a545daeb0dc` |
+| [26.2-neoforge](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39580677811/artifacts/12336351392) | `c8247402e8c0816ab2e884be15e8ab4ce4c8861ba65b7fe772d93d52a120e0ed` |
+
+The local distribution bundle retains those exact JARs and their reports. The
+verification also checks loader/resource metadata, class and hook contracts,
+and packaged ARM64/x86_64 JNI libraries, including 16 KB load alignment, RELRO
+and a non-executable stack. Build and host evidence for eight exact adapters
+does not establish universal version compatibility, full temporal FSR3,
+frame generation, X2E support or game acceptance for any untested profile.
+
+The isolated **Fabric 1.20.1 preparation** now includes the exact verified 0.2.4
+JAR with Iris 1.7.6, Sodium 0.5.12-beta.2 and Fabric Loader 0.19.5. Independent
+local verification checked all 41 checksum entries, rebuilt the recursive
+embedded-mod dependency list, and reran Fabric Loader's actual version-predicate
+parser on Java 17: 19 required dependencies and one incompatible-version
+exclusion passed. The prior 0.2.3 preparation bundle remains unchanged. The
+new preparation manifest SHA-256 is
+`90dce590f9285c5ff09ec5ce68b1eac7bfdccbfa1d1413ae6cb3e1738923b84d`.
+This is metadata and local payload preparation, not a complete launcher install
+or resolver/Mixin/game test. After unlock, use FCL's normal new-game/Fabric
+installer if the clean 1.20.1 base is still absent; preserve profile isolation
+and do not clone the Create Delight Forge installation.

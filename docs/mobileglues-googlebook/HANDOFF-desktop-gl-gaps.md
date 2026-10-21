@@ -29,10 +29,19 @@ CI unstripped input, stripped payload, diagnostic APK and physically tested
 local core hashes separate.
 
 The permanent bridge checkout is clean on `codex/resource-pack-metadata` at
-[`2f0e4faf57489c51418bfa9fe534d63f7623a769`](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/commit/2f0e4faf57489c51418bfa9fe534d63f7623a769).
-Advance it to the next reviewed bridge commit when ready, then pin the matching
-0.2.4 profile JAR hashes and CI/source evidence before runtime qualification.
-The pending version is not yet a verified artifact set.
+[`3e62436bcb8ada1566d4e6de793e683be64761c4`](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/commit/3e62436bcb8ada1566d4e6de793e683be64761c4),
+which versions the reviewed legacy depth correction as **0.2.4**. The semantic
+change is separate at
+[`556cd5daa8f201819005787f65c78521ada63c3a`](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/commit/556cd5daa8f201819005787f65c78521ada63c3a).
+The [legacy lifecycle contract](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/blob/3e62436bcb8ada1566d4e6de793e683be64761c4/docs/legacy-depth-lifecycle.md)
+records the generation, retirement and retry behavior. Independent host review
+passed all six legacy profiles with 86 checks each, 12 exact old-JAR failure
+witnesses and 18 rejected contract mutations. These are host and bytecode
+results. [CI run 39580677811](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39580677811)
+succeeded in all eight jobs; all downloaded JAR bytes and complete build reports
+match separately reproduced local artifacts. The runtime record pins all eight
+0.2.4 JAR hashes and source-tree hash `e60c773612da76e9086028f6a7b4fc2b2a0159daa269112a64fa66a696df4ffb`.
+Game acceptance remains pending and must use those exact profile artifacts.
 
 The physical system provider passes the expanded five-case buffer suite.
 MobileGlues 2.0.7 passed the three visibility cases but failed invalid-flag
@@ -41,19 +50,18 @@ subsequently passed all five expanded cases with its exact core hash and
 `src-beaba336ea4452da` marker. A separate run of the exact ARM64 core extracted
 from the verified CI APK also passed all five cases, with its distinct core
 hash and runner evidence retained. These results do not resolve the last recorded
-26.2 terrain/HUD failure or supplies the interrupted FSR-disabled comparison.
-Bridge 0.2.3 has verified CI artifacts for eight exact adapter profiles; physical acceptance is
+26.2 terrain/HUD failure or supply the interrupted FSR-disabled comparison.
+Bridge 0.2.4 has verified CI artifacts for eight exact adapter profiles; physical acceptance is
 still profile-specific. The device-owner's latest check still requires user
 unlock before game work.
 
 Next actions, using the current artifact records rather than the original
 2.0.1 instructions retained below:
 
-1. Finish independent verification of the pending bridge depth-generation
-   correction and its exact profile JARs. Native 2.0.8 CI verification is
-   complete; use the recorded artifact hashes and source marker. Preserve the
-   completed five-case physical core pass, and rerun the isolated harness when
-   a native change or artifact mismatch requires it.
+1. Use the verified native 2.0.8 and bridge 0.2.4 distribution artifacts and
+   recorded profile JAR hashes. CI/downloaded artifact verification is complete
+   for both repositories. Preserve the completed five-case physical core passes;
+   rerun the isolated harness when a native change or artifact mismatch requires it.
 2. After user unlock, verify the selected launcher profile and that no Minecraft
    process is running before changing a test artifact. Preserve world data,
    original pack archives and backed-up settings. Confirm the new marker from
@@ -76,7 +84,7 @@ Next actions, using the current artifact records rather than the original
 | Requested runtime profile | Next qualification step after unlock and artifact verification |
 | --- | --- |
 | 1.20.1 Forge / Create Delight Remake | Retest the actual modpack and Oculus 1.8.0 with the new bridge, including the original Complementary and Steadfast archives and quality/NativeAA transitions. Preserve the earlier 0.2.1 visual results as their own evidence. |
-| 1.20.1 Fabric | Prepare an isolated profile using the exact pinned Iris/Sodium/bridge tuple, then verify world, pack effects and quality transitions. Preparation is not runtime acceptance. |
+| 1.20.1 Fabric | The isolated local payload is prepared with Loader 0.19.5, Iris 1.7.6, Sodium 0.5.12-beta.2 and bridge 0.2.4; 20 declared dependency predicates pass. After unlock, recheck the installed versions and use FCL's normal new-game/Fabric installer if the clean base is absent. Do not clone Create Delight or replace generated profile JSON. Verify world, pack effects and quality transitions separately. |
 | 1.21.1 NeoForge 21.1.262 | Retest the supported delivery tuple with its exact Iris 1.8.14-beta.1/Sodium 0.8.13 lock, including effects, quality transitions and save/exit. |
 | 1.21.1 Fabric | Verify the isolated profile and exact adapter/mod lock, then run its own world/pack and lifecycle checks. |
 | 26.2 NeoForge | Finish the FSR-disabled versus enabled terrain/HUD comparison with matching pack/settings and recorded phase diagnostics; retain the existing failure. |

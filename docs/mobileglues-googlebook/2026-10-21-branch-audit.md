@@ -155,7 +155,11 @@ subsequently succeeded at exact `ab4d31d`, and artifact `12335463401` was
 independently verified. The runtime record distinguishes its stripped payloads
 from the local unstripped core used physically. A subsequent separate run also
 passed all five cases using the exact extracted CI ARM64 payload, with its own
-core-bound evidence. Game rendering and the pending
-bridge lifecycle correction remain unqualified. These updates do not
+core-bound evidence. The bridge legacy depth correction subsequently passed
+independent host review and was committed at `556cd5d`, with version 0.2.4 at
+`3e62436`. Bridge [CI 39580677811](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/actions/runs/39580677811)
+succeeded in all eight jobs; every downloaded JAR and complete build report
+matches the separately reproduced local artifact. Physical lifecycle/game
+acceptance remains pending. These updates do not
 promote the separate FP16 experiment or close the broader effect/performance
 and lifecycle gates.
