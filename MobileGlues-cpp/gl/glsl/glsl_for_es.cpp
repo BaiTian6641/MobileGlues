@@ -1173,6 +1173,16 @@ std::string GLSLtoGLSLES_2(const char* glsl_code, GLenum glsl_type, uint essl_ve
         R"((\buniform\s+)(?!(?:highp|mediump|lowp)\b)((?:float|vec[234]|int|ivec[234]|mat[234](?:x[234])?))(\s+iris_[A-Za-z0-9_]+\s*;))");
     essl = std::regex_replace(essl, iris_uniform, "$1highp $2$3");
 
+    // SPIRV-Cross emits `layout(binding = 0)` for every sampler that had no
+    // explicit binding in the desktop source. ESSL 3.1+ makes that a fixed
+    // texture unit, so every sampler aliases unit 0 and the application's
+    // glUniform1i calls no longer take effect. Desktop GL treats sampler
+    // bindings as application state; strip the qualifier so unit assignment
+    // remains uniform-driven. Images and storage blocks keep their bindings.
+    static const std::regex sampler_binding(
+        R"(layout\s*\(\s*binding\s*=\s*\d+\s*\)(\s*uniform\s+(?:(?:highp|mediump|lowp)\s+)?sampler))");
+    essl = std::regex_replace(essl, sampler_binding, "$1");
+
     // ESSL 3.10 supports layout(binding=...) on uniform blocks, samplers,
     // images and shader-storage blocks. Keep it when the target can express it:
     // stripping SSBO bindings loses the pack's binding 0/3 contract before the
