@@ -11,25 +11,41 @@
 #include "gles/loader.h"
 #include "gl/mg.h"
 #include "config/settings.h"
+#include "gl/FSR3ScenePlan.h"
 
-// --- the four externals framebuffer.cpp reaches for --------------------------
+// --- the externals framebuffer.cpp reaches for -------------------------------
 struct gles_func_t g_gles_func{};
 namespace FSR1_Context { GLuint g_renderFBO = 0; bool g_dirty = false; }
 void set_gl_state_current_draw_fbo(GLuint v) { gl_state->current_draw_fbo = v; }
 void mg_set_gl_error(GLenum) {}
 static std::array<GLint, 4> driver_viewport{0, 0, 2048, 2048};
 static unsigned viewport_calls = 0;
-static unsigned scene_viewport_calls = 0;
+static unsigned scene_viewport_calls = 0; // conversions the planner accepted
+static unsigned adjust_probe_calls = 0;   // times the bind path asked
 static unsigned native_viewport_calls = 0;
-// Deliberately active hooks catch an implicit viewport mutation by framebuffer
-// binding. Production viewport conversion belongs to an explicit viewport call.
+static bool fsr3_final_scope_active = false;
+static GLuint bound_draw_fb = 0;
+static GLuint bound_read_fb = 0;
+// The bind path must run the same planner as the explicit glViewport/glScissor
+// paths. The real FSR3AdjustViewport asks the driver for COLOR_ATTACHMENT0's
+// texture extent and the EGL surface size; this harness fakes the driver, so it
+// models the target extent per bound framebuffer instead.
+static std::map<GLuint, std::array<int, 2>> target_extent;
 bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
+    ++adjust_probe_calls;
+    const auto it = target_extent.find(bound_draw_fb);
+    if (it == target_extent.end()) return false;
+    const FSR3ViewportPlan plan = FSR3PlanViewport(2880, 1585, it->second[0], it->second[1],
+                                                   x, y, width, height);
+    if (!plan.adjust) return false;
+    x = plan.x;
+    y = plan.y;
+    width = plan.width;
+    height = plan.height;
     ++scene_viewport_calls;
-    x = y = 0;
-    width = 1694;
-    height = 932;
     return true;
 }
+bool FSR3FinalScopeActive() { return fsr3_final_scope_active; }
 void FSR3NativeViewport() {
     ++native_viewport_calls;
     driver_viewport = {0, 0, 2880, 1585};
@@ -44,8 +60,6 @@ thread_local gl_state_t gl_state = &g_default_gl_state;
 static std::map<int, GLuint> physical;   // attachment index -> texture name
 static std::vector<GLenum>   draw_list;  // what the driver was last told
 static std::vector<GLenum>   invalidated;
-static GLuint bound_draw_fb = 0;
-static GLuint bound_read_fb = 0;
 
 static void fake_bind_fb(GLenum target, GLuint fb) {
     if (target != GL_READ_FRAMEBUFFER) bound_draw_fb = fb;
@@ -217,36 +231,81 @@ int main() {
     FSR1_Context::g_renderFBO = 0;
     FSR1_Context::g_dirty = false;
 
-    printf("10. framebuffer binding preserves the viewport, including shadow pass closure\n");
+    printf("10. scene bind restores the pre-scaled viewport; other binds leave it alone\n");
+    // Iris 1.8.14 binds its scaled scene target without an explicit glViewport,
+    // so the binding still carries the native 2880x1585 viewport. Conversion on
+    // that bind is the pre-c3cf54c behavior; a native target, a larger atlas and
+    // a menu rectangle must not move.
     global_settings.fsr3_setting = FSR3_Mode::Experimental;
-    viewport_calls = scene_viewport_calls = native_viewport_calls = 0;
-    for (const auto& viewport : {std::array<GLint, 4>{0, 0, 2048, 2048},
-                                std::array<GLint, 4>{0, 0, 1694, 932},
-                                std::array<GLint, 4>{0, 0, 2880, 1585},
-                                std::array<GLint, 4>{30, 40, 128, 256}}) {
-        driver_viewport = viewport;
-        for (GLenum target : {GL_FRAMEBUFFER, GL_DRAW_FRAMEBUFFER, GL_READ_FRAMEBUFFER}) {
-            // Closing a 26.2 render pass binds zero; the following shadow or
-            // scene framebuffer must inherit the application's existing viewport.
-            for (GLuint framebuffer : {0u, 149u, 91u}) {
-                glBindFramebuffer(target, framebuffer);
-                expect("bind preserves all four viewport components", driver_viewport == viewport, true);
-                GLuint draw = 0, read = 0;
-                mg_framebuffer_binding_ids(draw, read);
-                expect("draw binding still reaches the driver", draw, bound_draw_fb);
-                expect("read binding still reaches the driver", read, bound_read_fb);
-            }
-        }
-    }
+    viewport_calls = scene_viewport_calls = adjust_probe_calls = native_viewport_calls = 0;
+    fsr3_final_scope_active = false;
+    target_extent[91] = {1694, 932};   // scaled scene RenderTarget
+    target_extent[92] = {2880, 1585};  // native-sized target
+    target_extent[149] = {4096, 4096}; // atlas larger than the surface
+
+    driver_viewport = {0, 0, 2880, 1585};
+    glBindFramebuffer(GL_FRAMEBUFFER, 91);
+    expect("scaled scene target converts the native viewport",
+           driver_viewport == std::array<GLint, 4>{0, 0, 1694, 932}, true);
+    expect("scene conversion issues one glViewport", viewport_calls, 1);
+    expect("scene conversion was applied", scene_viewport_calls, 1);
+
+    driver_viewport = {0, 0, 2880, 1585};
+    glBindFramebuffer(GL_FRAMEBUFFER, 92);
+    expect("native target keeps the native viewport",
+           driver_viewport == std::array<GLint, 4>{0, 0, 2880, 1585}, true);
+
+    driver_viewport = {0, 0, 2880, 1585};
+    glBindFramebuffer(GL_FRAMEBUFFER, 149);
+    expect("atlas target keeps the native viewport",
+           driver_viewport == std::array<GLint, 4>{0, 0, 2880, 1585}, true);
+    expect("native and atlas targets are probed but not converted", scene_viewport_calls, 1);
+
+    driver_viewport = {30, 40, 128, 256};
+    glBindFramebuffer(GL_FRAMEBUFFER, 91);
+    expect("non-full-surface viewport (menu) is not scaled",
+           driver_viewport == std::array<GLint, 4>{30, 40, 128, 256}, true);
+    expect("menu viewport is not converted", scene_viewport_calls, 1);
+    expect("each draw-target bind ran the planner", adjust_probe_calls, 4);
+
+    // Closing a 26.2 render pass binds zero while a shadow viewport is current.
+    // That must inherit the existing viewport: there is no FBO-0 native reset.
+    driver_viewport = {0, 0, 2048, 2048};
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    expect("binding zero preserves the shadow viewport",
+           driver_viewport == std::array<GLint, 4>{0, 0, 2048, 2048}, true);
+    expect("binding zero issues no native reset", native_viewport_calls, 0);
+    expect("binding zero is not a scene bind", scene_viewport_calls, 1);
+
+    // The read target never owns the draw viewport.
+    driver_viewport = {0, 0, 2880, 1585};
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 91);
+    expect("read-target bind preserves the viewport",
+           driver_viewport == std::array<GLint, 4>{0, 0, 2880, 1585}, true);
+    expect("read-target bind does not convert", scene_viewport_calls, 1);
+
+    // The bridge sets the final output extent explicitly and brackets it with
+    // the final scope; a bind inside that scope must not override it.
+    fsr3_final_scope_active = true;
+    driver_viewport = {0, 0, 2880, 1585};
+    glBindFramebuffer(GL_FRAMEBUFFER, 91);
+    expect("final scope preserves the bridge viewport",
+           driver_viewport == std::array<GLint, 4>{0, 0, 2880, 1585}, true);
+    expect("final scope suppresses conversion", scene_viewport_calls, 1);
+    fsr3_final_scope_active = false;
+
+    // FSR1's redirect of 0 onto its render FBO is not a scene target; the
+    // viewport must survive it.
     FSR1_Context::g_renderFBO = 42;
     driver_viewport = {3, 5, 2048, 2048};
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     expect("FSR1 redirect preserves viewport", driver_viewport == std::array<GLint, 4>{3, 5, 2048, 2048}, true);
     expect("FSR1 redirect keeps physical draw binding", bound_draw_fb, 42);
     expect("FSR1 redirect keeps original read binding", bound_read_fb, 0);
-    expect("binding issues no driver viewport call", viewport_calls, 0);
-    expect("binding performs no scene viewport conversion", scene_viewport_calls, 0);
-    expect("binding performs no native viewport reset", native_viewport_calls, 0);
+    expect("binding issues no native viewport reset", native_viewport_calls, 0);
+    expect("only the scene bind converted in this scenario", scene_viewport_calls, 1);
+    expect("only the scene bind called glViewport", viewport_calls, 1);
+    expect("FSR1 redirect also ran the planner", adjust_probe_calls, 5);
     FSR1_Context::g_renderFBO = 0;
 
     printf("\n%s (%d failures)\n", fails ? "FAILED" : "all checks passed", fails);

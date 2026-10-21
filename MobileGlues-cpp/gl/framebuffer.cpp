@@ -13,6 +13,7 @@
 #include "log.h"
 #include "../config/settings.h"
 #include "FSR1/FSR1.h"
+#include "FSR3Direct.h"
 
 #define DEBUG 0
 
@@ -213,10 +214,23 @@ void glBindFramebuffer(GLenum target, GLuint framebuffer) {
         GLES.glBindFramebuffer(target, draw_fb);
     }
 
-    // Viewport state is independent of framebuffer binding. In particular,
-    // Minecraft 26.2 closes intermediate render passes by binding zero while
-    // Iris still owns a shadow viewport. Scene conversion belongs to explicit
-    // viewport calls; the bridge sets its final output viewport explicitly.
+    // Viewport state is independent of framebuffer binding in GL, but Iris
+    // 1.8.14 closes a 26.2 render pass by binding the scaled 1694x932 scene
+    // target without issuing glViewport. The viewport left behind is the
+    // 2880x1585 native one, so without this the scene is cropped. c3cf54c
+    // removed the bind-time conversion that used to map it; restore that
+    // conversion for the scene case only, through the same planner the
+    // explicit glViewport/glScissor paths use. The bind of 0 at the end of a
+    // shadow pass stays untouched -- there is no FBO-0 native viewport reset
+    // here -- and so does everything while the bridge's final scope owns the
+    // output extent.
+    if (target != GL_READ_FRAMEBUFFER && draw_fb != 0 && !FSR3FinalScopeActive() &&
+        global_settings.fsr3_setting == FSR3_Mode::Experimental) {
+        GLint viewport[4] = {0, 0, 0, 0};
+        GLES.glGetIntegerv(GL_VIEWPORT, viewport);
+        int x = viewport[0], y = viewport[1], w = viewport[2], h = viewport[3];
+        if (FSR3AdjustViewport(x, y, w, h)) GLES.glViewport(x, y, w, h);
+    }
 }
 // Record a draw binding without issuing one.
 //

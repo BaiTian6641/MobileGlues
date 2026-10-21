@@ -25,6 +25,10 @@ void FSR3SetBridgeMode();
 bool FSR3BridgeMode();
 
 void FSR3SetFinalScope(bool active);
+// True between the bridge's final presentation begin and end. A framebuffer
+// bind in that scope must not re-derive the scene viewport: the bridge sets
+// the final output extent explicitly.
+bool FSR3FinalScopeActive();
 void FSR3SetBridgeDepthTexture(unsigned int texture);
 unsigned int FSR3BridgeDepthTexture();
 void FSR3ApplyFinalViewportUniforms(int currentProgram);

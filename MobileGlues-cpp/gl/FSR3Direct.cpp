@@ -233,6 +233,8 @@ unsigned int FSR3BridgeDepthTexture() { return g_bridge_depth; }
 
 void FSR3SetFinalScope(bool active) { g_final_scope = active; }
 
+bool FSR3FinalScopeActive() { return g_final_scope; }
+
 void FSR3ApplyFinalViewportUniforms(int currentProgram) {
     if (!g_final_scope) return;
     int width = 0, height = 0;
