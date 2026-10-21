@@ -1,7 +1,17 @@
 # Shaderpack support program
 
-Status: **static audits complete; host/device gates NOT RUN. No new pack is
-supported yet.**
+Status: **device probes in progress. No pack is promoted above provisional S1;
+S2/S3 remain NOT RUN.**
+
+Current evidence:
+
+- Sildur Vibrant: provisional S1 (world route, no compile errors).
+- Sildur Enhanced Default: provisional S0; S1 not captured.
+- Sildur Basic: provisional S1.
+- iterationRP original: S0 PASS, S1 FAIL (full frame at NativeAA but brown/black;
+  scaled scene splits into a 960x528 lower-left region).
+- Bliss candidate: S0 FAIL (`deferred.fsh` uniform syntax error).
+- Solas candidate: provisional S0; washed frame, S1 unverified.
 
 This program tracks adoption of original shaderpack archives on the X1E
 Googlebook tuple. The fixed support boundary is **(MobileGlues core, Iris
