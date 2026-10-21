@@ -1,0 +1,19 @@
+{
+  "gl/shader_source.cpp": {},
+  "gl/image_metadata.cpp": {},
+  "gl/glsl/compat_image.cpp": {},
+  "upscaling/mg_fsr.cpp": {"cert-err33-c": 2},
+  "upscaling/mg_fsr_jni.cpp": {
+    "cert-err58-cpp": 1,
+    "bugprone-easily-swappable-parameters": 3,
+    "bugprone-narrowing-conversions": 2
+  },
+  "gl/FSR3Direct.cpp": {
+    "bugprone-easily-swappable-parameters": 3,
+    "bugprone-narrowing-conversions": 4
+  },
+  "egl/context.cpp": {
+    "performance-unnecessary-value-param": 1,
+    "bugprone-easily-swappable-parameters": 3
+  }
+}

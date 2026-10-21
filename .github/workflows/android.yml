@@ -1,0 +1,78 @@
+name: Android APK and core checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Host semantic tests
+        run: sh MobileGlues-cpp/tests/run.sh
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+      - name: Install pinned Android tools
+        run: sdkmanager 'ndk;28.2.13676358' 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Build both native ABIs
+        run: |
+          for abi in arm64-v8a x86_64; do
+            cmake -S MobileGlues-cpp -B "build/$abi" -G Ninja \
+              -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/28.2.13676358/build/cmake/android.toolchain.cmake" \
+              -DANDROID_ABI="$abi" -DANDROID_PLATFORM=android-26 \
+              -DANDROID_STL=c++_static -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
+              -DCMAKE_BUILD_TYPE=Release
+            cmake --build "build/$abi" --parallel 4
+          done
+      - name: AST, compiler lint, analyzer and ownership checks
+        run: |
+          python3 tools/quality/audit.py \
+            --compiler "$ANDROID_HOME/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++" \
+            --target x86_64-linux-gnu --compile-db build/arm64-v8a/compile_commands.json
+      - name: Checkout pinned launcher plugin
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: MobileGL-Dev/MobileGlues-plugin
+          ref: f5105e4ddd1752cccdcc6421c402960d40ec3d9d
+          path: build/plugin
+          persist-credentials: false
+      - name: Prepare plugin with this core
+        run: |
+          python3 tools/ci/prepare_android_plugin.py build/plugin \
+            --library "arm64-v8a=$PWD/build/arm64-v8a/libmobileglues.so" \
+            --library "x86_64=$PWD/build/x86_64/libmobileglues.so"
+      - name: Build APKs and run plugin checks
+        working-directory: build/plugin
+        run: sh gradlew :app:assembleDebug :app:assembleRelease :app:testDebugUnitTest :app:lintDebug --no-daemon
+      - name: Collect APKs and provenance
+        run: |
+          mkdir -p build/distribution
+          cp build/plugin/app/build/outputs/apk/debug/*.apk build/distribution/
+          cp build/plugin/app/build/outputs/apk/release/*.apk build/distribution/
+          cp build/plugin/core-provenance.json build/distribution/
+          git rev-parse HEAD > build/distribution/core-commit.txt
+          python3 tools/ci/verify_android_apk.py build/distribution/*.apk > build/distribution/apk-validation.json
+          cd build/distribution
+          sha256sum ./*.apk > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mobileglues-android-${{ github.sha }}
+          path: build/distribution/
+          if-no-files-found: error
+          retention-days: 14

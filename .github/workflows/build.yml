@@ -1,18 +1,22 @@
 name: Build MobileGlues for iOS
-on: [push, workflow_dispatch]
+on: [workflow_dispatch]
+permissions:
+  contents: read
 jobs:
   build-ios:
     runs-on: macos-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Build MobileGlues
         run: |
           cd MobileGlues-cpp
-          wget https://github.com/leetal/ios-cmake/raw/master/ios.toolchain.cmake
+          curl -fsSL https://raw.githubusercontent.com/leetal/ios-cmake/b36d5bce6f9a2d11d9f144bd5882ba31cfdca420/ios.toolchain.cmake -o ios.toolchain.cmake
+          echo '8d17b77feb69999ebcf9aa4ce3e07babc3d39f9daa23151b1a4f05b825021f2e  ios.toolchain.cmake' | shasum -a 256 -c -
           cmake -B build \
             -DCMAKE_TOOLCHAIN_FILE=ios.toolchain.cmake \
             -DSTATICLIB=OFF \
@@ -23,7 +27,7 @@ jobs:
           codesign -s - build/libmobileglues.dylib
 
       - name: Upload lib
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: MobileGlues-iOS-dylib
           path: /Users/runner/work/MobileGlues/MobileGlues/MobileGlues-cpp/build
