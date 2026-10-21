@@ -67,3 +67,11 @@ No image-format or unit rejection was logged. Therefore the brown/black frame
 is not explained by an illegal image qualifier or a wrong backing format. The
 remaining causes are contents/initialization (especially `pixelData2D` and the
 atmosphere LUT), custom-image clear, or a pack-side post/lighting issue.
+
+## Manual-exposure observation
+
+With `MANUAL_EXPOSURE` on and `SUNLIGHT_LEAK_FIX` off, the frame remains flat
+orange with a black sky. This exonerates the `pixelData2D` exposure scalar as
+the primary cause and weakens the gbuffer lightmap/sun-mask branch. The next
+leading candidates are the atmosphere 3D LUT/custom-texture upload and the
+remaining clear=false custom images.
