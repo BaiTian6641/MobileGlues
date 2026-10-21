@@ -17,4 +17,11 @@
 bool mg_collect_shader_source(GLsizei count, const GLchar* const* strings, const GLint* lengths,
                               std::string* out, GLenum* error);
 
+// Desktop GLSL permits a global `uniform` declaration after a function
+// definition. GLSL ES compilers used by ANGLE reject the `uniform` token in
+// that position. Move unconditional, single-line global uniform declarations
+// that follow the first function to immediately before it. Conditional
+// declarations are left in place because moving them can change their guard.
+std::string mg_hoist_late_global_uniforms(const std::string& source);
+
 #endif // MOBILEGLUES_SHADER_SOURCE_H

@@ -112,6 +112,13 @@ void glShaderSource(GLuint shader, GLsizei count, const GLchar* const* string, c
         }
         LOG_D("\n[INFO] [Shader] Converted Shader source: \n%s", essl_src.c_str())
     }
+    {
+        const std::string hoisted = mg_hoist_late_global_uniforms(essl_src);
+        if (hoisted != essl_src) {
+            LOG_W_FORCE("Hoisted late global uniform declarations before the first function")
+            essl_src = hoisted;
+        }
+    }
     mg_normalize_image_qualifiers(essl_src, image_formats);
     // Iris runs jcpp over the pack source before glShaderSource and the
     // translator regenerates ESSL from SPIR-V, so a #define-based guard here
