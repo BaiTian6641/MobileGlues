@@ -35,6 +35,16 @@ Every game-process row below was captured on **Minecraft 1.21.1 / NeoForge 21.1.
 pass is the reference evidence. Effect-specific rows are not upgraded by this header. The
 1.20.1/Fabric legacy and 26.3/Fabric future lanes have no game-process rows here.
 
+## 26.x experimental lane
+
+| Lane | Result | Evidence |
+| --- | --- | --- |
+| Minecraft 26.2, zero mods, OpenGL/ANGLE, current HEAD | **PASS for the bounded zero-mod world**: terrain, trees, HUD, hand and sky render after exporting the missing draw entry points | [26.2 regression record](validation/2026-10-21-262-sampler-and-rgba8-regressions.md), capture `8cc8dc7c…07d40f105` |
+| Minecraft 26.2, NeoForge + Iris + Sodium | **PENDING** | separate lane; not qualified by the zero-mod pass |
+| 1.21.1 shaderpack lane after the image/translator changes | **PENDING** | regression gate remains open |
+
+The 26.2 zero-mod pass is not a delivery-lane or shaderpack qualification.
+
 ## Renderer / build rows
 
 | Renderer build | Backend/provider | Device | Level | Result | Evidence |

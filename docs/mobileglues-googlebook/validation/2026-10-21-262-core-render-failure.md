@@ -1,5 +1,9 @@
 # Minecraft 26.2 core render failure after viewport fix
 
+> Superseded for root cause and current status by
+> [26.2 sampler, RGBA8 and draw-export regressions](2026-10-21-262-sampler-and-rgba8-regressions.md).
+> This note retains the pre-fix failure evidence; a zero-mod 26.2 world now renders.
+
 Date: 2026-10-21. Device: HP Googlebook 14 `C1L63708PZ`, Snapdragon X1E80100 /
 Adreno X1-85, ANGLE 2.1 / Vulkan 1.4.295, GLES 3.2.
 

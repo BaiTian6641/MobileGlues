@@ -8,6 +8,13 @@ That record supersedes the active task, repository map, latest-build and next-ac
 sections in the historical snapshot below. Review findings and boundaries are in
 [the independent review](2026-10-21-review.md). The supported delivery tuple is unchanged.
 
+26.x experimental status: a zero-mod Minecraft 26.2 world now renders terrain, trees,
+HUD, hand and sky after exporting the missing `glDrawArraysInstanced`/indirect entry
+points. The device bisect, upstream control and three fixed regressions are recorded in
+[the 26.2 regression record](validation/2026-10-21-262-sampler-and-rgba8-regressions.md).
+26.2 NeoForge/Iris/Sodium and the 1.21.1 shaderpack regression lane remain **PENDING**;
+this is not a delivery-lane or full 26.x qualification.
+
 Historical stage snapshot last updated: 2026-10-19 (bridge 1.0.17).
 
 Stage labels below retain the historical `Stage 0`-`Stage 8` numbering used when the evidence
