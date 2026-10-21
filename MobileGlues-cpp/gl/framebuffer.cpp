@@ -13,7 +13,6 @@
 #include "log.h"
 #include "../config/settings.h"
 #include "FSR1/FSR1.h"
-#include "FSR3Direct.h"
 
 #define DEBUG 0
 
@@ -214,25 +213,10 @@ void glBindFramebuffer(GLenum target, GLuint framebuffer) {
         GLES.glBindFramebuffer(target, draw_fb);
     }
 
-    // Iris binds its scaled gbuffer/composite FBOs without setting a viewport.
-    // Scale the current surface-sized viewport at bind time; native final/HUD
-    // targets and shadow targets do not match the surface and stay untouched.
-    if (target != GL_READ_FRAMEBUFFER) {
-        if (draw_fb == 0) {
-            // GUI/menu/HUD frames return to the default framebuffer. A scaled
-            // scene viewport must not leak into them.
-            if (global_settings.fsr3_setting == FSR3_Mode::Experimental) {
-                FSR3NativeViewport();
-            }
-        } else {
-            GLint vp[4] = {0, 0, 0, 0};
-            GLES.glGetIntegerv(GL_VIEWPORT, vp);
-            int x = vp[0], y = vp[1], w = vp[2], h = vp[3];
-            if (FSR3AdjustViewport(x, y, w, h)) {
-                GLES.glViewport(x, y, w, h);
-            }
-        }
-    }
+    // Viewport state is independent of framebuffer binding. In particular,
+    // Minecraft 26.2 closes intermediate render passes by binding zero while
+    // Iris still owns a shadow viewport. Scene conversion belongs to explicit
+    // viewport calls; the bridge sets its final output viewport explicitly.
 }
 // Record a draw binding without issuing one.
 //

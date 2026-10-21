@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <vector>
 #include <map>
+#include <array>
 #include "gl/framebuffer.h"
 #include "gles/loader.h"
 #include "gl/mg.h"
@@ -16,10 +17,23 @@ struct gles_func_t g_gles_func{};
 namespace FSR1_Context { GLuint g_renderFBO = 0; bool g_dirty = false; }
 void set_gl_state_current_draw_fbo(GLuint v) { gl_state->current_draw_fbo = v; }
 void mg_set_gl_error(GLenum) {}
-// The production link provides this via gl/FSR3Direct.cpp. This test only exercises
-// framebuffer shuffle state and has no EGL surface, so the FSR3 scene hook is inert.
-bool FSR3AdjustViewport(int&, int&, int&, int&) { return false; }
-void FSR3NativeViewport() {}
+static std::array<GLint, 4> driver_viewport{0, 0, 2048, 2048};
+static unsigned viewport_calls = 0;
+static unsigned scene_viewport_calls = 0;
+static unsigned native_viewport_calls = 0;
+// Deliberately active hooks catch an implicit viewport mutation by framebuffer
+// binding. Production viewport conversion belongs to an explicit viewport call.
+bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
+    ++scene_viewport_calls;
+    x = y = 0;
+    width = 1694;
+    height = 932;
+    return true;
+}
+void FSR3NativeViewport() {
+    ++native_viewport_calls;
+    driver_viewport = {0, 0, 2880, 1585};
+}
 int __android_log_print(int, const char*, const char*, ...) { return 0; }
 extern "C" void write_log(const char*, ...) {}
 global_settings_t global_settings{};
@@ -31,8 +45,16 @@ static std::map<int, GLuint> physical;   // attachment index -> texture name
 static std::vector<GLenum>   draw_list;  // what the driver was last told
 static std::vector<GLenum>   invalidated;
 static GLuint bound_draw_fb = 0;
+static GLuint bound_read_fb = 0;
 
-static void fake_bind_fb(GLenum, GLuint fb) { bound_draw_fb = fb; }
+static void fake_bind_fb(GLenum target, GLuint fb) {
+    if (target != GL_READ_FRAMEBUFFER) bound_draw_fb = fb;
+    if (target != GL_DRAW_FRAMEBUFFER) bound_read_fb = fb;
+}
+static void fake_viewport(GLint x, GLint y, GLsizei width, GLsizei height) {
+    ++viewport_calls;
+    driver_viewport = {x, y, width, height};
+}
 static void fake_fbtex2d(GLenum, GLenum att, GLenum, GLuint tex, GLint) {
     physical[att - GL_COLOR_ATTACHMENT0] = tex;
 }
@@ -47,6 +69,10 @@ static void fake_fbtex(GLenum, GLenum att, GLuint tex, GLint) {
 }
 static void fake_drawbuffers(GLsizei n, const GLenum* b) { draw_list.assign(b, b + n); }
 static void fake_getintegerv(GLenum pname, GLint* v) {
+    if (pname == GL_VIEWPORT) {
+        std::copy(driver_viewport.begin(), driver_viewport.end(), v);
+        return;
+    }
     *v = (pname == GL_MAX_COLOR_ATTACHMENTS || pname == GL_MAX_DRAW_BUFFERS) ? 8 : 0;
 }
 static void fake_deletefb(GLsizei, const GLuint*) {}
@@ -66,6 +92,7 @@ static void expect(const char* what, GLuint got, GLuint want) {
 
 int main() {
     GLES.glBindFramebuffer       = fake_bind_fb;
+    GLES.glViewport              = fake_viewport;
     GLES.glFramebufferTexture2D  = fake_fbtex2d;
     GLES.glFramebufferRenderbuffer = fake_fbrb;
     GLES.glFramebufferTextureLayer = fake_fblayer;
@@ -189,6 +216,38 @@ int main() {
     expect("failed rebuild republishes the surface", gl_state->current_draw_fbo, 0);
     FSR1_Context::g_renderFBO = 0;
     FSR1_Context::g_dirty = false;
+
+    printf("10. framebuffer binding preserves the viewport, including shadow pass closure\n");
+    global_settings.fsr3_setting = FSR3_Mode::Experimental;
+    viewport_calls = scene_viewport_calls = native_viewport_calls = 0;
+    for (const auto& viewport : {std::array<GLint, 4>{0, 0, 2048, 2048},
+                                std::array<GLint, 4>{0, 0, 1694, 932},
+                                std::array<GLint, 4>{0, 0, 2880, 1585},
+                                std::array<GLint, 4>{30, 40, 128, 256}}) {
+        driver_viewport = viewport;
+        for (GLenum target : {GL_FRAMEBUFFER, GL_DRAW_FRAMEBUFFER, GL_READ_FRAMEBUFFER}) {
+            // Closing a 26.2 render pass binds zero; the following shadow or
+            // scene framebuffer must inherit the application's existing viewport.
+            for (GLuint framebuffer : {0u, 149u, 91u}) {
+                glBindFramebuffer(target, framebuffer);
+                expect("bind preserves all four viewport components", driver_viewport == viewport, true);
+                GLuint draw = 0, read = 0;
+                mg_framebuffer_binding_ids(draw, read);
+                expect("draw binding still reaches the driver", draw, bound_draw_fb);
+                expect("read binding still reaches the driver", read, bound_read_fb);
+            }
+        }
+    }
+    FSR1_Context::g_renderFBO = 42;
+    driver_viewport = {3, 5, 2048, 2048};
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    expect("FSR1 redirect preserves viewport", driver_viewport == std::array<GLint, 4>{3, 5, 2048, 2048}, true);
+    expect("FSR1 redirect keeps physical draw binding", bound_draw_fb, 42);
+    expect("FSR1 redirect keeps original read binding", bound_read_fb, 0);
+    expect("binding issues no driver viewport call", viewport_calls, 0);
+    expect("binding performs no scene viewport conversion", scene_viewport_calls, 0);
+    expect("binding performs no native viewport reset", native_viewport_calls, 0);
+    FSR1_Context::g_renderFBO = 0;
 
     printf("\n%s (%d failures)\n", fails ? "FAILED" : "all checks passed", fails);
     return fails != 0;

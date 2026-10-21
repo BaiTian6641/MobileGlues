@@ -33,6 +33,12 @@ int main() {
     auto f = FSR3PlanViewport(S, T, 1920, 1200, 100, 50, 640, 360);
     expect("partial viewport left alone", f, false, 100, 50, 640, 360);
 
+    auto balanced = FSR3PlanViewport(2880, 1585, 1694, 932, 0, 0, 2880, 1585);
+    expect("explicit Balanced scene request scales once", balanced, true, 0, 0, 1694, 932);
+
+    auto shadow = FSR3PlanViewport(2880, 1585, 2048, 2048, 0, 0, 2048, 2048);
+    expect("observed 26.2 shadow request retains square extent", shadow, false, 0, 0, 2048, 2048);
+
     auto g = FSR3PlanViewport(S, T, 0, 0, 0, 0, S, T);
     expect("zero target left alone", g, false, 0, 0, S, T);
 
