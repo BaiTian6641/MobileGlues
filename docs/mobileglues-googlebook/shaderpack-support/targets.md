@@ -21,6 +21,28 @@ Initial source scan: legacy OptiFine/Iris-style shaders with `gl_FragData`,
 declarations in the top-level programs. Likely blockers are translator/profile
 compatibility, not new GPU features. Confirm by static compile and device import.
 
+## Bliss and Solas (candidate additions)
+
+These are Modrinth community requests being investigated alongside the original
+two-pack program. They are **candidates, not committed support targets**, until
+their static audits and device gates complete.
+
+| Field | Bliss | Solas |
+| --- | --- | --- |
+| Modrinth project | `ZvMtQlho` / `bliss-shader` | `EpQFjzrQ` / `solas-shader` |
+| Version | 2.1.2 | 3.0 |
+| Version ID | `kC2Y8q1P` | `idWbCGE2` |
+| SHA-256 | `f41db92acc585fe9ffe0cc124d6ecaea27cef9ded91129ebc2a8e60226947b2c` | `70761ed8a7b540c4df60e6775100415fa0de0f24f57c6182d09eab6323c4c78c` |
+| Modrinth SHA-512 verified | yes | yes |
+| License | All-Rights-Reserved | All-Rights-Reserved |
+| Local fixture | `/home/polar/MobileGlues-fixtures/Bliss-Solas/Bliss_v2.1.2_(Chocapic13_Shaders_edit).zip` | `.../Solas Shader V3.0.zip` |
+| Read-only extract | `/tmp/bliss` | `/tmp/solas` |
+
+Initial source scan: Bliss uses `#version 430 compatibility` compute/shadowcomp
+programs alongside legacy graphics stages; Solas uses `#version 430
+compatibility` shadow compute and `#version 130` graphics stages. Both require
+static feature mapping before device import. No support claim is made here.
+
 ## iterationRP (P1)
 
 | Field | Value |
