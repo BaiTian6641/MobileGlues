@@ -210,20 +210,9 @@ bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
     GLES.glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &target_h);
     GLES.glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(prev_tex));
     GLES.glActiveTexture(static_cast<GLenum>(prev_unit));
-    if (target_w >= surface_w && target_h >= surface_h) {
-        if (width == surface_w && height == surface_h) return false;
-        x = 0;
-        y = 0;
-        width = surface_w;
-        height = surface_h;
-        static bool logged_native = false;
-        if (!logged_native) {
-            logged_native = true;
-            LOG_W_FORCE("FSR3 native-target viewport %dx%d", width, height);
-        }
-        return true;
-    }
-    if (width != surface_w || height != surface_h) return false;
+    // Attachment size alone cannot identify a final pass: native-sized targets
+    // and larger atlases may use arbitrary viewports or scissor rectangles.
+    // The bridge resets the final viewport explicitly at its presentation boundary.
     const FSR3ViewportPlan plan = FSR3PlanViewport(surface_w, surface_h, target_w, target_h,
                                                     x, y, width, height);
     if (!plan.adjust) return false;

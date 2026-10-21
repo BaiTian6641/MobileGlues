@@ -21,6 +21,8 @@ $CXX -o /tmp/mg_subgroup_test tests/compat_subgroup_test.cpp gl/glsl/compat_subg
 $CXX -o /tmp/mg_fsr_contract_test tests/fsr_contract_test.cpp
 $CXX -o /tmp/mg_fsr1_core_test tests/fsr1_core_test.cpp
 $CXX -o /tmp/mg_fsr3_viewport_test tests/fsr3_viewport_test.cpp
+$CXX -ffunction-sections -fdata-sections -Wl,--gc-sections -o /tmp/mg_fsr3_viewport_runtime_test \
+    tests/fsr3_viewport_runtime_test.cpp gl/FSR3Direct.cpp
 $CXX -o /tmp/mg_fsr3_motion_math_test tests/fsr3_motion_math_test.cpp 
 $CXX -o /tmp/mg_fsr3_depth_contract_test tests/fsr3_depth_contract_test.cpp
 $CXX -o /tmp/mg_diagnostic_format_test tests/diagnostic_format_test.cpp
@@ -28,6 +30,7 @@ $CXX -o /tmp/mg_diagnostic_disabled_test tests/diagnostic_disabled_test.cpp
 /tmp/mg_fsr1_core_test
 echo
 /tmp/mg_fsr3_viewport_test
+/tmp/mg_fsr3_viewport_runtime_test
 echo
 /tmp/mg_fsr3_motion_math_test
 /tmp/mg_fsr3_depth_contract_test

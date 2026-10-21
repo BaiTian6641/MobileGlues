@@ -36,7 +36,7 @@ inline FSR3ViewportPlan FSR3PlanViewport(int surface_width, int surface_height,
     if (surface_width <= 0 || surface_height <= 0 || target_width <= 0 || target_height <= 0 ||
         width <= 0 || height <= 0)
         return plan;
-    if (width != surface_width || height != surface_height) return plan;
+    if (x != 0 || y != 0 || width != surface_width || height != surface_height) return plan;
     if (target_width >= surface_width || target_height >= surface_height) return plan;
     const float sx = static_cast<float>(target_width) / static_cast<float>(surface_width);
     const float sy = static_cast<float>(target_height) / static_cast<float>(surface_height);
