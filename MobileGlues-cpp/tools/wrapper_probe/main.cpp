@@ -1048,6 +1048,21 @@ void main() { outb.value = imageLoad(img, ivec3(0)).r; }
     return r;
 }
 
+Result test_image2d_rgba8_null_bind() {
+    Result r;
+    GLuint tex = 0;
+    api.glGenTextures(1, &tex);
+    api.glBindTexture(GL_TEXTURE_2D, tex);
+    api.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    const GLenum tex_error = api.glGetError();
+    api.glBindImageTexture(0, tex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+    const GLenum bind_error = api.glGetError();
+    api.glDeleteTextures(1, &tex);
+    r.ok = tex_error == GL_NO_ERROR && bind_error == GL_NO_ERROR;
+    r.detail = "tex=" + std::to_string(tex_error) + " bind=" + std::to_string(bind_error);
+    return r;
+}
+
 Result test_image2d_mutable_bind() {
     Result r;
     float zeros[16] = {0};
@@ -4235,6 +4250,7 @@ int main(int argc, char** argv) {
     if (!strcmp(mode, "iteration_caps")) run("iteration_caps", test_iteration_caps);
     if (!strcmp(mode, "all") || !strcmp(mode, "extensions")) run("extension_consistency", test_extension_consistency);
     if (!strcmp(mode, "all") || !strcmp(mode, "formatless_image")) run("formatless_image_metadata", test_formatless_image_metadata);
+    if (!strcmp(mode, "rgba8_null_bind")) run("image2d_rgba8_null_bind", test_image2d_rgba8_null_bind);
     if (!strcmp(mode, "image2d_mutable")) run("image2d_mutable_bind", test_image2d_mutable_bind);
     if (!strcmp(mode, "all") || !strcmp(mode, "explicit_image")) run("explicit_image_binding", test_explicit_image_binding);
     if (!strcmp(mode, "all") || !strcmp(mode, "duplicate_image")) run("duplicate_image_binding", test_duplicate_image_binding);
