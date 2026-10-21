@@ -478,3 +478,14 @@ The saved log shows `Using shaderpack: iterationRP Alpha 0.8.31.zip`; the
 private `iterationRP-noTAA-test.zip` was never selected. The previous
 "inconclusive" note is withdrawn. TAA/colortex7 remains a live temporal
 candidate, alongside IRC accumulation and RTW refresh.
+
+## No-TAA control: completed
+
+The private no-TAA pack is confirmed active (`Using shaderpack:
+iterationRP-noTAA-test.zip`). Terrain remains flat orange and the sky remains
+black. Screenshot SHA-256 `3dec7bd2ad367628e925ba19f3d183e80aabce7908a31e57d2ea81c185556143`.
+
+TAA is therefore eliminated as the primary cause. The leading mechanism is the
+colortex0 ping-pong side selected for the no-final copy, consistent with the
+diffuse-denoiser `frameWeights` scratch side identified in the final-sampling
+audit.
