@@ -5,10 +5,85 @@ Continuation on 2026-10-21: see
 [independent review](2026-10-21-review.md). Later FSR3 findings are in
 [universal rendering research](2026-10-21-fsr3-universal-rendering-research.md) and
 [depth contract and runtime status](2026-10-21-fsr3-depth-contract-and-runtime-status.md),
-which record the `2.0.5-dev` / bridge `0.2.2` 26.2 rendering failure and remaining
-device gates. These records supersede the immediate-state
-table and next-action list below. The original handoff is retained as the
+which retain the `2.0.5-dev` / bridge `0.2.2` 26.2 rendering failure, later
+2.0.6/bridge 0.2.3 CI, the 2.0.7 full-library error failure, interrupted control
+and the verified 2.0.8 CI artifacts and physical buffer pass with remaining
+game gates. The
+[buffer mapping checkpoint](2026-10-21-buffer-mapping-and-rendering-checkpoint.md)
+records the separately reviewed S4.9 corrections and their host/provider
+limits. These records supersede the immediate-state table and next-action list below. The original handoff is retained as the
 baseline; it is not a description of the latest branch or artifacts.
+
+## Current continuation checkpoint
+
+The delivery branch is `codex/desktop-gl-universal-fsr`. Current corrective
+commits are buffer mapping `ed85188`, viewport/scissor `e3ab06c`, buffer errors
+`9549931`, durable probe tooling `c02565e`, and 2.0.8-dev packaging `ab4d31d`.
+The exact revisions and evidence are linked in the runtime and buffer records
+above. The latest error correction passed independent review and 187 focused
+ASan/UBSan checks. Its completed old-source comparison failed 38 assertions;
+the corrected source failed none. Native CI [39578250534](https://github.com/BaiTian6641/MobileGlues/actions/runs/39578250534)
+succeeded at exact `ab4d31d`; artifact `12335463401` and the locally signed
+release derivative are independently verified. The runtime record keeps the
+CI unstripped input, stripped payload, diagnostic APK and physically tested
+local core hashes separate.
+
+The permanent bridge checkout is clean on `codex/resource-pack-metadata` at
+[`2f0e4faf57489c51418bfa9fe534d63f7623a769`](https://github.com/BaiTian6641/MobileGlues-FSR3-Bridge/commit/2f0e4faf57489c51418bfa9fe534d63f7623a769).
+Advance it to the next reviewed bridge commit when ready, then pin the matching
+0.2.4 profile JAR hashes and CI/source evidence before runtime qualification.
+The pending version is not yet a verified artifact set.
+
+The physical system provider passes the expanded five-case buffer suite.
+MobileGlues 2.0.7 passed the three visibility cases but failed invalid-flag
+reporting; that overall result remains FAIL. The corrected 2.0.8 full library
+subsequently passed all five expanded cases with its exact core hash and
+`src-beaba336ea4452da` marker. A separate run of the exact ARM64 core extracted
+from the verified CI APK also passed all five cases, with its distinct core
+hash and runner evidence retained. These results do not resolve the last recorded
+26.2 terrain/HUD failure or supplies the interrupted FSR-disabled comparison.
+Bridge 0.2.3 has verified CI artifacts for eight exact adapter profiles; physical acceptance is
+still profile-specific. The device-owner's latest check still requires user
+unlock before game work.
+
+Next actions, using the current artifact records rather than the original
+2.0.1 instructions retained below:
+
+1. Finish independent verification of the pending bridge depth-generation
+   correction and its exact profile JARs. Native 2.0.8 CI verification is
+   complete; use the recorded artifact hashes and source marker. Preserve the
+   completed five-case physical core pass, and rerun the isolated harness when
+   a native change or artifact mismatch requires it.
+2. After user unlock, verify the selected launcher profile and that no Minecraft
+   process is running before changing a test artifact. Preserve world data,
+   original pack archives and backed-up settings. Confirm the new marker from
+   the game process before interpreting its rendering.
+3. Complete the 26.2 FSR-disabled control and an enabled comparison using the
+   same pack/settings. Bridge 0.2.3 can trace terrain phases with FSR disabled;
+   absent `FINAL_DRAW`/`SUBMIT_RESULT` roles are expected in that control.
+   Capture terrain and HUD behavior, then save and exit normally. The prior
+   uncontrolled restart has no established cause; it is not a completed control.
+4. Verify quality-switch and NativeAA depth lifetime for the corrected legacy
+   bridge adapters. Prepare/verify the exact requested profile locks in the
+   matrix below, then test each independently with the reviewed 0.2.4 bridge.
+   Preserve completed profile results while adding new evidence; 1.18.2 stays
+   at build/static evidence until it receives its own runtime session.
+5. Continue the general desktop-GL gaps and effect/lifecycle gates from their
+   evidence rows. Retain explicit provider limits and the separate unqualified
+   FP16 experiment; do not infer full temporal FSR3, universal compatibility,
+   sustained performance or X2E support from the bounded probe results.
+
+| Requested runtime profile | Next qualification step after unlock and artifact verification |
+| --- | --- |
+| 1.20.1 Forge / Create Delight Remake | Retest the actual modpack and Oculus 1.8.0 with the new bridge, including the original Complementary and Steadfast archives and quality/NativeAA transitions. Preserve the earlier 0.2.1 visual results as their own evidence. |
+| 1.20.1 Fabric | Prepare an isolated profile using the exact pinned Iris/Sodium/bridge tuple, then verify world, pack effects and quality transitions. Preparation is not runtime acceptance. |
+| 1.21.1 NeoForge 21.1.262 | Retest the supported delivery tuple with its exact Iris 1.8.14-beta.1/Sodium 0.8.13 lock, including effects, quality transitions and save/exit. |
+| 1.21.1 Fabric | Verify the isolated profile and exact adapter/mod lock, then run its own world/pack and lifecycle checks. |
+| 26.2 NeoForge | Finish the FSR-disabled versus enabled terrain/HUD comparison with matching pack/settings and recorded phase diagnostics; retain the existing failure. |
+| 26.2 Fabric | Verify isolated preparation and the exact pinned tuple, then run a separate terrain/HUD and FSR comparison. A NeoForge result does not qualify it. |
+| 1.18.2 Forge and Fabric | Retain the verified build/static adapter checks; runtime qualification is NOT RUN until separately scheduled and executed. |
+
+## Original handoff baseline
 
 Date: 2026-10-21. Target: Minecraft 1.21.1 / NeoForge 21.1.262 / Iris
 1.8.14-beta.1 / Sodium 0.8.13, HP Googlebook 14 (`C1L63708PZ`), Snapdragon

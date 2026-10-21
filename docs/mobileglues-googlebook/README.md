@@ -9,7 +9,8 @@ directory does not contain release claims. Machine-readable distribution inputs 
 | File | Purpose |
 | --- | --- |
 | [FSR3 universal rendering research](2026-10-21-fsr3-universal-rendering-research.md) | Eight exact adapter locks, primary-source API families from 1.17 through 26.2, rendering contracts and future qualification gaps. |
-| [FSR3 depth contract and runtime status](2026-10-21-fsr3-depth-contract-and-runtime-status.md) | Native `4d93e41`, packaging `2.0.5-dev`, bridge `0.2.2` ownership/protocol, Create/Steadfast visual pass, 26.2 rendering failure and remaining device gates. |
+| [Buffer mapping and rendering checkpoint](2026-10-21-buffer-mapping-and-rendering-checkpoint.md) | S4.9 coherent-storage versus mapping correction, exact Sodium comparison, mapping/error corrections, 187-check review, five-case host/provider evidence and unproven terrain causality. |
+| [FSR3 depth contract and runtime status](2026-10-21-fsr3-depth-contract-and-runtime-status.md) | Depth and viewport/buffer checkpoints, verified native 2.0.8 and bridge 0.2.3 CI, Create/Steadfast visual pass, retained 26.2 failure and interrupted control, 2.0.7 full-library error failure, 2.0.8 physical full-library pass, and pending game/bridge lifecycle gates. |
 | `execution-state.md` | Current task, repository identity, confirmed progress, blockers and next action. |
 | `feature-matrix.md` | Evidence rows for renderer builds, provider gates, pack/effect attempts and device gates. |
 | `decisions.md` | Architecture decisions with evidence and consequences. |
@@ -37,7 +38,15 @@ into Stage 0.
 Do not copy a historical stage result into a current gate without rechecking its lane, provider
 and pack tuple.
 
-## Current lane status
+## Earlier stage checkpoint
+
+The stage table below predates the desktop-GL continuation. Use the dated buffer
+and runtime records above for the latest source, artifacts and physical results:
+2.0.8 has passed independent CI artifact verification and the bounded physical
+full-library buffer suite, including a separate run of the exact CI ARM64 payload. Game rendering and the bridge lifecycle correction
+remain pending. The historical absence/status statements below
+are not a current feature inventory. New bounded fixes do not automatically
+close their larger stage gates.
 
 | Lane/stage | Status | What the evidence covers |
 | --- | --- | --- |

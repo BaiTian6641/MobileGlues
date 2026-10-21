@@ -127,6 +127,35 @@ and zero new diagnostics against its 26-diagnostic baseline. Its rejection path 
 viewport, scissor and color-mask state before returning, and it rejects a resize
 mismatch before allocating or dispatching. This does not qualify every launcher
 resolution policy: a main target deliberately smaller than the EGL output is
-rejected by the current bridge contract. The existing native-target branch that
-expands partial viewports is separate review debt, not covered by the pure
-viewport helper's partial-viewport test.
+rejected by the current bridge contract. At this audit checkpoint, the native-target
+branch that expanded partial viewports remained separate review debt; the pure
+viewport helper test did not cover that production branch.
+
+That debt was subsequently corrected by
+[`e3ab06c`](https://github.com/BaiTian6641/MobileGlues/commit/e3ab06c9b61bb97c52bc01816698f86852251d0b).
+The new regression links the actual `FSR3Direct.cpp`: the pre-fix translation
+unit fails five cases, while the corrected source passes the same checks and
+ASan/UBSan. It preserves partial/offset viewport and scissor rectangles, including
+atlas targets. The later nine-translation-unit static audit reports 25 existing
+diagnostics and zero new diagnostics. These remain host/static results; see the
+[latest runtime and artifact record](2026-10-21-fsr3-depth-contract-and-runtime-status.md)
+for the separate 2.0.7 failure, 2.0.8 full-library pass and remaining artifact/game gates.
+
+Later delivery commits preserve the separation of semantic fixes and tooling:
+[`9549931`](https://github.com/BaiTian6641/MobileGlues/commit/95499319f3081e51ffc4da1267b0c78eb76f8432)
+corrects three buffer entry points' application errors;
+[`c02565e`](https://github.com/BaiTian6641/MobileGlues/commit/c02565ef034fc798686271f053a5e25c67832472)
+adds the durable full-library probe and five-case suite; and
+[`ab4d31d`](https://github.com/BaiTian6641/MobileGlues/commit/ab4d31db0aa849cb5bbd3446cee91d60a71ef793)
+versions the candidate as 2.0.8-dev. Independent review and 187 focused
+ASan/UBSan checks passed. The old-source bounded comparison failed 38 assertions;
+the physical system provider and corrected 2.0.8 full library each passed all
+five expanded cases in separate runs. Native [CI 39578250534](https://github.com/BaiTian6641/MobileGlues/actions/runs/39578250534)
+subsequently succeeded at exact `ab4d31d`, and artifact `12335463401` was
+independently verified. The runtime record distinguishes its stripped payloads
+from the local unstripped core used physically. A subsequent separate run also
+passed all five cases using the exact extracted CI ARM64 payload, with its own
+core-bound evidence. Game rendering and the pending
+bridge lifecycle correction remain unqualified. These updates do not
+promote the separate FP16 experiment or close the broader effect/performance
+and lifecycle gates.
