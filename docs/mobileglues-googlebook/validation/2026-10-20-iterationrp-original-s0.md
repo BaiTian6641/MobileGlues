@@ -49,3 +49,16 @@ assigned but no format producer.
 
 An image-bridge JAR is a **diagnostic only**; it is not a support dependency and
 does not qualify the original pack.
+
+## Diagnostic bridge cleanup
+
+`mgirisbridge-1.0.22.jar` was copied to the mods folder for one isolation test,
+but the game did not relaunch and the JAR never loaded. FCL's content provider
+does not implement delete, and the app is not debuggable, so it was not
+removable from the host. It must be removed through the FCL file manager before
+the next launch. It is a diagnostic artifact only and must not be listed as a
+support dependency.
+
+The stable core `c741b74d…` was reinstalled after the G1 experiment. The G1
+source remains committed and host-tested; it is not currently the installed
+device build.
