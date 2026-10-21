@@ -13,7 +13,7 @@ These are candidate additions to the shaderpack support program.
 | SOL-00 | Pin Solas 3.0 hash/license/fixture | DONE | `targets.md` |
 | SOL-01 | Static Solas audit | DONE | `audits/2026-10-20-solas-static-audit.md` |
 | SOL-02 | Host shadowcomp/shadow image probes | NOT RUN | distinct units, vertex stage |
-| SOL-03 | Device S0/S1 default profile | NOT RUN | default includes VX compute/images |
+| SOL-03 | Device S0/S1 default profile | **S0 PASS; S1 unproven** | loaded 44 FPS; image warnings; washed frame; `validation/2026-10-20-solas-s0.md` |
 | SOL-04 | End/PBR/DH/advanced lanes | NOT RUN | separate gates |
 
 Neither pack is promoted to a committed support target by this ledger. Bliss
