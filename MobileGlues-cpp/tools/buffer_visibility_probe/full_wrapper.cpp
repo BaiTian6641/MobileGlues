@@ -256,6 +256,51 @@ int main(int argc, char** argv) {
         run("persistent_coherent", [&]{visibility(persistent | GL_MAP_COHERENT_BIT_EXT, persistent | GL_MAP_COHERENT_BIT_EXT, render_program, vao);});
         run("invalid_flags", invalid_flags);
         run("invalid_flush_range", invalid_flush_range);
+        // Minecraft 26.2's GlBuffer.Direct uses the DSA entry points, not the
+        // target-bound ones. Exercise the same 0x72 mapping and verify that an
+        // explicit flush makes the written bytes visible to a readback.
+        run("dsa_persistent_explicit_0x72", [&]{
+            using StorageFn = void (*)(GLuint, GLsizeiptr, const void*, GLbitfield);
+            using MapFn = void* (*)(GLuint, GLintptr, GLsizeiptr, GLbitfield);
+            using UnmapFn = GLboolean (*)(GLuint);
+            using FlushFn = void (*)(GLuint, GLintptr, GLsizeiptr);
+            using CopyFn = void (*)(GLuint, GLuint, GLintptr, GLintptr, GLsizeiptr);
+            const auto storage = load<StorageFn>(library, "glNamedBufferStorage");
+            const auto map = load<MapFn>(library, "glMapNamedBufferRange");
+            const auto unmap = load<UnmapFn>(library, "glUnmapNamedBuffer");
+            const auto flush = load<FlushFn>(library, "glFlushMappedNamedBufferRange");
+            const auto copy = load<CopyFn>(library, "glCopyNamedBufferSubData");
+            GLuint source = 0, destination = 0;
+            buffers.gen(1, &source); buffers.gen(1, &destination);
+            require(source != 0 && destination != 0, "DSA buffer generation failed");
+            constexpr GLbitfield persistent = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT_EXT;
+            storage(source, 64, nullptr, persistent);
+            storage(destination, 64, nullptr, GL_MAP_READ_BIT);
+            check_error("DSA storage");
+            auto* mapping = static_cast<unsigned char*>(
+                    map(source, 0, 64, persistent | GL_MAP_FLUSH_EXPLICIT_BIT | GL_MAP_UNSYNCHRONIZED_BIT));
+            require(mapping != nullptr, "DSA mapping failed");
+            for (int i = 0; i < 64; ++i) mapping[i] = static_cast<unsigned char>(i * 3 + 7);
+            flush(source, 0, 64);
+            check_error("DSA explicit flush");
+            // Minecraft 26.2 keeps its staging buffer mapped while copying from
+            // it. Copy before unmap so the test covers that exact sequence.
+            copy(source, destination, 0, 0, 64);
+            check_error("DSA mapped-source copy");
+            const GLsync fence = full.glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+            require(fence != nullptr, "DSA fence failed");
+            const GLenum wait = full.glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1000000000ull);
+            full.glDeleteSync(fence);
+            require(wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED, "DSA fence did not complete");
+            require(unmap(source) == GL_TRUE, "DSA source unmap failed");
+            check_error("DSA source unmap");
+            auto* readback = static_cast<unsigned char*>(map(destination, 0, 64, GL_MAP_READ_BIT));
+            require(readback != nullptr, "DSA destination mapping failed");
+            for (int i = 0; i < 64; ++i)
+                require(readback[i] == static_cast<unsigned char>(i * 3 + 7), "DSA flushed bytes were not visible after copy");
+            require(unmap(destination) == GL_TRUE, "DSA destination unmap failed");
+            buffers.remove(1, &source); buffers.remove(1, &destination);
+        });
         full.glBindVertexArray(0); full.glDeleteVertexArrays(1, &vao); full.glUseProgram(0); full.glDeleteProgram(render_program);
         check_error("program/VAO cleanup");
         // Keep the library loaded until the EGL context has been destroyed.

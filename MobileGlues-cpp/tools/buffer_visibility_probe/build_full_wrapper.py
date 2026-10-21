@@ -79,7 +79,7 @@ def main():
         "egl_context_client_version_requested": 3,
         "shader_dialect": "GLSL 330 core",
         "resolution": "same-DSO dlsym plus dladdr validation; no provider fallback or EGL/GLES link",
-        "cases": ["persistent_explicit_0x72", "nonpersistent_explicit", "persistent_coherent", "invalid_flags", "invalid_flush_range"],
+        "cases": ["persistent_explicit_0x72", "nonpersistent_explicit", "persistent_coherent", "invalid_flags", "invalid_flush_range", "dsa_persistent_explicit_0x72"],
         "runtime": "not run by this build",
     }
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")

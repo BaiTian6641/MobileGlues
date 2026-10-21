@@ -131,7 +131,7 @@ it remains empty with an unavailable flag when no context exists.
 Any missing capability/symbol, compile/link failure, invalid-flag acceptance,
 wrong pixel/flag, synchronization failure, unexpected error or failed context
 cleanup yields a failure. The runner preserves the raw result and diagnostics,
-requires all five distinct cases to pass, and rejects missing/invalid JSON,
+requires all six distinct cases to pass, and rejects missing/invalid JSON,
 timeouts, wrong markers or missing provider identity. A completed build or
 three passing visibility cases with a failing error case cannot satisfy that
 overall gate.
@@ -153,6 +153,15 @@ flush offset and for a range exceeding the mapping, then verifies that a legal
 flush and unmap succeed. It performs no image-visibility comparison. Earlier
 four-case reports remain four-case evidence and are not relabelled as this
 expanded suite.
+
+The sixth case, `dsa_persistent_explicit_0x72`, exercises the DSA entry points
+used by Minecraft 26.2: `glNamedBufferStorage`, `glMapNamedBufferRange`,
+`glFlushMappedNamedBufferRange`, `glCopyNamedBufferSubData`, and
+`glUnmapNamedBuffer`. It keeps the source mapped while copying, then fences and
+reads the destination through a legal read mapping. This closes the prior gap
+where only the target-bound `glMapBufferRange` path was tested. It does not
+cover `glGetNamedBufferSubData`, whose underlying `glGetBufferSubData` entry
+point is currently a stub.
 
 Host-only validation of the full-wrapper guard and result parser can be run
 without any device or graphics library:

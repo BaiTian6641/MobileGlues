@@ -16,7 +16,8 @@ import uuid
 
 
 EXPECTED_CASES = {"persistent_explicit_0x72", "nonpersistent_explicit",
-                  "persistent_coherent", "invalid_flags", "invalid_flush_range"}
+                  "persistent_coherent", "invalid_flags", "invalid_flush_range",
+                  "dsa_persistent_explicit_0x72"}
 
 
 def digest(path):
