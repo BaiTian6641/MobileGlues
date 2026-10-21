@@ -1,5 +1,5 @@
 // Real EGL/GLES buffer visibility checks. The provider build never links
-// MobileGlues; the host adapter build links only the real buffer.cpp.
+// MobileGlues; the host adapter links the real buffer.cpp and getter.cpp.
 #include "api.h"
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -16,7 +16,9 @@
 #include <vector>
 
 #ifdef MG_BUFFER_WRAPPER
-void attach_buffer_wrapper(BufferApi&, void (*)(GLenum, GLint*));
+using ErrorReader = GLenum (*)();
+ErrorReader attach_buffer_wrapper(BufferApi&, void (*)(GLenum, GLint*), ErrorReader);
+ErrorReader wrapper_error = nullptr;
 #endif
 
 namespace {
@@ -33,8 +35,34 @@ std::string quote(const char* text) {
 void require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
+GLenum probe_error() {
+    const GLenum provider = glGetError();
+#ifdef MG_BUFFER_WRAPPER
+    // Shader/render calls in this adapter use the raw provider. Inspect that
+    // queue first, then the actual frontend queue used by buffer entry points.
+    // The frontend getter otherwise classifies unpromoted provider errors as
+    // internal diagnostics. Never let that hide a failed probe draw.
+    require(wrapper_error != nullptr, "buffer frontend error reader was not attached");
+    const GLenum frontend = wrapper_error();
+    require(provider == GL_NO_ERROR || frontend == GL_NO_ERROR,
+            "simultaneous provider and frontend errors");
+    if (frontend != GL_NO_ERROR) return frontend;
+#endif
+    return provider;
+}
+GLenum buffer_error() {
+#ifdef MG_BUFFER_WRAPPER
+    require(wrapper_error != nullptr, "buffer frontend error reader was not attached");
+    const GLenum unpromoted = glGetError();
+    const GLenum frontend = wrapper_error();
+    require(unpromoted == GL_NO_ERROR, "buffer rejection remained in provider queue instead of frontend");
+    return frontend;
+#else
+    return glGetError();
+#endif
+}
 void check_error(const char* operation) {
-    const GLenum error = glGetError();
+    const GLenum error = probe_error();
     if (error) throw std::runtime_error(std::string(operation) + " GL error " + std::to_string(error));
 }
 template<class T> T load(void* library, const char* name) {
@@ -187,17 +215,37 @@ void visibility(GLbitfield flags, GLbitfield access, GLuint render_program, GLui
 void invalid_flags() {
     GLuint id = 0; buffers.gen(1, &id); buffers.bind(GL_ARRAY_BUFFER, id);
     buffers.storage(GL_ARRAY_BUFFER, 64, nullptr, GL_MAP_PERSISTENT_BIT_EXT);
-    GLenum error = glGetError(); buffers.remove(1, &id);
+    GLenum error = buffer_error(); buffers.remove(1, &id);
     require(error == GL_INVALID_VALUE, "invalid storage flags were not rejected");
     buffers.gen(1, &id); buffers.bind(GL_ARRAY_BUFFER, id);
     buffers.storage(GL_ARRAY_BUFFER, 64, nullptr, GL_MAP_WRITE_BIT);
     check_error("invalid-map setup");
     void* mapping = buffers.map(GL_ARRAY_BUFFER, 0, 64, GL_MAP_WRITE_BIT | 0x80000000u);
-    error = glGetError();
+    error = buffer_error();
     if (mapping) buffers.unmap(GL_ARRAY_BUFFER);
     buffers.remove(1, &id);
     require(mapping == nullptr && error == GL_INVALID_VALUE, "unknown mapping flags were not rejected");
 }
+void invalid_flush_range() {
+    Storage storage(GL_ARRAY_BUFFER, 16, 32, GL_MAP_WRITE_BIT,
+                    GL_MAP_WRITE_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
+    storage.pointer = buffers.map(storage.target, storage.offset, storage.size, storage.access);
+    require(storage.pointer != nullptr, "flush-range setup mapping failed");
+    std::memset(storage.pointer, 0, static_cast<size_t>(storage.size));
+    check_error("flush-range setup");
+    // Flush offsets are relative to this mapping, not the buffer's offset16.
+    buffers.flush(storage.target, -1, 1);
+    require(buffer_error() == GL_INVALID_VALUE, "negative flush offset was not rejected");
+    buffers.flush(storage.target, storage.size - 1, 2);
+    require(buffer_error() == GL_INVALID_VALUE, "flush past mapped range was not rejected");
+    buffers.flush(storage.target, 0, storage.size);
+    check_error("legal flush after invalid ranges");
+    const GLboolean unmapped = buffers.unmap(storage.target);
+    storage.pointer = nullptr;
+    require(unmapped == GL_TRUE, "flush-range unmap failed");
+    check_error("flush-range unmap");
+}
+
 }
 
 int main() {
@@ -233,7 +281,7 @@ int main() {
                    load<decltype(buffers.unmap)>(library,"glUnmapBuffer"), load<decltype(buffers.flush)>(library,"glFlushMappedBufferRange"),
                    load<decltype(buffers.parameter)>(library,"glGetBufferParameteriv")};
 #ifdef MG_BUFFER_WRAPPER
-        attach_buffer_wrapper(buffers, glGetIntegerv);
+        wrapper_error = attach_buffer_wrapper(buffers, glGetIntegerv, glGetError);
 #endif
         GLuint render_program = program(), vao = 0; glGenVertexArrays(1, &vao);
         auto run = [&](const char* name, auto test) {
@@ -245,6 +293,7 @@ int main() {
         run("nonpersistent_explicit", [&]{visibility(GL_MAP_WRITE_BIT, GL_MAP_WRITE_BIT | GL_MAP_FLUSH_EXPLICIT_BIT, render_program, vao);});
         run("persistent_coherent", [&]{visibility(persistent | GL_MAP_COHERENT_BIT_EXT, persistent | GL_MAP_COHERENT_BIT_EXT, render_program, vao);});
         run("invalid_flags", invalid_flags);
+        run("invalid_flush_range", invalid_flush_range);
         glBindVertexArray(0); glDeleteVertexArrays(1, &vao); glUseProgram(0); glDeleteProgram(render_program);
         // Keep the library loaded until the EGL context has been destroyed.
     } catch (const std::exception& e) { ++failures; results.push_back("{\"name\":\"setup\",\"pass\":false,\"detail\":" + quote(e.what()) + "}"); }
