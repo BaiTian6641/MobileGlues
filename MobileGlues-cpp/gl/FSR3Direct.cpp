@@ -19,6 +19,7 @@
 #include "../egl/context.h"
 #include "../gles/gles.h"
 #include "../upscaling/mg_fsr_abi.h"
+#include "../upscaling/mg_fsr_lifecycle.h"
 
 #include <EGL/egl.h>
 
@@ -408,7 +409,9 @@ void mg_fsr3_forget_context(unsigned long long ctx_id) {
     if (g_current_ctx && g_current_ctx->id == ctx_id) {
         destroy_resources(it->second);
     } else {
-        it->second = ContextState{};
+        // The owning context is gone; free CPU/session ownership without
+        // deleting similarly numbered objects in whichever context replaced it.
+        mg_fsr_abandon_session(it->second.session);
     }
     g_states.erase(it);
 }

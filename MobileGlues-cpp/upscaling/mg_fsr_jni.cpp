@@ -6,14 +6,14 @@
 // End of Source File Header
 //
 // Optional JNI entry points for the Minecraft/Iris bridge. The bridge passes
-// no resources: it calls immediately after Iris' final pass while the main
-// framebuffer is current, and this file resolves the current color/depth
-// attachments. This keeps the Java side renderer-agnostic and avoids exposing
-// Minecraft classes in the native contract.
+// camera matrices and an optional scene-depth texture immediately around Iris'
+// final pass. This file resolves the current main color/depth attachments and
+// keeps Minecraft classes out of the native contract.
 
 #if defined(__ANDROID__)
 
 #include "mg_fsr_abi.h"
+#include "mg_fsr_lifecycle.h"
 #include "fsr3_motion_math.h"
 #include "../config/settings.h"
 #include "../egl/context.h"
@@ -395,14 +395,32 @@ void destroy_state(JniState& s) {
     if (s.depth_synth) GLES.glDeleteTextures(1, &s.depth_synth);
     if (s.input_fbo) GLES.glDeleteFramebuffers(1, &s.input_fbo);
     if (s.output_fbo) GLES.glDeleteFramebuffers(1, &s.output_fbo);
+    if (s.motion_program) GLES.glDeleteProgram(s.motion_program);
     s.motion = s.color_input = s.depth_synth = 0;
     s.input_fbo = s.output_fbo = s.attached_output = 0;
+    s.motion_program = 0;
+    s.u_inv_vp = s.u_prev_vp = s.u_size = s.u_depth = s.u_camera_delta = s.u_has_prev = -1;
+    s.motion_compile_failed = false;
     s.width = s.height = 0;
     s.render_width = s.render_height = 0;
     s.failed = false;
 }
 
 } // namespace
+
+void mg_fsr_jni_forget_context(unsigned long long context_id) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    const auto it = g_states.find(context_id);
+    if (it == g_states.end()) return;
+    // release_locked runs after the last thread has released the old context.
+    // A different backend context may already be current, so deletion through
+    // GL here could destroy unrelated objects that reuse the same numeric IDs.
+    mg_fsr_abandon_session(it->second.session);
+    g_states.erase(it);
+    std::lock_guard<std::mutex> camera_lock(g_camera_mutex);
+    g_camera.valid = false;
+    g_camera.has_previous = false;
+}
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeBridgeMode(JNIEnv*, jclass) {

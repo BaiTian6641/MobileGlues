@@ -9,6 +9,7 @@
 #include "../gl/log.h"
 #include "../gl/mg.h"
 #include "../gl/FSR3Direct.h"
+#include "../upscaling/mg_fsr_lifecycle.h"
 #include "trace.h"
 #include <mutex>
 #include <ska/flat_hash_map.hpp>
@@ -109,6 +110,7 @@ void release_locked(std::shared_ptr<MGContext> ctx) {
     mg_framebuffer_forget_context(ctx->id);
     mg_fsr1_forget_context(ctx->id);
     mg_fsr3_forget_context(ctx->id);
+    mg_fsr_jni_forget_context(ctx->id);
     mg_depth_clear_forget_context(ctx->id);
     if (in_map) g_contexts.erase(it);
 }

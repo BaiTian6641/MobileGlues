@@ -10,6 +10,7 @@
 // output. It deliberately has no fallback that calls itself FSR3.
 
 #include "mg_fsr_abi.h"
+#include "mg_fsr_lifecycle.h"
 #include "fsr3/fsr3_backend.h"
 
 #include "../egl/context.h"
@@ -115,6 +116,13 @@ bool valid_dispatch_abi(const mg_fsr_dispatch_t& d) {
 }
 
 } // namespace
+
+void mg_fsr_abandon_session(void* raw) {
+    Session* session = session_from(raw);
+    if (!session) return;
+    session->backend.abandon();
+    delete session;
+}
 
 extern "C" {
 
