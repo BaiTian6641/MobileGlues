@@ -73,6 +73,14 @@ std::string mg_lower_legacy_image_formats(const std::string& glsl) {
                 // RGBA16F by glTexImage/glTexStorage.
                 item = "rgba16f";
                 changed = true;
+            } else if (item == "r8ui" || item == "r16ui") {
+                // ES 3.10 image qualifiers omit r8ui/r16ui; storage is R32UI.
+                item = "r32ui";
+                changed = true;
+            } else if (item == "rg32ui") {
+                // ES 3.10 has no rg32ui qualifier; storage is RGBA32UI.
+                item = "rgba32ui";
+                changed = true;
             } else if (item == "rg32f") {
                 // The provider rejects rg32f; RG32F storage is widened to
                 // RGBA32F by the storage path.

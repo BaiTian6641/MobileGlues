@@ -76,6 +76,12 @@ GLenum mg_image_backing_format(GLenum logical_format) {
     case GL_RG32F:
         // ES image qualifiers do not include rg32f on the target provider.
         return GL_RGBA32F;
+    case GL_RG32UI:
+        // ES 3.10 has no rg32ui image qualifier. RGBA32UI preserves both
+        // integer channels while giving the image a legal binding format.
+        return GL_RGBA32UI;
+    case GL_RGBA32UI:
+        return GL_RGBA32UI;
     case GL_RGBA8:
         return GL_RGBA8;
     case GL_RGBA8_SNORM:
@@ -110,6 +116,8 @@ const char* mg_image_qualifier(GLenum logical_format) {
         return "rgba16f";
     case GL_RGBA32F:
         return "rgba32f";
+    case GL_RGBA32UI:
+        return "rgba32ui";
     case GL_RGBA8:
         return "rgba8";
     case GL_RGBA8_SNORM:

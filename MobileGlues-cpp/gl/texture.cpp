@@ -558,7 +558,7 @@ static bool mg_is_image_storage_format(GLenum internal_format) {
     return internal_format == GL_R8UI || internal_format == GL_R16UI || internal_format == GL_R32UI ||
            internal_format == GL_R8I || internal_format == GL_R16I || internal_format == GL_R32I ||
            internal_format == GL_R32F || internal_format == GL_RGBA16F || internal_format == GL_RGBA32F ||
-           internal_format == GL_RG32F || internal_format == GL_RGBA8;
+           internal_format == GL_RG32F || internal_format == GL_RGBA8 || internal_format == GL_RGBA32UI;
 }
 
 void internal_convert(GLenum* internal_format, GLenum* type, GLenum* format, bool has_data) {
@@ -845,7 +845,10 @@ void internal_convert(GLenum* internal_format, GLenum* type, GLenum* format, boo
         if (type) *type = GL_SHORT;
         break;
     case GL_RG32UI:
-        if (format) *format = GL_RG_INTEGER;
+        // ES has no RG32UI storage format. RGBA32UI keeps both integer
+        // channels and is accepted by glTexStorage/glBindImageTexture.
+        *internal_format = GL_RGBA32UI;
+        if (format) *format = GL_RGBA_INTEGER;
         if (type) *type = GL_UNSIGNED_INT;
         break;
     case GL_RG32I:
