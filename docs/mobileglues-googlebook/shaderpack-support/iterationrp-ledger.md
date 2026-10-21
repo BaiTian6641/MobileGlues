@@ -12,7 +12,7 @@ Target: original `iterationRP Alpha 0.8.31.zip`
 | ITRP-03 | Core-only deterministic image units (G2) | PROOF GAP | core resolver exists; no original-pack no-bridge run |
 | ITRP-04 | SSBO clear reachability (G3) | NOT A DEFAULT BLOCKER | 4 KiB SSBO fully written by SSBOUpdate_CS |
 | ITRP-05 | Graphics-stage image rewriting (G4) | NOT RUN | `PixelData_VS`, `shadow.gsh` |
-| ITRP-06 | Device S0/S1 on default profile | **S0 PASS; S1 FAIL** | baseline main-side fix corrects terrain; sky still black; no-TAA test; `audits/2026-10-20-iterationrp-color-sky-analysis.md` |
+| ITRP-06 | Device S0/S1 on default profile | **S0 PASS; S1 FAIL** | original TAA: terrain fixed by baseline side; sky still black; `audits/2026-10-20-iterationrp-color-sky-analysis.md` |
 | ITRP-07 | S2 effect matrix on default profile | NOT RUN | no missing effects |
 | ITRP-08 | Advanced ACT/WSR/RTW profiles | NOT RUN | separate profile gates |
 | ITRP-09 | Final/composite sampling and ping-pong identity audit | IN PROGRESS | periodic reset observed; `IterationRPFinalSamplingAudit` |

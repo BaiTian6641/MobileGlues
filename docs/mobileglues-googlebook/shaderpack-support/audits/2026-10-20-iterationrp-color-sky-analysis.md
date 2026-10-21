@@ -502,3 +502,11 @@ The source of the fix is in `FinalPassRendererMixin`.
 
 No-TAA remains selected in this capture; the terrain correction is from the
 baseline-side change, not TAA.
+
+## Original pack with baseline fix
+
+With the original archive and TAA enabled, terrain remains correctly textured
+and colored; only the sky is black. Screenshot SHA-256 `c951638e1d641dd56b91852ec43e497b03f3f23a815f5fc7cdadbfc5f8ff9447`.
+
+Terrain-color root cause is therefore the colortex0 side used by the final
+copy. The remaining sky failure is separate and is now the only S1 blocker.
