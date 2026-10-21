@@ -21,7 +21,6 @@ void ApplyFSR3Present();
 bool FSR3AdjustViewport(int& x, int& y, int& width, int& height);
 bool FSR3GetSurfaceSize(int& width, int& height);
 void FSR3NativeViewport();
-void FSR3SetNativeExtent(int width, int height);
 void FSR3SetBridgeMode();
 bool FSR3BridgeMode();
 

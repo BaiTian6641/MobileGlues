@@ -17,6 +17,14 @@ struct FSR3ViewportPlan {
     int height = 0;
 };
 
+// The bridge ABI consumes a native-resolution final color target. Reject an
+// intermediate target before allocation or dispatch can apply scaling twice.
+inline bool FSR3IsNativeOutputExtent(int surface_width, int surface_height,
+                                    int color_width, int color_height) {
+    return surface_width > 0 && surface_height > 0 &&
+           color_width == surface_width && color_height == surface_height;
+}
+
 inline FSR3ViewportPlan FSR3PlanViewport(int surface_width, int surface_height,
                                          int target_width, int target_height,
                                          int x, int y, int width, int height) {

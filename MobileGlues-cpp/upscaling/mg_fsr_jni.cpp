@@ -523,6 +523,15 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
         bridge_fail("no color texture attachment");
         return -1;
     }
+    int surface_width = 0, surface_height = 0;
+    if (!FSR3GetSurfaceSize(surface_width, surface_height) ||
+        !FSR3IsNativeOutputExtent(surface_width, surface_height, width, height)) {
+        // Newer Iris versions can leave a swap/composite FBO bound after the
+        // final draw. The Java adapter must select the actual final target;
+        // accepting an arbitrary attachment here would recursively shrink it.
+        bridge_fail("final color target does not match the EGL output extent");
+        return -1;
+    }
     int depth_width = 0, depth_height = 0;
     bool have_depth = false;
     const GLuint bridge_depth = FSR3BridgeDepthTexture();
@@ -538,8 +547,6 @@ Java_com_googlebook_fsrbridge_Fsr3Bridge_nativeSubmit(JNIEnv*, jclass) {
         bridge_fail("no depth texture attachment");
         return -1;
     }
-    FSR3SetNativeExtent(width, height);
-
     std::lock_guard<std::mutex> lock(g_mutex);
     JniState& s = g_states[context_key];
     // Scene targets are allocated at the quality extent. Build matching FSR3

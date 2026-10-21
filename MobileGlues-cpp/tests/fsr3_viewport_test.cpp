@@ -39,6 +39,20 @@ int main() {
     auto h = FSR3PlanViewport(2880, 1800, 2400, 1200, 0, 0, 2880, 1800);
     expect("independent axes use their own ratio", h, true, 0, 0, 2400, 1200);
 
+    // Iris 26.2 may return with its smaller swap FBO bound. It must not become
+    // the output extent or the next frame's viewport reference.
+    if (!FSR3IsNativeOutputExtent(2880, 1585, 2880, 1585) ||
+        FSR3IsNativeOutputExtent(2880, 1585, 1694, 932) ||
+        FSR3IsNativeOutputExtent(2880, 1585, 996, 548) ||
+        FSR3IsNativeOutputExtent(1920, 1080, 2880, 1585) ||
+        FSR3IsNativeOutputExtent(0, 0, 0, 0) ||
+        !FSR3IsNativeOutputExtent(1920, 1080, 1920, 1080)) {
+        printf("  FAIL final target rejects intermediate and stale resize extents\n");
+        ++fails;
+    } else {
+        printf("  ok   final target rejects intermediate and stale resize extents\n");
+    }
+
     printf(fails ? "fsr3_viewport: %d checks failed\n" : "fsr3_viewport: all checks passed\n", fails);
     return fails ? 1 : 0;
 }

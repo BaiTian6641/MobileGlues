@@ -56,8 +56,6 @@ std::mutex g_mutex;
 std::unordered_map<unsigned long long, ContextState> g_states;
 thread_local bool g_in_present = false;
 std::atomic<bool> g_bridge_presented_this_frame{false};
-std::atomic<int> g_native_width{0};
-std::atomic<int> g_native_height{0};
 std::atomic<bool> g_bridge_mode{false};
 thread_local bool g_final_scope = false;
 thread_local unsigned int g_bridge_depth = 0;
@@ -183,19 +181,14 @@ bool FSR3BridgeMode() {
     return g_bridge_mode.load(std::memory_order_acquire);
 }
 
-void FSR3SetNativeExtent(int width, int height) {
-    g_native_width.store(width > 0 ? width : 0, std::memory_order_relaxed);
-    g_native_height.store(height > 0 ? height : 0, std::memory_order_relaxed);
-}
-
 bool FSR3AdjustViewport(int& x, int& y, int& width, int& height) {
     if (global_settings.fsr3_setting != FSR3_Mode::Experimental) return false;
     if (width <= 0 || height <= 0) return false;
-    int surface_w = g_native_width.load(std::memory_order_relaxed);
-    int surface_h = g_native_height.load(std::memory_order_relaxed);
-    if (surface_w <= 0 || surface_h <= 0) {
-        if (!surface_size(surface_w, surface_h)) return false;
-    }
+    // The current EGL surface owns the output extent. A previously bound
+    // intermediate framebuffer cannot define it, and a resize must take effect
+    // before the next bridge submission.
+    int surface_w = 0, surface_h = 0;
+    if (!surface_size(surface_w, surface_h)) return false;
     GLint fbo = 0;
     GLES.glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fbo);
     if (fbo == 0) return false;
@@ -264,11 +257,8 @@ void FSR3ApplyFinalViewportUniforms(int currentProgram) {
 }
 
 void FSR3NativeViewport() {
-    int width = g_native_width.load(std::memory_order_relaxed);
-    int height = g_native_height.load(std::memory_order_relaxed);
-    if (width <= 0 || height <= 0) {
-        if (!surface_size(width, height)) return;
-    }
+    int width = 0, height = 0;
+    if (!surface_size(width, height)) return;
     static bool logged = false;
     if (!logged) {
         logged = true;
