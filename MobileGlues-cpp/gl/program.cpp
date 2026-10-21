@@ -220,7 +220,7 @@ void glGetProgramiv(GLuint program, GLenum pname, GLint* params) {
         // path did that and made incomplete shader programs look qualified.
         GLchar infoLog[512] = {0};
         GLES.glGetProgramInfoLog(program, sizeof(infoLog), nullptr, infoLog);
-        LOG_W_FORCE("Program %u link/validate failed: \n%s", program, infoLog);
+        LOG_W_FORCE("[MG-SHADER-FAIL] program=%u query=0x%x link/validate failed: %.500s", program, pname, infoLog);
     }
     CHECK_GL_ERROR
 }

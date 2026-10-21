@@ -45,6 +45,10 @@ extern "C" GLAPI GLAPIENTRY void glCompileShader(GLuint shader) {
         GLES.glGetShaderiv(shader, GL_SHADER_TYPE, &type);
         char info[4096] = {0};
         GLES.glGetShaderInfoLog(shader, sizeof(info), nullptr, info);
+        // Some launchers filter compiler-error chunks from redirected stderr.
+        // Reuse the existing bounded diagnostic in logcat without querying GL again.
+        __android_log_print(ANDROID_LOG_ERROR, RENDERERNAME,
+                            "[MG-SHADER-FAIL] compile shader=%u type=0x%x log=%.3000s", shader, type, info);
         fprintf(stderr, "[MG-SHADER-FAIL] compile shader=%u type=0x%x log=%.3000s\n", shader, type, info);
         fflush(stderr);
     }
