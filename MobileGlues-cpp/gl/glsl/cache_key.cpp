@@ -15,7 +15,7 @@ std::string build_translation_cache_key(const char* source, unsigned shader_type
                                         int hide_mg_env_level, unsigned major, unsigned minor, unsigned revision,
                                         unsigned patch) {
     // Bump whenever a translation rule changes so old entries cannot be reused.
-    constexpr int kTranslationCacheSchema = 5;
+    constexpr int kTranslationCacheSchema = 6;
     std::string key(source ? source : "");
     key += "\n//schema=" + std::to_string(kTranslationCacheSchema) + "|" + std::to_string(major) + "." +
            std::to_string(minor) + "." + std::to_string(revision) + "." + std::to_string(patch) +
