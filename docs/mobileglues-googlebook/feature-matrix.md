@@ -44,6 +44,7 @@ pass is the reference evidence. Effect-specific rows are not upgraded by this he
 | 1.21.1 NeoForge + Iris + Sodium, Sildurs Extreme + bridge 0.2.4 | **74 FPS**; regression pass | same record |
 | Create Delight Remake 1.20.1 Forge + Oculus + Steadfast 0.8.0 | **76 FPS** for the captured scene | same record |
 | RGBA8 null allocation + image bind | **PASS** (`tex=0 bind=0`) | `rgba8_null_bind` wrapper probe, commit `01feb52` |
+| iterationRP RGBA8 `playerAtlas_img` pack | **PASS for image bind/load; pack S1 color defect remains** | 1.21.1 + iterationRP-noTAA-test.zip; no `MG-IMG-ERROR`; capture `9ce7460d…` |
 | FSR3 bridge 26.1 Fabric/NeoForge | **host PASS; device PENDING** | bridge commits `b95f259`, `8576b37` |
 
 The 26.2 zero-mod and bounded shaderpack passes are not a full release qualification.
